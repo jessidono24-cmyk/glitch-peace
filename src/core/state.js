@@ -122,4 +122,5 @@ export const CURSOR = {
   shop:    0,
   dream:   0,
   upgradeFrom: 'title',
+  optFrom:     'title',  // tracks which screen opened the options panel
 };

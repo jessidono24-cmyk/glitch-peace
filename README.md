@@ -5,8 +5,8 @@
 [![Version](https://img.shields.io/badge/version-1.5.0--alpha-blue.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
-[![Lines of Code](https://img.shields.io/badge/LOC-9%2C600%2B-orange.svg)](src/)
-[![Progress](https://img.shields.io/badge/completion-48%25-yellow.svg)](#-development-roadmap)
+[![Lines of Code](https://img.shields.io/badge/LOC-10%2C000%2B-orange.svg)](src/)
+[![Progress](https://img.shields.io/badge/completion-52%25-yellow.svg)](#-development-roadmap)
 
 *Begin in stillness. Emerge through pattern recognition. Transform through play.*
 
@@ -86,27 +86,30 @@ Visible in the dreamscape selection screen for each level:
 
 ---
 
-## 📦 Current Version: v1.5.0-alpha (February 2026)
+## 📦 Current Version: v1.6.0-alpha (February 2026)
 
 ### Build Statistics
 | Metric | Value |
 |--------|-------|
-| Source files | 40 JS modules |
-| Lines of code | ~9,600 |
-| Bundle size | 238 KB (80 KB gzipped) |
+| Source files | 43 JS modules |
+| Lines of code | ~10,000 |
+| Bundle size | 249 KB (83 KB gzipped) |
 | Build time | ~600ms |
-| Completion | ~48% of full vision |
+| Completion | ~52% of full vision |
 
 ### What's In This Build
-- ✅ **Complete base game** (Phases 1-5): 17 tile types, 10 dreamscapes, 5 archetypes, 9 enemy AI behaviors
-- ✅ **Grid Mode** (tactical tile-based) + **Shooter Mode** (twin-stick action, 4 weapons)
+- ✅ **Complete base game** (Phases 1-5): 17 tile types + **4 embodiment tiles**, 10 dreamscapes, 5 archetypes, 9 enemy AI behaviors
+- ✅ **4 Somatic Tiles** (Phase 2.6) — BODY_SCAN ◯, BREATH_SYNC ≋, ENERGY_NODE ✦, GROUNDING ⊕ — spawn per dreamscape emotional context
+- ✅ **RPG Character System** (Phase M5 basics) — STR/INT/WIS/VIT stats driven by gameplay; XP + level progression; archetype dialogue panel
+- ✅ **Full Tutorial** (all 10 dreamscapes) — 3 contextual hints per dreamscape, one-at-a-time display with alpha fade
+- ✅ **Grid Mode** (tactical tile-based) + **Shooter Mode** (twin-stick action) with proper pause/resume flow
 - ✅ **13 Play Styles** — Zen, Speedrun, Puzzle, Horror, Roguelike, Training, Boss Rush, Pacifist, Reverse, Ritual, Daily (all wired)
 - ✅ **12 Cosmological Frameworks** — mapped to dreamscapes, visible in selection screen
 - ✅ **Dream Yoga System** (Phase 2.5) — lucidity meter, reality check prompts, dream sign tracking
 - ✅ **Emotional engine** — 10-emotion field with valence, arousal, coherence, 7 synergy patterns
 - ✅ **Temporal system** — 8 lunar phases × 7 weekday harmonics affecting gameplay
 - ✅ **Recovery tools** — impulse buffer + consequence preview
-- ✅ **Adaptive difficulty** — 5 age-calibrated tiers
+- ✅ **Adaptive difficulty** — 5 age-calibrated tiers (ages 5+)
 - ✅ **19-language vocabulary** with Fibonacci-spaced repetition
 - ✅ **Sigil learning** — visual glyphs from 15+ traditions
 - ✅ **Session tracker** + urge management + wellness monitoring
@@ -114,9 +117,9 @@ Visible in the dreamscape selection screen for each level:
 - ✅ **Intelligence enhancement** — IQ/EQ proxy metrics, strategic coaching
 - ✅ **Chakra system** + Tarot archetypes (Phase 10)
 - ✅ **Integration dashboard** (Phase 11) — H key to toggle
-- ✅ **Campaign manager** (Phase M3) — tutorial hints, narrative arc
+- ✅ **Campaign manager** (Phase M3) — tutorial hints for all 10 dreamscapes, narrative arc
 - ✅ **Procedural audio** — 8 distinct SFX via Web Audio API
-- ✅ **Onboarding flow** — age group, language, difficulty selection
+- ✅ **Onboarding flow** — age group, language, difficulty selection; ESC saves preference
 
 ---
 
@@ -219,7 +222,8 @@ Phase 2.5   ████████████████████ 100% �
 Phase 6-11  ████████████████████ 100% ✅  Learning/Awareness/IQ/Chakra
 Cosmologies ████████████████████ 100% ✅  12 frameworks mapped ← NEW
 
-Phase M5    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  RPG Mode
+Phase 2.6   ████████████████████ 100% ✅  Embodiment Tiles (BODY_SCAN, BREATH_SYNC, ENERGY_NODE, GROUNDING) ← NEW
+Phase M5    ██░░░░░░░░░░░░░░░░░░  10% 🔨  RPG Mode (character stats + archetype dialogue started) ← IN PROGRESS
 Phase M6    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Constellation Mode
 Dream deep  ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Body scan / breath / somatic tiles
 Boss System ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Multi-phase bosses
@@ -228,16 +232,18 @@ Phase M7    ░░░░░░░░░░░░░░░░░░░░   0% �
 Phase M8    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Multiplayer / Co-op
 Steam pack  ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Electron + Steamworks
 
-Overall: ~9,600 / 20,000+ lines (~48%)
+Overall: ~10,000 / 20,000+ lines (~52%)
 ```
 
 ### 🚧 Next Steps
 
-**Phase M5: RPG Mode** (~2,500 lines)
-- Character stats + progression tree
-- Dialogue with archetype NPCs (Dragon, Child Guide, Orb, Captor-Teacher, Protector)
-- Quest system (main narrative + 5 side quests)
-- Inventory system
+**Phase M5: RPG Mode** (~2,500 lines) — *10% complete*
+- ✅ Character stats (STR/INT/WIS/VIT + XP + level) driven by gameplay
+- ✅ Archetype dialogue — 5 lines per archetype shown on tile collection
+- ⏳ Dialogue tree expansion — branching responses based on stat levels
+- ⏳ Quest system (main narrative + 5 side quests)
+- ⏳ Inventory system
+- ⏳ Full NPC encounter scenes
 
 **Embodiment Deepening** (~1,800 lines)
 - New tiles: `BODY_SCAN`, `BREATH_SYNC`, `ENERGY_NODE`, `GROUNDING`
@@ -366,7 +372,7 @@ Built on:
 
 ## 💫 The Vision
 
-**From 9,600 to 20,000+ lines.**
+**From 10,000 to 20,000+ lines.**
 **From game to consciousness platform.**
 **From player to awakened dreamer.**
 
@@ -374,7 +380,7 @@ Built on:
 
 ---
 
-**v1.5.0-alpha · February 2026 · 48% Complete**
+**v1.6.0-alpha · February 2026 · 52% Complete**
 [glitch-peace](https://github.com/jessidono24-cmyk/glitch-peace) · [glitch-peace-vite](https://github.com/jessidono24-cmyk/glitch-peace-vite)
 
 *Built with intention. Shared with love. Free always.*

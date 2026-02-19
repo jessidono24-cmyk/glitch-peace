@@ -17,6 +17,7 @@ export function showMsg(g, text, color, timer) {
 export function activateArchetype(g, type, matrixActive) {
   const arch = ARCHETYPES[type]; if (!arch) return;
   g.archetypeActive = true; g.archetypeType = type; g.archetypeTimer = 180;
+  g.lastArchetypeActivated = type; // Phase M5: expose for archetype dialogue
   UPG.archetypePower = arch.power; UPG.archetypeDuration = 180;
   showMsg(g, arch.activationMsg, '#ffdd00', 70);
   resonanceWave(g, g.player.x, g.player.y, '#ffdd00');
@@ -157,6 +158,35 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
   } else if (tileType === T.MEMORY) {
     g.grid[ny][nx] = T.VOID; g.score += 50;
     onMsg('MEMORY ECHO…', '#88bbaa', 30); burst(g, nx, ny, '#88bbaa', 10, 2);
+
+  // ── Phase 2.6: Embodiment / Somatic Tiles ──────────────────────────
+  } else if (tileType === T.BODY_SCAN) {
+    g.grid[ny][nx] = T.VOID; g.score += 80;
+    g.hp = Math.min(UPG.maxHp, g.hp + 10);
+    burst(g, nx, ny, '#00aa44', 14, 2.5);
+    onMsg('BODY SCAN +10 HP  ·  notice sensations…', '#00cc44', 55);
+    setEmotion(g, 'peace');
+
+  } else if (tileType === T.BREATH_SYNC) {
+    g.grid[ny][nx] = T.VOID; g.score += 60;
+    UPG.energy = Math.min(UPG.energyMax, UPG.energy + 20);
+    burst(g, nx, ny, '#6688ff', 14, 2.5);
+    onMsg('BREATH SYNC  ·  inhale 4  ·  hold 4  ·  exhale 4…', '#6688ff', 100);
+
+  } else if (tileType === T.ENERGY_NODE) {
+    g.grid[ny][nx] = T.VOID; g.score += 120;
+    UPG.energy = Math.min(UPG.energyMax, UPG.energy + 40);
+    UPG.glitchPulseCharge = Math.min(100, UPG.glitchPulseCharge + 20);
+    burst(g, nx, ny, '#cc44ff', 18, 3);
+    resonanceWave(g, nx, ny, '#cc44ff');
+    onMsg('ENERGY NODE  +40 ENERGY  ✦', '#cc44ff', 45);
+
+  } else if (tileType === T.GROUNDING) {
+    g.grid[ny][nx] = T.VOID; g.score += 70;
+    g.slowMoves = false; UPG.emotion = 'neutral'; UPG.emotionTimer = 0;
+    g.hp = Math.min(UPG.maxHp, g.hp + 5);
+    burst(g, nx, ny, '#886644', 12, 2);
+    onMsg('GROUNDED  ·  feel your feet  ·  breathe  +5 HP', '#aa8855', 65);
 
   } else if (TILE_DEF[tileType] && TILE_DEF[tileType].dmg > 0) {
     if (UPG.shield && UPG.shieldTimer > 0) {

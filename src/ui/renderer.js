@@ -408,6 +408,17 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     ctx.fillText(tmods.lunarName || '', w - 12, 70);
     ctx.fillText(tmods.planetName || '', w - 12, 80);
   }
+  // Phase M5: Character level display
+  const cs = window._characterStats;
+  if (cs) {
+    ctx.fillStyle = '#334455'; ctx.font = '7px Courier New';
+    ctx.fillText('LVL·' + cs.level + '  XP ' + Math.round(cs.xpPercent * 100) + '%', w - 12, 90);
+    if (cs.levelUpMsg) {
+      ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 4;
+      ctx.font = '7px Courier New'; ctx.fillText(cs.levelUpMsg, w - 12, 100);
+      ctx.shadowBlur = 0;
+    }
+  }
   ctx.textAlign = 'left';
 
   if (g.msg && g.msgTimer > 0) {
@@ -472,6 +483,32 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     ctx.fillText((meanParts[1] || meanParts[0] || '').trim(), sgX + 80, sgY + 40);
     ctx.fillStyle = '#443322'; ctx.font = '7px Courier New';
     ctx.fillText('✦ sigil · ' + (sigil.patterns || []).join(' + '), sgX + 76, sgY + 54);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Phase M5: Archetype dialogue panel ───────────────────────────────
+  const ad = window._archetypeDialogue;
+  if (ad && ad.text && ad.alpha > 0.02) {
+    const ARCH_COLORS = { dragon:'#ffaa00', child:'#aaffcc', orb:'#aaddff', captor:'#ffaadd', protector:'#88ccff' };
+    const adColor = ARCH_COLORS[ad.key] || '#ffdd88';
+    const adW = 320, adX = w / 2 - adW / 2, adY = Math.round(h * 0.28) - 44;
+    ctx.globalAlpha = Math.min(1, ad.alpha);
+    ctx.fillStyle = 'rgba(2,2,12,0.93)'; ctx.fillRect(adX, adY, adW, 68);
+    ctx.strokeStyle = adColor + '55'; ctx.lineWidth = 1; ctx.strokeRect(adX, adY, adW, 68);
+    ctx.fillStyle = adColor; ctx.shadowColor = adColor; ctx.shadowBlur = 6;
+    ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('◈ ARCHETYPE SPEAKS', w / 2, adY + 14); ctx.shadowBlur = 0;
+    // Word-wrap dialogue text
+    ctx.fillStyle = '#ddeedd'; ctx.font = 'italic 10px Courier New';
+    const words = ad.text.split(' ');
+    let line = '', ly = adY + 32;
+    for (const word of words) {
+      const test = line + (line ? ' ' : '') + word;
+      if (ctx.measureText(test).width > adW - 24 && line) {
+        ctx.fillText(line, w / 2, ly); ly += 15; line = word;
+      } else line = test;
+    }
+    if (line) ctx.fillText(line, w / 2, ly);
     ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
 
@@ -584,17 +621,22 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
       ctx.fillText(challenge.fact, w/2, h*0.42 + 74);
       ctx.textAlign = 'left'; ctx.globalAlpha = 1;
     }
-    // Phase M3: Tutorial hint overlay (first 3 dreamscapes)
-    const hints = window._tutorialHints;
-    if (hints && hints.length > 0) {
-      ctx.globalAlpha = 0.92;
-      ctx.fillStyle = 'rgba(0,12,0,0.9)'; ctx.fillRect(sx, sy - 44, gp, 38);
-      ctx.strokeStyle = 'rgba(0,255,136,0.22)'; ctx.lineWidth = 1;
-      ctx.strokeRect(sx, sy - 44, gp, 38);
-      ctx.fillStyle = '#00cc66'; ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'center';
-      ctx.fillText('HINT', sx + gp / 2, sy - 30);
-      ctx.fillStyle = '#225533'; ctx.font = '8px Courier New';
-      hints.slice(0, 2).forEach((h, i) => ctx.fillText(h, sx + gp / 2, sy - 18 + i * 13));
+    // Phase M3: Tutorial hint overlay — cycles one hint at a time
+    const tut = window._currentTutorialHint;
+    if (tut && tut.text) {
+      const ta = (tut.timer > 30 ? 1 : tut.timer / 30) * 0.95;
+      ctx.globalAlpha = ta;
+      ctx.fillStyle = 'rgba(0,14,4,0.94)'; ctx.fillRect(sx, sy - 50, gp, 44);
+      ctx.strokeStyle = 'rgba(0,255,136,0.3)'; ctx.lineWidth = 1;
+      ctx.strokeRect(sx, sy - 50, gp, 44);
+      ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 4;
+      ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('✦ HOW TO PLAY  ' + (tut.index + 1) + ' / ' + tut.total, sx + gp / 2, sy - 36);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#ccffcc'; ctx.font = '9px Courier New';
+      ctx.fillText(tut.text, sx + gp / 2, sy - 20);
+      ctx.fillStyle = '#334433'; ctx.font = '7px Courier New';
+      ctx.fillText('ESC to open menu · auto-advances…', sx + gp / 2, sy - 8);
       ctx.textAlign = 'left'; ctx.globalAlpha = 1;
     }
 

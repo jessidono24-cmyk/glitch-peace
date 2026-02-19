@@ -62,6 +62,9 @@ import { PLAY_MODES, PLAY_MODE_LIST, applyPlayMode, getPlayModeMeta } from './sy
 import { COSMOLOGIES, DREAMSCAPE_COSMOLOGY, getCosmologyForDreamscape } from './systems/cosmology/cosmologies.js';
 // ─── Phase 2.5: Dream Yoga System ────────────────────────────────────────
 import { dreamYoga } from './systems/awareness/dream-yoga.js';
+// ─── Phase M5: RPG Basics ─────────────────────────────────────────────────
+import { characterStats } from './systems/rpg/character-stats.js';
+import { archetypeDialogue } from './systems/rpg/archetype-dialogue.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -232,6 +235,7 @@ function startGame(dreamIdx) {
   const tmods = temporalSystem.getModifiers();
   window._tmods = tmods;
   if (gameMode === 'shooter') {
+    game = null;
     resetSession();
     shooterMode.init({});
     setPhase('playing'); lastMove = 0;
@@ -260,7 +264,9 @@ function startGame(dreamIdx) {
   dreamYoga.resetSession();
   // Phase M3: start tutorial for first dreamscape
   campaignManager.startTutorial(CFG.dreamIdx);
-  campaignManager.markTutorialShown(CFG.dreamIdx);
+  // Phase M5: reset RPG session
+  characterStats.resetSession();
+  archetypeDialogue.reset();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -287,6 +293,8 @@ function nextDreamscape() {
   const empathyReflection = empathyTraining.getReflection();
   // Phase M3: campaign completion
   const milestone = campaignManager.onDreamscapeComplete(g.ds.id % DREAMSCAPES.length, g.score);
+  // Phase M5: RPG — reward XP on dreamscape completion
+  characterStats.onDreamComplete();
   interludeState = {
     text: g.ds.completionText,
     subtext: DREAMSCAPES[nextIdx].narrative,
@@ -306,7 +314,6 @@ function nextDreamscape() {
     game.msg = DREAMSCAPES[nextIdx].name; game.msgColor = '#ffdd00'; game.msgTimer = 90;
     // Phase M3: start tutorial for new dreamscape (if first visit)
     campaignManager.startTutorial(nextIdx);
-    campaignManager.markTutorialShown(nextIdx);
     if (phase === 'interlude') setPhase('playing');
   }, INTERLUDE_TIMEOUT_MS);
 }
@@ -344,6 +351,8 @@ function loop(ts) {
 
   // ── Shooter mode ─────────────────────────────────────────────────────
   if (gameMode === 'shooter') {
+    // Expose shooter state for pause menu display
+    window._shooterState = { wave: shooterMode.wave, score: shooterMode.player.score, health: Math.round(shooterMode.player.health) };
     const result = shooterMode.update(dt, keys, matrixActive, ts);
     shooterMode.render(ctx, ts, { w, h, DPR });
     if (result && result.phase === 'dead') {
@@ -448,9 +457,18 @@ function loop(ts) {
       // Phase 9: track move mindfulness
       const wasPreviewActive = consequencePreview.active && consequencePreview.ghostPath.length > 0;
       const wasImpulseActive = !!impulseBuffer.activeDirection;
-      if (wasPreviewActive || wasImpulseActive) strategicThinking.onMindfulMove();
+      if (wasPreviewActive || wasImpulseActive) { strategicThinking.onMindfulMove(); characterStats.onMindfulMove(); }
       else strategicThinking.onImpulsiveMove();
       logicPuzzles.onMove(wasPreviewActive, wasImpulseActive);
+      // Phase M5: RPG stat events on each move
+      if (targetTile === 6) characterStats.onInsightCollect();                         // T.INSIGHT
+      if ([17,18,19,20].includes(targetTile)) characterStats.onEmbodimentTile();       // somatic tiles
+      // Award hazard-survival XP when player moves to a safe tile while enemies are nearby
+      if (targetTile === 0 || targetTile === 4) {   // T.VOID or T.PEACE
+        const nearbyEnemies = game.enemies.filter(e =>
+          Math.abs(e.y - game.player.y) + Math.abs(e.x - game.player.x) <= 2).length;
+        if (nearbyEnemies > 0) characterStats.onHazardSurvived();
+      }
       // Play Mode: count moves for puzzle mode
       if (game.moveLimit) {
         game.movesRemaining = Math.max(0, (game.movesRemaining || game.moveLimit) - 1);
@@ -606,7 +624,23 @@ function loop(ts) {
   };
   // Campaign tutorial hints
   window._tutorialHints = campaignManager.getTutorialHints(CFG.dreamIdx);
+  campaignManager.tickTutorial();
+  const _at = campaignManager.activeTutorial;
+  window._currentTutorialHint = _at
+    ? { text: _at.hints[_at.index], timer: _at.timer, total: _at.hints.length, index: _at.index }
+    : null;
   window._campaignTotal = campaignManager.totalComplete;
+
+  // Phase M5: RPG character stats + archetype dialogue
+  characterStats.tick();
+  archetypeDialogue.tick();
+  // Trigger archetype dialogue if archetype tile was just activated
+  if (game.lastArchetypeActivated) {
+    archetypeDialogue.onArchetypeCollect(game.lastArchetypeActivated);
+    game.lastArchetypeActivated = null;
+  }
+  window._archetypeDialogue = archetypeDialogue.active;
+  window._characterStats    = characterStats.statObj;
 
   if (game.hp <= 0) {
     deadGame = game; // snapshot for death screen
@@ -666,7 +700,7 @@ window.addEventListener('keydown', e => {
       }
     }
     if (e.key === 'Backspace' && onboardState.step > 0) onboardState.step--;
-    if (e.key === 'Escape') setPhase('title');
+    if (e.key === 'Escape') { PLAYER_PROFILE.onboardingDone = true; savePlayerProfile(); setPhase('title'); }
     e.preventDefault(); return;
   }
 
@@ -694,7 +728,7 @@ window.addEventListener('keydown', e => {
       languageSystem.setNativeLang(nCode);
       languageSystem.setTargetLang(tCode);
       languageSystem.setDisplayMode(mode);
-      setPhase(game ? 'paused' : 'title');
+      setPhase(CURSOR.optFrom === 'paused' ? 'paused' : 'title');
     }
     e.preventDefault(); return;
   }
@@ -710,7 +744,7 @@ window.addEventListener('keydown', e => {
       sfxManager.resume(); sfxManager.playMenuSelect();
       if (CURSOR.menu===0)      startGame(CFG.dreamIdx);
       else if (CURSOR.menu===1) setPhase('dreamselect');
-      else if (CURSOR.menu===2) { CURSOR.opt=0; setPhase('options'); }
+      else if (CURSOR.menu===2) { CURSOR.opt=0; CURSOR.optFrom='title'; setPhase('options'); }
       else if (CURSOR.menu===3) setPhase('highscores');
       else if (CURSOR.menu===4) { CURSOR.shop=0; CURSOR.upgradeFrom='title'; setPhase('upgrade'); }
     }
@@ -739,9 +773,9 @@ window.addEventListener('keydown', e => {
     }
     if (e.key==='Enter') {
       if(CURSOR.opt===4) { setPhase('langopts'); }  // Language settings
-      else if(CURSOR.opt===5) setPhase(game?'paused':'title');
+      else if(CURSOR.opt===5) setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
     }
-    if (e.key==='Escape') setPhase(game?'paused':'title');
+    if (e.key==='Escape') setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
     e.preventDefault(); return;
   }
   if (phase === 'highscores') { if(e.key==='Enter'||e.key==='Escape') setPhase('title'); e.preventDefault(); return; }
@@ -783,21 +817,29 @@ window.addEventListener('keydown', e => {
       window._breathState = { isActive: false };
     }
     if (e.key==='Enter') {
-      if(CURSOR.pause===0) { sessionTracker.resumeSession(); urgeManagement.stop(); setPhase('playing'); }
-      else if(CURSOR.pause===1){CURSOR.opt=0;setPhase('options');}
-      else if(CURSOR.pause===2){CURSOR.shop=0;CURSOR.upgradeFrom='paused';setPhase('upgrade');}
-      else { setPhase('title'); CURSOR.menu=0; game=null; }
+      if(CURSOR.pause===0) {
+        if(gameMode==='shooter') shooterMode.paused=false;
+        else { sessionTracker.resumeSession(); urgeManagement.stop(); }
+        setPhase('playing');
+      }
+      else if(CURSOR.pause===1){CURSOR.opt=0; CURSOR.optFrom='paused'; setPhase('options');}
+      else if(CURSOR.pause===2 && gameMode!=='shooter'){CURSOR.shop=0;CURSOR.upgradeFrom='paused';setPhase('upgrade');}
+      else if(CURSOR.pause===2 && gameMode==='shooter'){ shooterMode.paused=false; setPhase('playing'); }
+      else { if(gameMode==='shooter') shooterMode.paused=false; else { sessionTracker.endSession(0,0); } setPhase('title'); CURSOR.menu=0; game=null; }
     }
-    if (e.key==='Escape') { sessionTracker.resumeSession(); urgeManagement.stop(); setPhase('playing'); }
+    if (e.key==='Escape') {
+      if(gameMode==='shooter') { shooterMode.paused=false; setPhase('playing'); }
+      else { sessionTracker.resumeSession(); urgeManagement.stop(); setPhase('playing'); }
+    }
     e.preventDefault(); return;
   }
   if (phase === 'playing') {
-    // Shooter mode: ESC to title, no other special keys
+    // Shooter mode: ESC pauses (not instant title exit)
     if (gameMode === 'shooter') {
-      if (e.key==='Escape') { setPhase('title'); CURSOR.menu=0; }
+      if (e.key==='Escape') { shooterMode.paused = true; CURSOR.pause=0; setPhase('paused'); }
       e.preventDefault(); return;
     }
-    if (e.key==='Escape') { CURSOR.pause=0; sessionTracker.pauseSession(); emergenceIndicators.record('pause_frequency'); dashboard.hide(); setPhase('paused'); }
+    if (e.key==='Escape') { CURSOR.pause=0; sessionTracker.pauseSession(); emergenceIndicators.record('pause_frequency'); characterStats.onPauseUsed(); dashboard.hide(); setPhase('paused'); }
     if ((e.key==='h'||e.key==='H') && !e.repeat) dashboard.toggle();
     if (e.key==='Shift' && !e.repeat) {
       const next = matrixActive === 'A' ? 'B' : 'A';
@@ -830,6 +872,7 @@ window.addEventListener('keydown', e => {
       if (UPG.freeze && UPG.freezeTimer<=0) {
         UPG.freezeTimer=2500; _showMsg('FREEZE ACTIVE!','#0088ff',50); burst(game,game.player.x,game.player.y,'#0088ff',20,4);
         strategicThinking.onFreezeUsed();  // Phase 9
+        characterStats.onFreezeUsed();    // Phase M5
         // Phase 9: empathy — stun enemies' behaviors
         if (game.enemies && game.enemies.length > 0) {
           const randEnemy = game.enemies[Math.floor(Math.random() * game.enemies.length)];
@@ -843,6 +886,7 @@ window.addEventListener('keydown', e => {
         if (!game.contZones) game.contZones=[];
         game.contZones.push({x:game.player.x,y:game.player.y,timer:240,maxTimer:240});
         strategicThinking.onContainmentZone();  // Phase 9
+        characterStats.onContainmentUsed();     // Phase M5
         _showMsg('CONTAINMENT ZONE','#00ffcc',38);
       } else _showMsg('NEED 2 ◆ FOR CONTAINMENT','#334455',28);
     }

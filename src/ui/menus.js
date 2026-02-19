@@ -166,6 +166,15 @@ export function drawPause(ctx, w, h, game, pauseIdx) {
   if (game) {
     ctx.fillStyle = '#223322'; ctx.font = '9px Courier New'; ctx.fillText(game.ds.name + '  ·  LEVEL ' + game.level, w / 2, h / 2 - 60);
     ctx.fillStyle = '#334455'; ctx.fillText(game.ds.narrative, w / 2, h / 2 - 46);
+  } else {
+    // Shooter mode pause
+    const ss = window._shooterState;
+    if (ss) {
+      ctx.fillStyle = '#ff6622'; ctx.shadowColor = '#ff6622'; ctx.shadowBlur = 6;
+      ctx.font = '9px Courier New'; ctx.fillText('SHOOTER ARENA  ·  WAVE ' + ss.wave, w / 2, h / 2 - 60);
+      ctx.shadowBlur = 0; ctx.fillStyle = '#664422';
+      ctx.fillText('SCORE: ' + ss.score + '  ·  HP: ' + ss.health, w / 2, h / 2 - 46);
+    }
   }
 
   // Phase 7: Session wellness display

@@ -8,26 +8,66 @@
 
 // ─── Tutorial hints (shown on first visit, by dreamscape index) ──────
 const TUTORIAL_HINTS = [
-  // 0: Void State
-  ['Move with WASD or Arrow Keys.', 'Collect ◈ PEACE tiles to advance.', 'Avoid red hazard tiles — they drain HP.'],
-  // 1: Mountain Dragon Realm
-  ['SHIFT toggles Matrix A/B. Matrix B (green) aids recovery.', 'Hold into a hazard tile for 1 second to pause and reconsider.', '◆ INSIGHT tiles restore energy — seek them.'],
-  // 2: Courtyard of Ojos
-  ['Consequence preview (ghost path) shows your next 3 steps.', 'Archetype ☆ tiles grant special powers — press J to activate.', 'ESC pauses anytime. You can always stop.'],
-  // 3: Leaping Field  (no hints — player is learning)
-  [],
-  // 4: Summit
-  [],
-  // 5: Neighborhood
-  [],
-  // 6: Modern Bedroom
-  [],
-  // 7: Aztec Chase
-  [],
-  // 8: Orb Escape
-  [],
-  // 9: Integration
-  ['You have reached Dreamscape Integration.', 'All systems are available — use them together.'],
+  // 0: Void State — introduce core controls
+  [
+    'Move with WASD or Arrow Keys. Collect ◈ PEACE tiles to fill your bar.',
+    'Avoid red/dark hazard tiles — they drain your HP. Green tiles restore it.',
+    'Press SHIFT to toggle Matrix A ↔ B. Matrix B (green glow) aids recovery.',
+  ],
+  // 1: Mountain Dragon Realm — introduce deeper mechanics
+  [
+    'Hold toward a hazard tile for ~1 second before stepping — this is intentional.',
+    '◆ INSIGHT tiles give tokens for the Upgrade Shop. Seek them!',
+    'Press J when an ARCHETYPE ☆ is active to unleash its power.',
+  ],
+  // 2: Courtyard of Ojos — preview + archetype + pause
+  [
+    'A GHOST PATH appears when you hold a direction key — see your next 3 steps.',
+    'ESC pauses anytime. Pause is always safe and encouraged.',
+    'The loop repeats until you find the door — look for the pattern.',
+  ],
+  // 3: Leaping Field — teleport + orb archetype
+  [
+    'TELEPORT ⇒ tiles jump you to a random empty spot — try them!',
+    'ORB ARCHETYPE (☆): press J to phase-walk through walls briefly.',
+    'ENERGY_NODE ✦ and BREATH_SYNC ≋ tiles restore energy — watch for them.',
+  ],
+  // 4: Summit — adaptive enemies + hidden tiles
+  [
+    'ADAPTIVE enemies learn your movement — vary your routes.',
+    'HIDDEN tiles reveal in Matrix A mode (SHIFT). They may hold secrets.',
+    'You are strong enough to reach the top. Pace yourself.',
+  ],
+  // 5: Neighborhood — capture zones + memory tiles
+  [
+    'CAPTURE ZONES appear around enemies — move away before the timer expires.',
+    'MEMORY · tiles (small dots) preserve your progress — collect them.',
+    'When overwhelmed: pause (ESC), breathe with B, then continue.',
+  ],
+  // 6: Modern Bedroom — cover + rapid spawn
+  [
+    'COVER ▪ tiles stun nearby enemies when you step on them. Use them!',
+    'RAPID SPAWN: stay mobile — standing still is riskier than moving.',
+    'PROTECTOR ARCHETYPE ☆: press J to release a shielding burst.',
+  ],
+  // 7: Aztec Chase — labyrinth enemies + traps
+  [
+    'LABYRINTH enemies patrol corridor walls — stay in open areas.',
+    'TRAPS × deal damage AND push you back. Step carefully near orange tiles.',
+    'The LABYRINTH SHIFTS over time — no single safe route. Adapt.',
+  ],
+  // 8: Orb Escape — wall phase event + scatter enemies
+  [
+    'WALL PHASE event temporarily makes walls passable — use that window!',
+    'SCATTER enemies move AWAY from you — herd them toward corners.',
+    'TELEPORT chains let you cross the grid quickly when surrounded.',
+  ],
+  // 9: Integration — all systems available
+  [
+    'Every system is available now — use them together.',
+    'H key opens the Integration Dashboard: all your stats at a glance.',
+    'SA · MCA · MNF · SC — the sovereignty is yours. Trust yourself.',
+  ],
 ];
 
 // ─── Campaign milestone narratives ───────────────────────────────────

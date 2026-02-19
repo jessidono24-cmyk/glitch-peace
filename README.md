@@ -61,6 +61,26 @@ Opens at `http://localhost:3000`
 
 **Target: 20,000+ lines** for complete vision
 
+### 🎮 Multiple Gameplay Modes (Planned)
+Transforming from single grid-based game to multidimensional platform:
+
+**Gameplay Modes:**
+- **Grid Mode** (Current) - Tactical tile-based movement
+- **Shooter Mode** (Next Priority) - Fast-paced action combat
+- **RPG Mode** - Deep narrative with dialogue and quests
+- **Constellation Mode** - Meditative puzzle patterns
+- **Platformer Mode** - Classic side-scrolling
+- **Rhythm Mode** - Music-based gameplay
+
+**Game Modes:**
+- **Campaign/Story** - Guided narrative journey
+- **Freeplay** - Unrestricted exploration
+- **Multiplayer** - Co-op and competitive
+- **Meditation** - Calm, mindful gameplay
+- **Challenge** - Mastery and leaderboards
+
+See **[GAMEPLAY_MODES.md](docs/GAMEPLAY_MODES.md)** for complete design
+
 ## Documentation
 
 ### Core Documents

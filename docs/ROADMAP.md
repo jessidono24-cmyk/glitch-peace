@@ -425,11 +425,90 @@ Create unified dashboard that synthesizes all systems into coherent whole.
 
 1. ✅ Folder structure created
 2. ✅ Documentation complete
-3. ⏳ Begin Phase 6: Learning systems
-   - Start with vocabulary-engine.js
-   - Test thoroughly
-   - Iterate based on feedback
-4. ⏳ Continue through phases sequentially
+3. ✅ Comprehensive research integrated
+4. ✅ Multiple gameplay modes designed
+5. ⏳ **Next Priority: Mode System Implementation**
+   - Create mode-manager.js
+   - Build mode switching UI
+   - Implement Shooter Mode (strongest scaffold)
+6. ⏳ Begin Phase 6: Learning systems
+7. ⏳ Continue through phases sequentially
+
+## Multiple Gameplay Modes Roadmap
+
+### Phase M1: Mode System Foundation (Week 1)
+Create modular system for switching between different gameplay modes.
+- [ ] Create `src/modes/mode-manager.js`
+- [ ] Define GameMode interface
+- [ ] Build mode selection UI
+- [ ] Test with existing Grid mode
+- [ ] Add seamless mode switching
+
+### Phase M2: Shooter Mode (Weeks 2-3) **HIGH PRIORITY**
+Fast-paced action mode as proof-of-concept and immediate variety.
+- [ ] Implement continuous movement system
+- [ ] Create projectile combat mechanics
+- [ ] Convert enemies to shooter format
+- [ ] Adapt tiles to power-ups
+- [ ] Balance difficulty and pacing
+- [ ] Polish and test thoroughly
+
+**Why Shooter Next?**
+- Reuses existing assets (enemies, tiles)
+- Simpler than RPG (no dialogue, quests)
+- Fast development cycle
+- Tests mode system thoroughly
+- Provides immediate gameplay variety
+
+### Phase M3: Campaign Structure (Weeks 4-5)
+Create narrative backbone that ties all modes together.
+- [ ] Write narrative arc through dreamscapes
+- [ ] Design progression system
+- [ ] Create cutscenes and interludes
+- [ ] Integrate tutorial elements
+- [ ] Implement mode unlocking system
+- [ ] Add multiple endings
+
+### Phase M4: Freeplay Mode (Week 5)
+Unrestricted access to all content for exploration.
+- [ ] Build customization options
+- [ ] Create configuration UI
+- [ ] Add preset system
+- [ ] Save/load custom setups
+
+### Phase M5: RPG Mode (Weeks 6-9)
+Deep narrative mode with character development.
+- [ ] Create stats and progression system
+- [ ] Implement dialogue engine
+- [ ] Build quest framework
+- [ ] Design NPC system
+- [ ] Add inventory management
+- [ ] Create combat system (turn-based or real-time)
+
+### Phase M6: Constellation Mode (Weeks 10-11)
+Meditative puzzle mode for pattern recognition.
+- [ ] Implement star connection mechanics
+- [ ] Create puzzle generation system
+- [ ] Design pattern revelation mechanics
+- [ ] Add art generation features
+- [ ] Integrate sharing capabilities
+
+### Phase M7: Additional Modes (Weeks 12-14)
+Expand gameplay diversity with more modes.
+- [ ] Platformer implementation
+- [ ] Rhythm system integration
+- [ ] Meditation mode
+- [ ] Challenge mode with leaderboards
+
+### Phase M8: Multiplayer Infrastructure (Weeks 15-20)
+Social and collaborative gameplay.
+- [ ] Design network architecture
+- [ ] Build lobby system
+- [ ] Implement co-op mechanics
+- [ ] Create competitive modes
+- [ ] Add synchronization system
+
+See **[GAMEPLAY_MODES.md](docs/GAMEPLAY_MODES.md)** for complete design details.
 
 ---
 

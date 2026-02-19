@@ -25,6 +25,8 @@ import { temporalSystem } from './systems/temporal-system.js';
 import { ImpulseBuffer } from './recovery/impulse-buffer.js';
 import { ConsequencePreview } from './recovery/consequence-preview.js';
 import { sfxManager } from './audio/sfx-manager.js';
+import { ModeManager } from './modes/mode-manager.js';
+import { GridMode } from './modes/grid-mode.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -73,20 +75,32 @@ window._consequencePreview = consequencePreview;
 const keys = new Set();
 window._keys = keys;
 
-// ─── Stars / visions ────────────────────────────────────────────────────
+// ─── Stars / visions (shared with modes) ────────────────────────────────
+// Note: GridMode manages its own stars/visions, these are kept for menu screens
+let backgroundStars = [];
+let visions = [];
+let hallucinations = [];
+let glitchFrames = 0, glitchTimer = 500;
+let anomalyActive = false, anomalyData = { row:-1, col:-1, t:0 };
+let interludeState = { text:'', subtext:'', timer:0, ds:null };
+
 function initStars(w, h) {
   backgroundStars = [];
   for (let i = 0; i < 30; i++)
     backgroundStars.push({ x:Math.random()*w, y:Math.random()*h, r:0.5+Math.random()*1.5, a:Math.random()*0.15, phase:Math.random()*Math.PI*2 });
 }
 
-function spawnVisions(w, h) {
-  visions = [];
-  for (let i = 0; i < 5; i++)
-    visions.push({ text:pick(VISION_WORDS), x:40+Math.random()*(w-80), y:90+Math.random()*(h-140),
-      alpha:0, targetAlpha:0.04+Math.random()*0.07, life:200+rnd(500), maxLife:700,
-      dx:(Math.random()-0.5)*0.05, dy:-0.03-Math.random()*0.04 });
-}
+// ─── Mode Manager (Phase M1) ─────────────────────────────────────────────
+const sharedSystems = {
+  emotionalField,
+  temporalSystem,
+  sfxManager,
+  impulseBuffer,
+  consequencePreview
+};
+const modeManager = new ModeManager(sharedSystems);
+modeManager.registerMode('grid', GridMode);
+window._modeManager = modeManager;
 
 // ─── Helpers shared across systems ──────────────────────────────────────
 function _showMsg(text, color, timer) { if (game) { game.msg = text; game.msgColor = color; game.msgTimer = timer; } }
@@ -165,10 +179,23 @@ function startGame(dreamIdx) {
   impulseBuffer.reset();
   consequencePreview.deactivate();
   sfxManager.resume(); // Resume audio context on user interaction
+  
+  // Update shared systems reference
+  sharedSystems.emotionalField = emotionalField;
+  
+  // Initialize grid mode through ModeManager
+  resizeCanvas();
   CFG.dreamIdx = dreamIdx || 0;
   window._insightTokens = 0; window._dreamIdx = CFG.dreamIdx;
-  game = initGame(CFG.dreamIdx, 0, 0, undefined);
-  window._game = game;
+  
+  modeManager.switchMode('grid', {
+    dreamIdx: CFG.dreamIdx,
+    prevScore: 0,
+    prevLevel: 0,
+    prevHp: undefined
+  });
+  
+  game = window._game;  // GridMode exposes game to window
   setPhase('playing'); lastMove = 0; setMatrixHoldTime(0);
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
@@ -218,79 +245,52 @@ function loop(ts) {
   if (phase === 'paused')      { drawPause(ctx, w, h, game, CURSOR.pause); animId=requestAnimationFrame(loop); return; }
   if (phase === 'interlude')   { drawInterlude(ctx, w, h, interludeState, ts); interludeState.timer--; if (interludeState.timer <= 0 && phase === 'interlude') setPhase('playing'); animId=requestAnimationFrame(loop); return; }
 
-  // ── Playing ──────────────────────────────────────────────────────────
-  const MOVE_DELAY = game.slowMoves ? UPG.moveDelay * 1.5 : UPG.moveDelay;
-  const DIRS = {
-    ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1],
-    w:[-1,0],s:[1,0],a:[0,-1],d:[0,1],W:[-1,0],S:[1,0],A:[0,-1],D:[0,1],
-  };
-  if (ts - lastMove > MOVE_DELAY) {
-    for (const [k,[dy,dx]] of Object.entries(DIRS)) {
-      if (keys.has(k)) {
-        tryMove(game, dy, dx, matrixActive, nextDreamscape, _showMsg, insightTokens,
-          (n) => { while (insightTokens < n) addInsightToken(); window._insightTokens = insightTokens; });
-        lastMove = ts; break;
-      }
+  // ── Playing (delegated to ModeManager) ──────────────────────────────────
+  const stateChange = modeManager.update(dt, keys, matrixActive, ts);
+  
+  // Handle state changes from mode
+  if (stateChange) {
+    if (stateChange.phase === 'dead') {
+      game = window._game;
+      saveScore(game.score, game.level, game.ds);
+      setPhase('dead');
+      animId = requestAnimationFrame(loop);
+      return;
+    } else if (stateChange.phase === 'interlude') {
+      interludeState = stateChange.data.interludeState;
+      setPhase('interlude');
+      // Schedule next dreamscape
+      setTimeout(() => {
+        const g = window._game;
+        const nextIdx = CFG.dreamIdx;
+        resizeCanvas();
+        modeManager.switchMode('grid', {
+          dreamIdx: nextIdx,
+          prevScore: g.score + 400 + g.level * 60,
+          prevLevel: g.level,
+          prevHp: g.hp
+        });
+        game = window._game;
+        game.msg = DREAMSCAPES[nextIdx].name;
+        game.msgColor = '#ffdd00';
+        game.msgTimer = 90;
+        if (phase === 'interlude') setPhase('playing');
+      }, 3600);
+      animId = requestAnimationFrame(loop);
+      return;
     }
   }
-
-  // ── Emotional field tick ──────────────────────────────────────────────
-
-  // Temporal system modifiers (T2)
-  const tmods = temporalSystem.getModifiers();
-  const coherenceMul = (matrixActive === 'B' ? 1.2 : 0.7) * tmods.coherenceMul;
-  emotionalField.decay(dt / 1000 * coherenceMul);
-  window._tmods = tmods;   // expose for renderer without circular import
-  UPG.emotion = emotionalField.getDominantEmotion().id;          // keep old string for renderer compat
-  game.slowMoves = (UPG.emotion === 'hopeless' || UPG.emotion === 'despair');
-  if (game) {
-    game.temporalEnemyMul = tmods.enemyMul;
-    game.insightMul = tmods.insightMul;
-  }
-
-  // ── Realm inference (E4) ────────────────────────────────────────────
-  if (window._emotionalField) {
-    const dist = window._emotionalField.getDistortion?.() ?? 0.45;
-    const val  = window._emotionalField.getValence?.()    ?? 0;
-    const normV = (1 - val) / 2;
-    let pd = dist * 0.7 + normV * 0.3;
-    if (matrixActive === 'A') pd = Math.min(1, pd * 1.2);
-    else                      pd = pd * 0.85;
-    setPurgDepth(Math.max(0, Math.min(1, pd)));
-    window._purgDepth = purgDepth;   // expose for renderer without import
-  }
-
-  // purgDepth modifiers on game object (read by player.js tile effects)
-  if (game) {
-    game.purgDepth     = purgDepth;
-    game.dmgMul        = purgDepth >= 0.8 ? 1.30
-                       : purgDepth >= 0.5 ? 1.15
-                       : 1.0;
-    game.healMul       = purgDepth <= 0.2 ? 1.25
-                       : purgDepth <= 0.35 ? 1.10
-                       : 1.0;
-  }
-
-  addMatrixHoldTime(dt);
-  if (matrixActive==='B' && matrixHoldTime>4000 && Math.random()<0.0002*dt) game.hp=Math.min(UPG.maxHp,game.hp+1);
-  if (matrixActive==='A' && matrixHoldTime>2500 && Math.random()<0.0003*dt) game.hp=Math.max(0,game.hp-1);
-
-  glitchTimer -= dt;
-  if (glitchTimer <= 0) { glitchFrames = 2 + rnd(4); glitchTimer = 500 + rnd(700); }
-  if (anomalyActive) { anomalyData.t--; if (anomalyData.t <= 0) anomalyActive = false; }
-
-  game.environmentTimer -= dt;
-  if (game.environmentTimer <= 0) { game.environmentTimer = 900 + rnd(700); if (Math.random()<0.6) triggerEnvironmentEvent(game); }
-
-  stepTileSpread(game, dt);
-  stepEnemies(game, dt, keys, matrixActive, hallucinations, _showMsg, setEmotion);
-
-  if (game.hp <= 0) {
-    saveScore(game.score, game.level, game.ds);
-    setPhase('dead'); animId=requestAnimationFrame(loop); return;
-  }
-
-  drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, hallucinations, anomalyActive, anomalyData, glitchFrames, DPR);
+  
+  // Render through ModeManager
+  modeManager.render(ctx, ts, {
+    DPR,
+    backgroundStars,
+    visions,
+    hallucinations,
+    anomalyActive,
+    anomalyData,
+    glitchFrames
+  });
   animId = requestAnimationFrame(loop);
 }
 
@@ -355,42 +355,10 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
   if (phase === 'playing') {
-    if (e.key==='Escape') { CURSOR.pause=0; setPhase('paused'); }
-    if (e.key==='Shift' && !e.repeat) {
-      const next = matrixActive === 'A' ? 'B' : 'A';
-      setMatrix(next); setMatrixHoldTime(0);
-      sfxManager.playMatrixSwitch(next === 'A');
-      const lbl = next==='A'?'MATRIX·A  ⟨ERASURE⟩':'MATRIX·B  ⟨COHERENCE⟩';
-      const col = next==='A'?'#ff0055':'#00ff88';
-      _showMsg(lbl, col, 55);
-      if (CFG.particles) burst(game, game.player.x, game.player.y, col, 22, 4);
-    }
-    if ((e.key==='j'||e.key==='J') && !e.repeat) {
-      if (game.archetypeActive) {
-        executeArchetypePower(game);
-        sfxManager.playArchetypePower();
-      } else if (UPG.temporalRewind && UPG.rewindBuffer.length>0) {
-        executeArchetypePower(game);
-        sfxManager.playArchetypePower();
-      } else {
-        _showMsg('NO ARCHETYPE ACTIVE', '#334455', 25);
-      }
-    }
-    if ((e.key==='r'||e.key==='R') && !e.repeat) {
-      if (UPG.glitchPulse && UPG.glitchPulseCharge>=100) triggerGlitchPulse(game, _showMsg);
-      else if (UPG.glitchPulse) _showMsg('CHARGING… '+Math.round(UPG.glitchPulseCharge)+'%','#660088',22);
-      else _showMsg('BUY GLITCH PULSE IN UPGRADES','#334455',28);
-    }
-    if ((e.key==='q'||e.key==='Q') && !e.repeat) {
-      if (UPG.freeze && UPG.freezeTimer<=0) { UPG.freezeTimer=2500; _showMsg('FREEZE ACTIVE!','#0088ff',50); burst(game,game.player.x,game.player.y,'#0088ff',20,4); }
-    }
-    if ((e.key==='c'||e.key==='C') && !e.repeat) {
-      if (insightTokens>=2) {
-        spendInsightTokens(2); window._insightTokens=insightTokens;
-        if (!game.contZones) game.contZones=[];
-        game.contZones.push({x:game.player.x,y:game.player.y,timer:240,maxTimer:240});
-        _showMsg('CONTAINMENT ZONE','#00ffcc',38);
-      } else _showMsg('NEED 2 ◆ FOR CONTAINMENT','#334455',28);
+    // Try mode-specific input handling first
+    if (!modeManager.handleInput(e.key, 'keydown', e)) {
+      // Fallback to global playing phase inputs
+      if (e.key==='Escape') { CURSOR.pause=0; setPhase('paused'); }
     }
   }
   const prevent = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '];

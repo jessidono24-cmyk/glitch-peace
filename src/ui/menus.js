@@ -13,31 +13,76 @@ function stars(ctx, backgroundStars, ts) {
   ctx.globalAlpha = 1;
 }
 
+// ─── Mode select definitions ──────────────────────────────────────────
+export const GAME_MODES = [
+  { id: 'grid',          label: '🗂️  GRID MODE',          sub: 'tactical tile navigation · original',         color: '#00ff88' },
+  { id: 'shooter',       label: '🔫  SHOOTER MODE',        sub: 'fast-paced arena combat · reflex',            color: '#ff6622' },
+  { id: 'constellation', label: '✦   CONSTELLATION MODE',  sub: 'connect star nodes · meditative puzzle  M6',  color: '#aaddff' },
+  { id: 'meditation',    label: '🌸  MEDITATION MODE',     sub: 'breathing & awareness · no enemies  M7',      color: '#88ffcc' },
+  { id: 'coop',          label: '🤝  CO-OP MODE',          sub: 'two-player journey · shared dreamscape  M8',  color: '#ffcc44' },
+  { id: 'challenge',     label: '📅  DAILY CHALLENGE',     sub: 'new seeded run every 24 hours',               color: '#cc88ff' },
+];
+
+export function drawModeSelect(ctx, w, h, modeIdx, backgroundStars, ts) {
+  ctx.fillStyle = '#02020a'; ctx.fillRect(0, 0, w, h);
+  for (let y2 = 0; y2 < h; y2 += 4) { ctx.fillStyle = 'rgba(0,0,0,0.08)'; ctx.fillRect(0, y2, w, 1); }
+  if (backgroundStars) stars(ctx, backgroundStars, ts);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 18;
+  ctx.font = 'bold 20px Courier New'; ctx.fillText('SELECT GAME MODE', w / 2, 52); ctx.shadowBlur = 0;
+  ctx.fillStyle = '#223322'; ctx.font = '9px Courier New';
+  ctx.fillText('choose your path through the dreamscapes', w / 2, 70);
+
+  const rowH = 70, startY = 100;
+  GAME_MODES.forEach((mode, i) => {
+    const sel  = i === modeIdx;
+    const ry   = startY + i * rowH;
+    const col  = mode.color;
+    if (sel) {
+      ctx.fillStyle = col + '18'; ctx.fillRect(w / 2 - 200, ry - 12, 400, 52);
+      ctx.strokeStyle = col + '66'; ctx.lineWidth = 1; ctx.strokeRect(w / 2 - 200, ry - 12, 400, 52);
+    }
+    ctx.fillStyle = sel ? col : '#2a3a2a';
+    ctx.shadowColor = sel ? col : 'transparent'; ctx.shadowBlur = sel ? 10 : 0;
+    ctx.font = sel ? 'bold 14px Courier New' : '12px Courier New';
+    ctx.fillText(mode.label, w / 2, ry + 8);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = sel ? '#445566' : '#1a2a1a'; ctx.font = '9px Courier New';
+    ctx.fillText(mode.sub, w / 2, ry + 26);
+  });
+
+  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New';
+  ctx.fillText('↑↓ navigate  ·  ENTER select mode  ·  ESC back', w / 2, h - 20);
+  ctx.textAlign = 'left';
+}
+
 export function drawTitle(ctx, w, h, backgroundStars, ts, menuIdx, gameMode) {
   ctx.fillStyle = '#02020a'; ctx.fillRect(0, 0, w, h);
   for (let y = 0; y < h; y += 4) { ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(0, y, w, 1); }
   stars(ctx, backgroundStars, ts);
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#0a0a20'; ctx.font = '8px Courier New'; ctx.fillText('A BEING NAVIGATES THE DREAMSCAPES', w / 2, h / 2 - 140);
+  ctx.fillStyle = '#0a0a20'; ctx.font = '8px Courier New'; ctx.fillText('A BEING NAVIGATES THE DREAMSCAPES', w / 2, h / 2 - 160);
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 32;
-  ctx.font = 'bold 36px Courier New'; ctx.fillText('GLITCH·PEACE', w / 2, h / 2 - 100); ctx.shadowBlur = 0;
-  ctx.fillStyle = '#0a1a0a'; ctx.font = '9px Courier New'; ctx.fillText('v4  ·  dreamscape consciousness simulation', w / 2, h / 2 - 78);
+  ctx.font = 'bold 36px Courier New'; ctx.fillText('GLITCH·PEACE', w / 2, h / 2 - 120); ctx.shadowBlur = 0;
+  ctx.fillStyle = '#0a1a0a'; ctx.font = '9px Courier New'; ctx.fillText('v4  ·  dreamscape consciousness simulation', w / 2, h / 2 - 98);
   // Mode indicator
-  const modeLabel = (gameMode === 'shooter') ? '[ SHOOTER MODE ]' : '[ GRID MODE ]';
-  const modeColor = (gameMode === 'shooter') ? '#ff6622' : '#00ff88';
+  const MODE_COLORS = { grid:'#00ff88', shooter:'#ff6622', constellation:'#aaddff', meditation:'#88ffcc', coop:'#ffcc44', challenge:'#cc88ff' };
+  const MODE_LABELS = { grid:'GRID', shooter:'SHOOTER', constellation:'CONSTELLATION', meditation:'MEDITATION', coop:'CO-OP', challenge:'CHALLENGE' };
+  const modeColor = MODE_COLORS[gameMode] || '#00ff88';
+  const modeLabel = '[ ' + (MODE_LABELS[gameMode] || gameMode.toUpperCase()) + ' MODE ]';
   ctx.fillStyle = modeColor; ctx.shadowColor = modeColor; ctx.shadowBlur = 8;
-  ctx.font = '10px Courier New'; ctx.fillText(modeLabel + '  ·  M to switch', w / 2, h / 2 - 60); ctx.shadowBlur = 0;
-  const menuTop = h / 2 - 42;
+  ctx.font = '10px Courier New'; ctx.fillText(modeLabel, w / 2, h / 2 - 78); ctx.shadowBlur = 0;
+  const menuTop = h / 2 - 58;
   MAIN_MENU.forEach((opt, i) => {
-    const sel = i === menuIdx, y = menuTop + i * 36;
+    const sel = i === menuIdx, y = menuTop + i * 32;
     if (sel) {
-      ctx.fillStyle = 'rgba(0,255,136,0.07)'; ctx.fillRect(w / 2 - 130, y - 19, 260, 28);
-      ctx.strokeStyle = 'rgba(0,255,136,0.28)'; ctx.strokeRect(w / 2 - 130, y - 19, 260, 28);
+      ctx.fillStyle = 'rgba(0,255,136,0.07)'; ctx.fillRect(w / 2 - 130, y - 18, 260, 26);
+      ctx.strokeStyle = 'rgba(0,255,136,0.28)'; ctx.strokeRect(w / 2 - 130, y - 18, 260, 26);
     }
     ctx.fillStyle = sel ? '#00ff88' : '#2a3a2a'; ctx.shadowColor = sel ? '#00ff88' : 'transparent'; ctx.shadowBlur = sel ? 8 : 0;
-    ctx.font = sel ? 'bold 14px Courier New' : '12px Courier New'; ctx.fillText(opt, w / 2, y); ctx.shadowBlur = 0;
+    ctx.font = sel ? 'bold 13px Courier New' : '11px Courier New'; ctx.fillText(opt, w / 2, y); ctx.shadowBlur = 0;
   });
-  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New'; ctx.fillText('↑↓ navigate  ·  ENTER select  ·  M toggle mode', w / 2, h - 20);
+  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New'; ctx.fillText('↑↓ navigate  ·  ENTER select', w / 2, h - 20);
   ctx.textAlign = 'left';
 }
 
@@ -751,5 +796,78 @@ export function drawHowToPlay(ctx, w, h) {
   ctx.fillText('All data stays local · No shame spirals · Pause any time · Your identity is always safe.', w / 2, h - 30);
   ctx.fillStyle = '#131328'; ctx.font = '9px Courier New';
   ctx.fillText('ENTER / ESC  ·  return to title', w / 2, h - 16);
+  ctx.textAlign = 'left';
+}
+
+// ─── Achievement popup overlay (drawn over any phase) ──────────────────
+export function drawAchievementPopup(ctx, w, h, popup, ts) {
+  if (!popup) return;
+  const alpha  = Math.min(1, popup.progress);
+  const slide  = Math.min(1, popup.progress);
+  const panelW = 280, panelH = 60;
+  const px     = w - panelW - 12;
+  const py     = 12 + (1 - slide) * -70;
+
+  ctx.globalAlpha = alpha * 0.95;
+  // Panel background
+  ctx.fillStyle = '#0a0a1a';
+  ctx.beginPath(); ctx.roundRect(px, py, panelW, panelH, 8); ctx.fill();
+  ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(px + 0.5, py + 0.5, panelW - 1, panelH - 1, 8); ctx.stroke();
+
+  // Icon
+  ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 12;
+  ctx.font = '22px Courier New'; ctx.textAlign = 'left';
+  ctx.fillText(popup.icon || '🏆', px + 12, py + 38);
+  ctx.shadowBlur = 0;
+
+  // Labels
+  ctx.fillStyle = '#ffdd44'; ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'left';
+  ctx.fillText('ACHIEVEMENT UNLOCKED', px + 44, py + 18);
+  ctx.fillStyle = '#00ff88'; ctx.font = 'bold 12px Courier New';
+  ctx.fillText(popup.name, px + 44, py + 34);
+  ctx.fillStyle = '#445566'; ctx.font = '8px Courier New';
+  ctx.fillText(popup.desc || '', px + 44, py + 48);
+
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'left';
+}
+
+// ─── Achievements screen ──────────────────────────────────────────────
+export function drawAchievements(ctx, w, h, achievementSystem, scrollOffset) {
+  ctx.fillStyle = '#02020a'; ctx.fillRect(0, 0, w, h);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffdd44'; ctx.shadowColor = '#ffdd44'; ctx.shadowBlur = 16;
+  ctx.font = 'bold 20px Courier New';
+  ctx.fillText('ACHIEVEMENTS', w / 2, 46);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#445566'; ctx.font = '10px Courier New';
+  ctx.fillText(achievementSystem.unlockedCount + ' / ' + achievementSystem.totalCount + ' unlocked', w / 2, 64);
+
+  const all = (window._achieveDefs && window._achieveDefs.ACHIEVEMENT_DEFS) || [];
+  const visible = Math.min(all.length, 8);
+  const startI  = scrollOffset || 0;
+  for (let i = 0; i < visible && startI + i < all.length; i++) {
+    const def = all[startI + i];
+    const unlocked = achievementSystem.isUnlocked(def.id);
+    const y = 90 + i * 52;
+    ctx.fillStyle = unlocked ? 'rgba(0,255,136,0.06)' : 'rgba(255,255,255,0.02)';
+    ctx.fillRect(w / 2 - 200, y - 12, 400, 42);
+    ctx.strokeStyle = unlocked ? 'rgba(0,255,136,0.25)' : 'rgba(255,255,255,0.06)';
+    ctx.strokeRect(w / 2 - 200, y - 12, 400, 42);
+    ctx.fillStyle = unlocked ? '#ffdd44' : '#334455'; ctx.font = '16px Courier New'; ctx.textAlign = 'left';
+    ctx.fillText(def.icon || '?', w / 2 - 188, y + 14);
+    ctx.fillStyle = unlocked ? '#00ff88' : '#334455'; ctx.font = 'bold 11px Courier New';
+    ctx.fillText(unlocked ? def.name : (def.hidden ? '???' : def.name), w / 2 - 162, y + 6);
+    ctx.fillStyle = unlocked ? '#445566' : '#223322'; ctx.font = '8px Courier New';
+    ctx.fillText(unlocked ? def.desc : (def.hidden ? 'Hidden achievement' : def.desc), w / 2 - 162, y + 20);
+    if (unlocked) {
+      ctx.fillStyle = '#ffdd44'; ctx.textAlign = 'right'; ctx.font = '8px Courier New';
+      ctx.fillText('✓', w / 2 + 188, y + 14);
+    }
+  }
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New';
+  ctx.fillText('↑↓ scroll  ·  ENTER / ESC back', w / 2, h - 20);
   ctx.textAlign = 'left';
 }

@@ -111,3 +111,4 @@ Peace nodes per level: `fibonacci(level + 2)` → 3, 5, 8, 13, 21, 34…
 5. **Hearth is always reachable** — pause anytime, save on pause, no data loss
 6. **Embodiment maximized** — learning through body, action, and experience (see EMBODIMENT.md)
 7. **Effortless by design** — align with natural cognition, not against it (see EFFORTLESS_LEARNING.md)
+8. **Sovereign codex compliance** — all research and features respect individual sovereignty (see SOVEREIGN_CODEX.md)

@@ -65,6 +65,7 @@ Opens at `http://localhost:3000`
 
 ### Core Documents
 - **[CANON.md](docs/CANON.md)** - Design laws and source of truth
+- **[SOVEREIGN_CODEX.md](docs/SOVEREIGN_CODEX.md)** - Ethical framework for all research
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and vision
 - **[ROADMAP.md](docs/ROADMAP.md)** - Development plan (Phases 6-11)
 - **[QUICKSTART.md](docs/QUICKSTART.md)** - Getting started guide
@@ -75,6 +76,12 @@ Opens at `http://localhost:3000`
 - **[COGNITIVE_ARCHITECTURE.md](docs/COGNITIVE_ARCHITECTURE.md)** - Information processing model
 - **[EFFORTLESS_LEARNING.md](docs/EFFORTLESS_LEARNING.md)** - Natural learning design
 - **[PSYCHOLOGY_FOUNDATIONS.md](docs/PSYCHOLOGY_FOUNDATIONS.md)** - Psychological & neuroscience research
+
+### Multidimensional Research
+- **[DREAM_YOGA_LUCID_DREAMING.md](docs/research/DREAM_YOGA_LUCID_DREAMING.md)** - Dream practices & lucidity science
+- **[QUANTUM_CONSCIOUSNESS.md](docs/research/QUANTUM_CONSCIOUSNESS.md)** - Quantum physics & consciousness
+- **[SACRED_COSMOLOGY.md](docs/research/SACRED_COSMOLOGY.md)** - Global wisdom traditions
+- **[CREATIVITY_CHANNEL.md](docs/research/CREATIVITY_CHANNEL.md)** - Creativity & consciousness channeling
 - **[RESEARCH_INTEGRATION.md](docs/RESEARCH_INTEGRATION.md)** - Research file management
 
 ### Development Guides

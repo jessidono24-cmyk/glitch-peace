@@ -643,7 +643,7 @@ export function drawHowToPlay(ctx, w, h) {
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 18;
   ctx.font = 'bold 22px Courier New'; ctx.fillText('HOW TO PLAY', w / 2, 40); ctx.shadowBlur = 0;
   ctx.fillStyle = '#1a3a1a'; ctx.font = '9px Courier New';
-  ctx.fillText('a consciousness engine disguised as a tile game  ·  18 dreamscapes · 19 play modes', w / 2, 56);
+  ctx.fillText('a consciousness engine disguised as a tile game  ·  18 dreamscapes · 21 play modes · gamepad supported', w / 2, 56);
 
   // ── Objective ─────────────────────────────────────────────────────────
   ctx.fillStyle = '#00cc77'; ctx.font = 'bold 11px Courier New'; ctx.fillText('OBJECTIVE', w / 2, 78);
@@ -703,7 +703,7 @@ export function drawHowToPlay(ctx, w, h) {
     ['SHIFT',        'Switch Matrix A ↔ B',  'H',     'Toggle dashboard'],
     ['J',            'Archetype power',       'R',     'Glitch Pulse (charged)'],
     ['Q',            'Freeze enemies',        'C',     'Containment zone (2◆)'],
-    ['X',            'Transmute (Alchemist/Ritual)', '  ',    ''],
+    ['X',            'Transmute (Alchemist/Ritual)', 'Gamepad', 'Left stick=move  A=arch  Y=pulse  LB=freeze'],
   ];
   CONTROLS_HELP.forEach(([k1, v1, k2, v2], i) => {
     const cy2 = ctrlY + 16 + i * 18;

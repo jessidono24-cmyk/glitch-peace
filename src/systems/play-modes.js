@@ -158,6 +158,22 @@ export const PLAY_MODES = {
     config: { peaceMul: 1.4, hazardMul: 0.3, insightMul: 2.2, scoreMul: 1.6, enemySpeed: 0.5, timeLimit: null },
     mechanics: { enemyBehavior: 'wander', zenMode: false, moveLimit: null, reverseMode: false, autoHeal: 0, slowMul: 0.7, ritual_space: true, alchemist: true },
   },
+
+  // 20. NIGHTMARE — Maximum difficulty, no mercy
+  nightmare: {
+    id: 'nightmare', name: 'Nightmare', emoji: '🌑',
+    desc: 'Maximum intensity — 2× damage, fast predictive enemies, no healing from peace, max score reward',
+    config: { peaceMul: 0.4, hazardMul: 2.0, insightMul: 1.0, scoreMul: 5.0, enemySpeed: 1.65, timeLimit: null },
+    mechanics: { enemyBehavior: 'predictive', zenMode: false, moveLimit: null, reverseMode: false, autoHeal: 0, slowMul: 1.0, nightmare: true },
+  },
+
+  // 21. RHYTHM — Beat-synchronised movement scoring
+  rhythm: {
+    id: 'rhythm', name: 'Rhythm Flow', emoji: '🎵',
+    desc: 'Move in sync with the beat for bonus score — 80 BPM pulse, on-beat movement ×2 score',
+    config: { peaceMul: 1.3, hazardMul: 0.8, insightMul: 1.5, scoreMul: 1.8, enemySpeed: 0.9, timeLimit: null },
+    mechanics: { enemyBehavior: 'patrol', zenMode: false, moveLimit: null, reverseMode: false, autoHeal: 0, slowMul: 1.0, rhythm: true },
+  },
 };
 
 // Ordered list for options cycling
@@ -338,6 +354,26 @@ export function applyPlayMode(game, modeId) {
     game.playModeLabel = '🕯️  RITUAL SPACE  ·  somatic · alchemical · seeds ×2';
     // Double element seed yield flag (checked in main.js during tile step)
     game.ritualSeedMultiplier = 2;
+  }
+
+  // ── Nightmare: ultra-hard — scale spread timer, reinforce enemy count ──
+  if (mech.nightmare && game.grid) {
+    // Halve spread timer so DESPAIR/HOPELESS spread twice as fast
+    game.spreadTimer = 1000;
+    // Peace tiles don't heal in nightmare mode
+    game.nightmareMode = true;
+    game.playModeLabel = '🌑  NIGHTMARE  ·  no mercy · maximum intensity';
+  }
+
+  // ── Rhythm: seed beat state for on-beat scoring bonus ──────────────────
+  if (mech.rhythm) {
+    // 80 BPM = 750ms per beat
+    game.rhythmBpm     = 80;
+    game.rhythmBeatMs  = 750;
+    game.rhythmTimer   = 750; // countdown to next beat
+    game.rhythmWindow  = 140; // ±140ms counts as "on beat"
+    game.rhythmStreak  = 0;
+    game.playModeLabel = '🎵  RHYTHM FLOW  ·  move on the beat · bonus ×2';
   }
 
   return game;

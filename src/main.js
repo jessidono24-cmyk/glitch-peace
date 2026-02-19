@@ -380,7 +380,7 @@ function nextDreamscape() {
   const nextGame = initGame(nextIdx, g.score + 400 + g.level * 60, g.level, g.hp);
   nextGame.msg = DREAMSCAPES[nextIdx].name; nextGame.msgColor = '#ffdd00'; nextGame.msgTimer = 90;
 
-  // Boss spawn: integration/ancient_structure/void_nexus get bosses
+  // Boss spawn: integration/ancient_structure/void_nexus/summit get bosses
   if (DREAMSCAPES[nextIdx].id === 'integration' && !nextGame.boss) {
     bossSystem.spawnBossForGame(nextGame, 'integration_master');
     sfxManager.playBossEnter();
@@ -389,6 +389,9 @@ function nextDreamscape() {
     sfxManager.playBossEnter();
   } else if (DREAMSCAPES[nextIdx].id === 'void_nexus' && !nextGame.boss) {
     bossSystem.spawnBossForGame(nextGame, 'fear_guardian');
+    sfxManager.playBossEnter();
+  } else if (DREAMSCAPES[nextIdx].id === 'summit' && nextGame.level >= 6 && !nextGame.boss) {
+    bossSystem.spawnBossForGame(nextGame, 'void_keeper');
     sfxManager.playBossEnter();
   }
 
@@ -437,6 +440,7 @@ function buyUpgrade(id) {
 function loop(ts) {
   const dt = Math.min(ts - prevTs, 100); prevTs = ts; // cap at 100 ms to absorb tab-switch spikes
   const w = CW(), h = CH();
+  pollGamepad(); // Controller support — runs every frame
 
   if (phase === 'onboarding')  { drawOnboarding(ctx, w, h, onboardState); animId=requestAnimationFrame(loop); return; }
   if (phase === 'langopts')    { drawLanguageOptions(ctx, w, h, langOptState); animId=requestAnimationFrame(loop); return; }
@@ -496,6 +500,20 @@ function loop(ts) {
       game.speedrunTimer = 0; game.speedrunActive = false;
       game.hp = 0; // end run
     }
+  }
+
+  // ── Play Mode: Rhythm beat tracker ──────────────────────────────────
+  if (game.rhythmTimer !== undefined) {
+    game.rhythmTimer -= dt;
+    if (game.rhythmTimer <= 0) {
+      game.rhythmTimer = game.rhythmBeatMs;
+      game.rhythmBeat = true; // pulse flag
+      window._beatPulse = 1.0;
+    } else {
+      game.rhythmBeat = false;
+      window._beatPulse = Math.max(0, (window._beatPulse || 0) - dt / 200);
+    }
+    window._rhythmTimeToNext = game.rhythmTimer;
   }
 
   // ── Play Mode: Zen auto-heal ─────────────────────────────────────────
@@ -621,8 +639,26 @@ function loop(ts) {
           game.hp = 0; // end run
         }
       }
+      // Play Mode: Rhythm on-beat bonus
+      if (game.rhythmTimer !== undefined) {
+        const RHYTHM_BASE_BONUS = 50, RHYTHM_MAX_STREAK = 8;
+        const distToNext = game.rhythmTimer, distToPrev = game.rhythmBeatMs - game.rhythmTimer;
+        const onBeat = distToNext < game.rhythmWindow || distToPrev < game.rhythmWindow;
+        if (onBeat) {
+          game.rhythmStreak = (game.rhythmStreak || 0) + 1;
+          const bonus = Math.round(RHYTHM_BASE_BONUS * Math.min(game.rhythmStreak, RHYTHM_MAX_STREAK));
+          game.score += bonus;
+          _showMsg('🎵 ON BEAT ×' + game.rhythmStreak + ' +' + bonus, '#ffcc00', 30);
+          window._beatPulse = 1.0;
+        } else {
+          game.rhythmStreak = 0;
+        }
+      }
+      const _hpBeforeMove = game.hp;
       tryMove(game, dy, dx, matrixActive, nextDreamscape, _showMsg, insightTokens,
         (n) => { while (insightTokens < n) addInsightToken(); window._insightTokens = insightTokens; });
+      // Nightmare mode: peace tiles don't heal (revert any HP gain from peace tile)
+      if (game.nightmareMode && targetTile === 4 && game.hp > _hpBeforeMove) game.hp = _hpBeforeMove;
       lastMove = ts;
       impulseBuffer.reset();
     }
@@ -1092,7 +1128,7 @@ window.addEventListener('keydown', e => {
       if (insightTokens>=2) {
         spendInsightTokens(2); window._insightTokens=insightTokens;
         if (!game.contZones) game.contZones=[];
-        game.contZones.push({x:game.player.x,y:game.player.y,timer:240,maxTimer:240});
+        game.contZones.push({x:game.player.x,y:game.player.y,timer:4000,maxTimer:4000});
         strategicThinking.onContainmentZone();  // Phase 9
         characterStats.onContainmentUsed();     // Phase M5
         _showMsg('CONTAINMENT ZONE','#00ffcc',38);
@@ -1104,6 +1140,59 @@ window.addEventListener('keydown', e => {
 });
 
 window.addEventListener('keyup', e => keys.delete(e.key));
+
+// ─── Gamepad / Controller support ─────────────────────────────────────────
+// Polls the Gamepad API each frame for Steam-compatible controller input.
+// Left stick / D-pad → movement  |  A(0)=J archetype  |  B(1)=ESC
+// X(2)=transmute  |  Y(3)=glitch pulse  |  LB(4)=freeze  |  RB(5)=matrix toggle
+// START(9)=pause  |  SELECT(8)=dashboard
+let gpLastButtons = [];
+function pollGamepad() {
+  const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const gp = gamepads[0];
+  if (!gp) return;
+
+  const GAMEPAD_DEADZONE = 0.28;
+  const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+
+  // Movement: left stick + D-pad
+  if (ax > GAMEPAD_DEADZONE || gp.buttons[15]?.pressed) keys.add('ArrowRight'); else keys.delete('ArrowRight');
+  if (ax < -GAMEPAD_DEADZONE || gp.buttons[14]?.pressed) keys.add('ArrowLeft'); else keys.delete('ArrowLeft');
+  if (ay > GAMEPAD_DEADZONE || gp.buttons[13]?.pressed) keys.add('ArrowDown'); else keys.delete('ArrowDown');
+  if (ay < -GAMEPAD_DEADZONE || gp.buttons[12]?.pressed) keys.add('ArrowUp'); else keys.delete('ArrowUp');
+
+  const pressed = (i) => gp.buttons[i]?.pressed && !gpLastButtons[i];
+
+  if (pressed(0) && phase === 'playing' && gameMode === 'grid') { // A: archetype
+    if (game?.archetypeActive) executeArchetypePower(game);
+  }
+  if (pressed(3) && phase === 'playing' && gameMode === 'grid') { // Y: glitch pulse
+    if (UPG.glitchPulse && UPG.glitchPulseCharge >= 100) triggerGlitchPulse(game, _showMsg);
+  }
+  if (pressed(4) && phase === 'playing' && gameMode === 'grid') { // LB: freeze
+    if (UPG.freeze && UPG.freezeTimer <= 0) {
+      UPG.freezeTimer = 2500; _showMsg('FREEZE ACTIVE!', '#0088ff', 50);
+    }
+  }
+  if (pressed(5) && phase === 'playing' && gameMode === 'grid') { // RB: matrix toggle
+    const next = matrixActive === 'A' ? 'B' : 'A';
+    setMatrix(next); setMatrixHoldTime(0);
+    sfxManager.resume(); sfxManager.playMatrixSwitch(next === 'A');
+  }
+  if (pressed(9)) { // START: pause/resume
+    if (phase === 'playing') { CURSOR.pause = 0; sessionTracker.pauseSession(); setPhase('paused'); }
+    else if (phase === 'paused') { sessionTracker.resumeSession(); setPhase('playing'); }
+    else if (phase === 'title') startGame(CFG.dreamIdx);
+  }
+  if (pressed(8) && phase === 'playing') dashboard.toggle(); // SELECT: dashboard
+
+  // Save button states for edge detection
+  gpLastButtons = gp.buttons.map(b => b?.pressed || false);
+}
+
+// Gamepad connect/disconnect events
+window.addEventListener('gamepadconnected',    e => { _showMsg('CONTROLLER CONNECTED  ·  Left Stick=move  A=arch  B=back  Y=pulse', '#00ccff', 90); console.log('[Gamepad] connected:', e.gamepad.id); });
+window.addEventListener('gamepaddisconnected', e => { console.log('[Gamepad] disconnected:', e.gamepad.id); gpLastButtons = []; });
 
 // ─── Mouse events for shooter mode ────────────────────────────────────
 canvas.addEventListener('mousemove', e => {

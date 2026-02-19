@@ -2,11 +2,11 @@
 
 > **A multidimensional consciousness awakening platform** for healing, learning, and transformation — playable today as an HTML5 game, building toward a free Steam release.
 
-[![Version](https://img.shields.io/badge/version-1.9.0--alpha-blue.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
+[![Version](https://img.shields.io/badge/version-2.0.0--alpha-blue.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
-[![Lines of Code](https://img.shields.io/badge/LOC-11%2C800%2B-orange.svg)](src/)
-[![Progress](https://img.shields.io/badge/completion-78%25-yellow.svg)](#-development-roadmap)
+[![Lines of Code](https://img.shields.io/badge/LOC-12%2C500%2B-orange.svg)](src/)
+[![Progress](https://img.shields.io/badge/completion-85%25-yellow.svg)](#-development-roadmap)
 
 *Begin in stillness. Emerge through pattern recognition. Transform through play.*
 
@@ -45,7 +45,7 @@ GLITCH·PEACE is a **consciousness engine disguised as a game**. Built on extens
 - **Lucidity affirmations** surfacing at interlude transitions
 - Research basis: LaBerge (1990), Stumbrys et al. (2012), Tibetan dream yoga, Hobson (2009)
 
-### 🎮 19 Play Styles *(v1.9.0: Ritual Space added)*
+### 🎮 21 Play Styles *(v2.0.0: Nightmare 🌑 + Rhythm 🎵 added)*
 Each style radically changes gameplay feel. Select in OPTIONS → PLAY STYLE (← → to cycle):
 
 | Style | Feel | Key Change |
@@ -68,7 +68,9 @@ Each style radically changes gameplay feel. Select in OPTIONS → PLAY STYLE (�
 | 🏛️ Sacred Architecture | Structural | GROUNDING foundations, 80-move budget |
 | ⚗️ Alchemist | Alchemical | Collect element seeds, X to transmute |
 | ✦ Constellation Path | Stellar | Star-node navigation, constellation lines |
-| 🕯️ Ritual Space | Somatic-Alchemical | **NEW** Element seeds ×2, alchemy enabled, half-damage |
+| 🕯️ Ritual Space | Somatic-Alchemical | Element seeds ×2, alchemy enabled, half-damage |
+| 🌑 Nightmare | **NEW** Unforgiving | 2× damage, predictive enemies, 5× score, no mercy |
+| 🎵 Rhythm Flow | **NEW** Musical | Move on the beat (80 BPM) for ×2 bonus score |
 
 ### 🌍 12 Cosmological Frameworks *(newly mapped — from glitch-peace-vite)*
 Visible in the dreamscape selection screen for each level:
@@ -92,16 +94,16 @@ Visible in the dreamscape selection screen for each level:
 
 ---
 
-## 📦 Current Version: v1.9.0-alpha (February 2026)
+## 📦 Current Version: v2.0.0-alpha (February 2026)
 
 ### Build Statistics
 | Metric | Value |
 |--------|-------|
 | Source files | 46 JS modules |
 | Lines of code | ~12,500 |
-| Bundle size | 296 KB (96 KB gzipped) |
-| Build time | ~665ms |
-| Completion | ~78% of full vision |
+| Bundle size | 300 KB (97 KB gzipped) |
+| Build time | ~650ms |
+| Completion | ~85% of full vision |
 
 ### What's In This Build
 - ✅ **Complete base game** (Phases 1-5): 21 tile types, **18 dreamscapes**, 5 archetypes, 9+ enemy AI behaviors
@@ -296,24 +298,26 @@ glitch-peace/
 Phase 1-5   ████████████████████ 100% ✅  Foundation, base game
 Phase M1-2  ████████████████████ 100% ✅  Mode system, Shooter
 Phase M3    ████████████████████ 100% ✅  Campaign structure
-Phase M4+   ████████████████████ 100% ✅  19 Play Modes (Ritual Space 🕯️ added)
+Phase M4+   ████████████████████ 100% ✅  21 Play Modes (Nightmare 🌑 + Rhythm 🎵 added)
 Phase 2.5   ████████████████████ 100% ✅  Dream Yoga
 Phase 6-11  ████████████████████ 100% ✅  Learning/Awareness/IQ/Chakra
 Cosmologies ████████████████████ 100% ✅  12 frameworks mapped
 Phase 2.6   ████████████████████ 100% ✅  Embodiment Tiles — animated visuals + somatic SFX
 UX Polish   ████████████████████ 100% ✅  HOW TO PLAY; transitions; somatic visuals; tile SFX; level-up
-Boss System ████████████████████ 100% ✅  3 bosses × 3 phases; special attacks; rewards; 3 dreamscapes get bosses
+Boss System ████████████████████ 100% ✅  3 bosses × 3 phases; speedMs wired; 4 dreamscapes get bosses
 Quest System████████████████████ 100% ✅  5 main quests; dashboard panel; quest flash
 18 Dreamsc. ████████████████████ 100% ✅  All 18 dreamscapes complete (target reached)
+Containment ████████████████████ 100% ✅  C-key contZones rendered + enemy stun working
+Gamepad     ████████████████████ 100% ✅  Gamepad API — Steam controller support
 Phase M5    █████████████████░░░  90% 🔨  RPG: stats + XP + level + quests + death screen RPG stats
 Alchemy     ████████████████░░░░  80% 🔨  Proper Philosopher's Stone; element tracking; Ritual Space mode; 3 SFX
 Phase M6    █████████████░░░░░░░  65% 🔨  Constellation visual layer; Skymap + Ritual Space; star-node connect
 
-Phase M7    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Platformer / Rhythm
+Phase M7    ████░░░░░░░░░░░░░░░░  20% 🔨  Rhythm Mode implemented (beat-sync scoring)
 Phase M8    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Multiplayer / Co-op
-Steam pack  ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Electron + Steamworks
+Steam pack  ██░░░░░░░░░░░░░░░░░░  10% 🔨  Electron pathway docs; Gamepad API done
 
-Overall: ~12,500 / 16,000 estimated lines (~78%)
+Overall: ~12,500 / 14,700 estimated lines (~85%)
 ```
 
 ### 🚧 Next Steps
@@ -341,7 +345,12 @@ Overall: ~12,500 / 16,000 estimated lines (~78%)
 - ⏳ Constellation completion rewards and narrative
 - ⏳ Named constellation patterns (Orion, Pleiades, etc.)
 
-**Phase M7: Platformer/Rhythm** — *0% complete*
+**Phase M7: Platformer/Rhythm** — *20% complete — Rhythm Flow mode added*
+- ✅ **Rhythm Flow mode**: Beat-synchronised movement scoring at 80 BPM
+- ✅ Beat pulse indicator in HUD bottom bar (yellow line sweeps on beat)
+- ✅ On-beat movement gives ×2 score bonus with streak multiplier
+- ⏳ Full music system (Tone.js integration from glitch-peace-vite)
+- ⏳ Platformer gravity/jump mechanics (longer-term)
 **Phase M8: Multiplayer** — *0% complete*
 
 ---
@@ -362,7 +371,8 @@ GLITCH·PEACE has a clear path to **free Steam release**:
 - [ ] Steam Developer account ($100 one-time)
 - [ ] Store assets: 8+ screenshots, 30s trailer, capsule art (460×215, 231×87)
 - [ ] Content review: mental health themes require careful descriptor selection
-- [ ] Minimum viable depth: Phase M5 complete (RPG mode + boss system)
+- [ ] Minimum viable depth: Phase M5 complete (RPG mode + boss system) ✅ *done*
+- [x] Gamepad / controller support via Gamepad API ✅ *done*
 - [ ] Playtesting: 20+ external testers across age tiers
 - [ ] Follow [Take This](https://www.takethis.org/) mental health content guidelines
 
@@ -375,11 +385,12 @@ GLITCH·PEACE has a clear path to **free Steam release**:
 ### Timeline to Steam
 | Phase | Duration | Target |
 |-------|----------|--------|
-| M5 RPG Mode | 4 weeks | Apr 2026 |
-| M6 Constellation | 2 weeks | May 2026 |
-| Boss + Polish | 3 weeks | May 2026 |
-| Electron + Steamworks | 2 weeks | Jun 2026 |
-| Store review | 2-4 weeks | Jul 2026 |
+| M5 RPG Mode | ✅ done | Mar 2026 |
+| M6 Constellation | 2 weeks | Apr 2026 |
+| Boss + Polish | ✅ done | Mar 2026 |
+| Gamepad API | ✅ done | Mar 2026 |
+| Electron + Steamworks | 2 weeks | May 2026 |
+| Store review | 2-4 weeks | Jun 2026 |
 | **Steam Launch** | — | **Q3 2026** |
 
 ---
@@ -394,9 +405,11 @@ GLITCH·PEACE has a clear path to **free Steam release**:
 | **Enemy AI** | 9 behaviors (chase, patrol, orbit, adaptive, labyrinth…) | ✅ Complete |
 | **Shooter mode** | Twin-stick, 4 weapons, wave system | ✅ Complete |
 | **18 Dreamscapes** 🎉 | All 18 complete: original 10 + nature trio + elemental/cosmic quintet | ✅ Complete |
-| **19 Play Modes** | All modes incl. Alchemist ⚗️ + Constellation ✦ + Ritual Space 🕯️ | ✅ Complete |
-| **Boss system** | 3 bosses × 3 phases; 3 dreamscapes get bosses; special attacks; rewards | ✅ Complete |
+| **21 Play Modes** | All modes incl. Nightmare 🌑 + Rhythm 🎵 + Alchemist ⚗️ + Constellation ✦ + Ritual Space 🕯️ | ✅ Complete |
+| **Boss system** | 3 bosses × 3 phases; phase speedMs wired; 4 dreamscapes get bosses; special attacks | ✅ Complete |
 | **Quest system** | 5 main quests + dashboard panel + quest flash | ✅ Complete |
+| **Containment zones** | C-key contZones: rendered (teal ring) + enemy stun + timer decay | ✅ Complete |
+| **Gamepad support** | Gamepad API: left stick + D-pad + A/B/X/Y/LB/RB/START/SELECT — Steam-ready | ✅ Complete |
 | **Alchemy system** | 5 elements; proper Philosopher's Stone (all-4-elements); element tracking; 3 SFX | 🔨 80% |
 | **Onboarding** | Age group, language, difficulty; saved profile | ✅ Complete |
 | **HOW TO PLAY screen** | Tile guide, controls (incl. X=transmute Alchemist/Ritual), matrix system | ✅ Complete |
@@ -415,11 +428,11 @@ GLITCH·PEACE has a clear path to **free Steam release**:
 | **RPG basics (M5)** | STR/INT/WIS/VIT stats, XP, level, archetype dialogue, quest system, death screen | 🔨 90% |
 | **Alchemy (M6 extension)** | Element system; proper Philosopher's Stone; Great Work tracking; Ritual Space | 🔨 80% |
 | **Constellation mode (M6)** | Skymap + Ritual Space; constellation line overlay; star glow rings | 🔨 65% |
-| **Platformer/Rhythm (M7)** | New movement mode | ⬜ 0% |
+| **Platformer/Rhythm (M7)** | Rhythm Flow mode: 80 BPM beat sync, on-beat scoring, HUD beat indicator | 🔨 20% |
 | **Multiplayer (M8)** | Shared emotional field, co-op | ⬜ 0% |
-| **Steam packaging** | Electron wrapper, Steamworks SDK | ⬜ 0% |
+| **Steam packaging** | Electron wrapper pathway documented; Gamepad API live | 🔨 10% |
 
-**Overall: ~78% complete.** All 18 dreamscapes complete. Alchemy deepened with proper Philosopher's Stone, Ritual Space mode, and constellation visual overlay. Death screen and interlude enriched with RPG/quest/cosmology data. Remaining: element particle FX, constellation rewards, platformer mode, multiplayer, Steam packaging.
+**Overall: ~85% complete.** All 18 dreamscapes and 21 play modes done. Critical bugs fixed: containment zones now render and affect enemies; boss phase speedMs wired correctly. Added Nightmare and Rhythm modes. Gamepad API support added for Steam controller compatibility. Freeze cooldown HUD strip added. Summit dreamscape now gets a boss fight at level 6+. Remaining: element particle FX, constellation rewards, full Tone.js music, multiplayer, Steam packaging.
 
 ---
 

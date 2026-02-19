@@ -269,6 +269,27 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     ctx.setLineDash([]);
   }
 
+  // Containment zones (C-key: player-placed, stun enemies inside)
+  if (g.contZones) {
+    const CONT_ZONE_MAX_ALPHA = 0.6;
+    for (const cz of g.contZones) {
+      const czAlpha = Math.min(1, cz.timer / cz.maxTimer) * CONT_ZONE_MAX_ALPHA;
+      const czR = 3.5 * (CELL + GAP);
+      const czX = sx + cz.x * (CELL + GAP) + CELL / 2;
+      const czY = sy + cz.y * (CELL + GAP) + CELL / 2;
+      ctx.shadowColor = '#00ffcc'; ctx.shadowBlur = 12;
+      ctx.strokeStyle = `rgba(0,255,200,${czAlpha})`; ctx.lineWidth = 2; ctx.setLineDash([4, 5]);
+      ctx.beginPath(); ctx.arc(czX, czY, czR, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = `rgba(0,255,200,${czAlpha * 0.07})`; ctx.beginPath(); ctx.arc(czX, czY, czR, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      // Label
+      ctx.fillStyle = `rgba(0,200,160,${czAlpha})`; ctx.font = '7px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('CONTAIN', czX, czY - czR - 4);
+      ctx.textAlign = 'left';
+    }
+  }
+
   // Echoes
   for (const e of g.echos) {
     ctx.globalAlpha = e.life / e.maxLife * 0.55; ctx.fillStyle = e.color;
@@ -479,6 +500,22 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     ctx.fillStyle = pChr >= 1 ? '#ff00ff' : '#660088'; ctx.fillRect(32, 59, eBarW * pChr, 5);
     ctx.strokeStyle = 'rgba(150,0,200,0.2)'; ctx.strokeRect(32, 59, eBarW, 5);
     ctx.fillStyle = pChr >= 1 ? '#ff00ff' : '#553355'; ctx.font = '7px Courier New'; ctx.fillText('PULSE' + (pChr >= 1 ? ' READY' : ''), 32 + eBarW + 4, 65);
+  }
+
+  // Freeze cooldown strip (shows Q-key freeze charge/cooldown)
+  if (UPG_ref.freeze) {
+    const fTimer = UPG_ref.freezeTimer || 0;
+    if (fTimer > 0) {
+      const fPct = fTimer / 2500;
+      ctx.fillStyle = '#001a22'; ctx.fillRect(32, 59 + (UPG_ref.glitchPulse ? 7 : 0), eBarW, 4);
+      ctx.fillStyle = '#0088ff'; ctx.fillRect(32, 59 + (UPG_ref.glitchPulse ? 7 : 0), eBarW * fPct, 4);
+      ctx.strokeStyle = 'rgba(0,136,255,0.2)'; ctx.strokeRect(32, 59 + (UPG_ref.glitchPulse ? 7 : 0), eBarW, 4);
+      ctx.fillStyle = '#0088ff'; ctx.font = '6px Courier New';
+      ctx.fillText('FREEZE ' + Math.ceil(fTimer / 1000) + 's', 32 + eBarW + 4, 63 + (UPG_ref.glitchPulse ? 7 : 0));
+    } else {
+      ctx.fillStyle = '#334455'; ctx.font = '6px Courier New';
+      ctx.fillText('Q=FREEZE', 32 + eBarW + 4, 63 + (UPG_ref.glitchPulse ? 7 : 0));
+    }
   }
 
   // ImpulseBuffer hold progress (shown when holding into hazard)
@@ -780,6 +817,15 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = '#1a1a2a'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
   ctx.fillText('WASD/ARROWS · SHIFT=matrix · J=arch · R=pulse · Q=freeze · C=contain · ESC=pause · H=dashboard', w / 2, h - 11);
   ctx.textAlign = 'left';
+
+  // ── Rhythm mode: beat pulse indicator in bottom bar ──────────────────
+  const beatPulse = window._beatPulse || 0;
+  if (beatPulse > 0.05) {
+    ctx.globalAlpha = beatPulse * 0.7;
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillRect(0, h - 28, w * beatPulse, 2);
+    ctx.globalAlpha = 1;
+  }
 
   // ── Phase 9: Empathy flash (enemy behavior label shown after freeze) ──
   const iqData = window._iqData;

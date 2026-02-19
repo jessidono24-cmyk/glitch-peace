@@ -45,7 +45,8 @@ export function stepEnemies(game, dt, keys, matrixActive, hallucinations, showMs
   if (g.boss && g.boss.hp > 0) {
     const b = g.boss; b.timer += dt; b.phaseTimer -= dt;
     if (b.phaseTimer <= 0) { b.phase = b.phase === 'chase' ? 'orbit' : 'chase'; b.phaseTimer = 400 + rnd(300); }
-    if (b.timer > 280) {
+    // Use phase-specific speed from boss-system if available, fallback to 280ms
+    if (b.timer > (b.speedMs || 280)) {
       b.timer = 0;
       let tx = g.player.x, ty = g.player.y;
       if (g.level >= 8) {
@@ -208,6 +209,17 @@ export function stepEnemies(game, dt, keys, matrixActive, hallucinations, showMs
         showMsg('CAPTURED!', '#ff0044', 25);
       }
     }
+    // Containment zones (player-placed via C key): stun enemies inside
+    // Radius 3 tiles matches the visual rendering (3.5 × cell+gap circle, ~3 tile effective radius)
+    const CONT_ZONE_STUN_RADIUS = 3;
+    if (g.contZones) {
+      for (const cz of g.contZones) {
+        if (Math.abs(e.x - cz.x) <= CONT_ZONE_STUN_RADIUS && Math.abs(e.y - cz.y) <= CONT_ZONE_STUN_RADIUS) {
+          e.stunTimer = Math.max(e.stunTimer, 800);
+        }
+      }
+    }
   }
   g.captureZones = g.captureZones.filter(c => { c.timer--; return c.timer > 0; });
+  if (g.contZones) g.contZones = g.contZones.filter(c => { c.timer -= dt; return c.timer > 0; });
 }

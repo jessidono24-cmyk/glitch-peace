@@ -22,6 +22,9 @@ import { drawTitle, drawDreamSelect, drawOptions, drawHighScores,
          drawUpgradeShop, drawPause, drawInterlude, drawDead } from './ui/menus.js';
 import { EmotionalField } from './systems/emotional-engine.js';
 import { temporalSystem } from './systems/temporal-system.js';
+import { ImpulseBuffer } from './recovery/impulse-buffer.js';
+import { ConsequencePreview } from './recovery/consequence-preview.js';
+import { sfxManager } from './audio/sfx-manager.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -60,6 +63,12 @@ let interludeState = { text:'', subtext:'', timer:0, ds:null };
 // ─── Emotional field (E1) ────────────────────────────────────────────────
 let emotionalField = new EmotionalField();
 window._emotionalField = emotionalField;   // lets renderer read it without circular import
+
+// ─── Pattern Recognition (Phase 4) ───────────────────────────────────────
+let impulseBuffer = new ImpulseBuffer();
+let consequencePreview = new ConsequencePreview();
+window._impulseBuffer = impulseBuffer;
+window._consequencePreview = consequencePreview;
 
 const keys = new Set();
 window._keys = keys;
@@ -153,6 +162,9 @@ function startGame(dreamIdx) {
   emotionalField = new EmotionalField();
   window._emotionalField = emotionalField;
   temporalSystem.refresh();
+  impulseBuffer.reset();
+  consequencePreview.deactivate();
+  sfxManager.resume(); // Resume audio context on user interaction
   CFG.dreamIdx = dreamIdx || 0;
   window._insightTokens = 0; window._dreamIdx = CFG.dreamIdx;
   game = initGame(CFG.dreamIdx, 0, 0, undefined);
@@ -286,9 +298,10 @@ function loop(ts) {
 window.addEventListener('keydown', e => {
   keys.add(e.key);
   if (phase === 'title') {
-    if (e.key==='ArrowUp')   CURSOR.menu=(CURSOR.menu-1+5)%5;
-    if (e.key==='ArrowDown') CURSOR.menu=(CURSOR.menu+1)%5;
+    if (e.key==='ArrowUp')   { CURSOR.menu=(CURSOR.menu-1+5)%5; sfxManager.playMenuNav(); }
+    if (e.key==='ArrowDown') { CURSOR.menu=(CURSOR.menu+1)%5; sfxManager.playMenuNav(); }
     if (e.key==='Enter'||e.key===' ') {
+      sfxManager.playMenuSelect();
       if (CURSOR.menu===0)      startGame(CFG.dreamIdx);
       else if (CURSOR.menu===1) setPhase('dreamselect');
       else if (CURSOR.menu===2) { CURSOR.opt=0; setPhase('options'); }
@@ -346,15 +359,22 @@ window.addEventListener('keydown', e => {
     if (e.key==='Shift' && !e.repeat) {
       const next = matrixActive === 'A' ? 'B' : 'A';
       setMatrix(next); setMatrixHoldTime(0);
+      sfxManager.playMatrixSwitch(next === 'A');
       const lbl = next==='A'?'MATRIX·A  ⟨ERASURE⟩':'MATRIX·B  ⟨COHERENCE⟩';
       const col = next==='A'?'#ff0055':'#00ff88';
       _showMsg(lbl, col, 55);
       if (CFG.particles) burst(game, game.player.x, game.player.y, col, 22, 4);
     }
     if ((e.key==='j'||e.key==='J') && !e.repeat) {
-      if (game.archetypeActive) executeArchetypePower(game);
-      else if (UPG.temporalRewind && UPG.rewindBuffer.length>0) executeArchetypePower(game);
-      else _showMsg('NO ARCHETYPE ACTIVE', '#334455', 25);
+      if (game.archetypeActive) {
+        executeArchetypePower(game);
+        sfxManager.playArchetypePower();
+      } else if (UPG.temporalRewind && UPG.rewindBuffer.length>0) {
+        executeArchetypePower(game);
+        sfxManager.playArchetypePower();
+      } else {
+        _showMsg('NO ARCHETYPE ACTIVE', '#334455', 25);
+      }
     }
     if ((e.key==='r'||e.key==='R') && !e.repeat) {
       if (UPG.glitchPulse && UPG.glitchPulseCharge>=100) triggerGlitchPulse(game, _showMsg);

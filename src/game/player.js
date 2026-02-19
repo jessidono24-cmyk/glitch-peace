@@ -3,6 +3,7 @@ import { T, TILE_DEF, ARCHETYPES, CELL, GAP } from '../core/constants.js';
 import { CFG, UPG } from '../core/state.js';
 import { rnd, pick } from '../core/utils.js';
 import { burst, resonanceWave, addEcho } from './particles.js';
+import { sfxManager } from '../audio/sfx-manager.js';
 
 export function setEmotion(g, em) {
   // Push the emotion event into the EmotionalField if available
@@ -105,6 +106,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
   const d = { dmgMul: CFG.difficulty === 'hard' ? 1.45 : CFG.difficulty === 'easy' ? 0.55 : 1.0 };
 
   if (tileType === T.PEACE) {
+    sfxManager.playPeaceCollect();
     const pts = Math.round((150 + g.level * 20) * UPG.resonanceMultiplier);
     g.score += pts; g.hp = Math.min(UPG.maxHp, g.hp + Math.round(20 * (g.healMul ?? 1)));
     g.grid[ny][nx] = T.VOID; g.peaceLeft--;
@@ -121,7 +123,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
       onMsg('+PEACE +' + pts + (UPG.comboCount > 1 ? ' ×' + UPG.resonanceMultiplier.toFixed(1) : ''), '#00ffcc', 38);
     }
     setEmotion(g, 'peace');
-    if (g.peaceLeft === 0) onNextDreamscape();
+    if (g.peaceLeft === 0) { sfxManager.playLevelComplete(); onNextDreamscape(); }
 
   } else if (tileType === T.INSIGHT) {
     const pts = Math.round((300 + g.level * 50) * UPG.resonanceMultiplier * (g.insightMul ?? 1.0));
@@ -173,6 +175,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
         if (sy >= 0 && sy < sz && sx >= 0 && sx < sz && g.grid[sy][sx] === T.VOID) g.grid[sy][sx] = T.DESPAIR;
       }
       g.hp = Math.max(0, g.hp - dmg);
+      sfxManager.playDamage();
       g.shakeFrames = 5;
       const dmgColors = { [T.DESPAIR]:'#2244ff',[T.TERROR]:'#ff0000',[T.SELF_HARM]:'#660000',[T.RAGE]:'#ff0044',[T.HOPELESS]:'#004488',[T.GLITCH]:'#aa00ff',[T.TRAP]:'#ff8800',[T.PAIN]:'#440000' };
       const pColors   = { [T.DESPAIR]:'#3355ff',[T.TERROR]:'#ff2222',[T.SELF_HARM]:'#880000',[T.RAGE]:'#ff0044',[T.HOPELESS]:'#004488',[T.GLITCH]:'#aa00ff',[T.TRAP]:'#ff8800',[T.PAIN]:'#440000' };

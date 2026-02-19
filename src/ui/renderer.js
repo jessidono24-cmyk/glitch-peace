@@ -60,10 +60,12 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
   ctx.globalAlpha = 1; ctx.textAlign = 'left';
 
   // Grid
+  // Build tileFlicker lookup Map for O(1) per-tile query (was O(n) array.find)
+  const flickerMap = new Map(g.tileFlicker.map(f => [f.y * sz + f.x, f]));
   for (let y = 0; y < sz; y++) {
     for (let x = 0; x < sz; x++) {
       const raw = g.grid[y][x];
-      const fl  = g.tileFlicker.find(f => f.y === y && f.x === x);
+      const fl  = flickerMap.get(y * sz + x);
       const val = (fl && fl.reveal && raw === T.HIDDEN) ? T.INSIGHT : raw;
       const td  = TILE_DEF[val] || TILE_DEF[T.VOID];
       const tp  = P[val] || P[T.VOID];
@@ -122,8 +124,56 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
         ctx.fillStyle = 'rgba(100,200,150,0.15)'; ctx.fillRect(px, py, CELL, CELL);
         ctx.globalAlpha = 1;
       }
+      // ── Phase 2.6: Somatic tile renders ──────────────────────────────────
+      if (val === T.BODY_SCAN) {
+        const pulse = 0.5 + 0.5 * Math.sin(ts * 0.004 + x * 1.1 + y * 0.9);
+        ctx.shadowColor = '#00aa44'; ctx.shadowBlur = 12 * pulse;
+        for (let ring = 0; ring < 3; ring++) {
+          const r = (5 + ring * 6) + 2 * Math.sin(ts * 0.003 + ring * 1.2);
+          ctx.globalAlpha = (0.65 - ring * 0.15) * pulse;
+          ctx.strokeStyle = ring === 0 ? '#00ff88' : ring === 1 ? '#00cc66' : '#008844';
+          ctx.lineWidth = 1.5 - ring * 0.3;
+          ctx.beginPath(); ctx.arc(px + CELL / 2, py + CELL / 2, r, 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+      }
+      if (val === T.BREATH_SYNC) {
+        const phase_ = (ts * 0.0025) % (Math.PI * 2);
+        ctx.shadowColor = '#6688ff'; ctx.shadowBlur = 10;
+        ctx.strokeStyle = '#6688ff'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        const waveW = CELL - 8;
+        for (let i = 0; i <= waveW; i++) {
+          const wx = px + 4 + i;
+          const wy = py + CELL / 2 + Math.sin(phase_ + i * 0.38) * 5.5;
+          if (i === 0) ctx.moveTo(wx, wy); else ctx.lineTo(wx, wy);
+        }
+        ctx.stroke(); ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+      }
+      if (val === T.ENERGY_NODE) {
+        ctx.shadowColor = '#cc44ff'; ctx.shadowBlur = 16;
+        const ang = ts * 0.01 + x * 1.9 + y * 1.5;
+        for (let i = 0; i < 6; i++) {
+          const a = ang + i * Math.PI / 3, r = 8 + 3 * Math.sin(ts * 0.007 + i);
+          ctx.fillStyle = i % 2 === 0 ? '#cc44ff' : '#8800dd';
+          ctx.beginPath(); ctx.arc(px + CELL / 2 + Math.cos(a) * r, py + CELL / 2 + Math.sin(a) * r, 2.5, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+      }
+      if (val === T.GROUNDING) {
+        const pulse2 = 0.5 + 0.5 * Math.sin(ts * 0.003 + x + y);
+        ctx.shadowColor = '#886644'; ctx.shadowBlur = 9 * pulse2;
+        ctx.globalAlpha = 0.7 + 0.2 * pulse2;
+        ctx.strokeStyle = '#aa8855'; ctx.lineWidth = 2;
+        const cxg = px + CELL / 2, cyg = py + CELL / 2;
+        ctx.beginPath(); ctx.moveTo(cxg, cyg - 9); ctx.lineTo(cxg, cyg + 9); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cxg - 9, cyg); ctx.lineTo(cxg + 9, cyg); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cxg, cyg, 10, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+      }
       if (td.sym && val !== T.VOID && val !== T.WALL && val !== T.PEACE && val !== T.INSIGHT &&
-          val !== T.ARCHETYPE && val !== T.TELEPORT && val !== T.HIDDEN && val !== T.MEMORY) {
+          val !== T.ARCHETYPE && val !== T.TELEPORT && val !== T.HIDDEN && val !== T.MEMORY &&
+          val !== T.BODY_SCAN && val !== T.BREATH_SYNC && val !== T.ENERGY_NODE && val !== T.GROUNDING) {
         ctx.fillStyle = tp.bd; ctx.font = '12px Courier New'; ctx.textAlign = 'center';
         ctx.globalAlpha = 0.55; ctx.fillText(td.sym, px + CELL / 2, py + CELL / 2 + 5);
         ctx.globalAlpha = 1; ctx.textAlign = 'left';
@@ -138,6 +188,61 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     }
   }
   g.tileFlicker = g.tileFlicker.filter(f => { f.t--; return f.t > 0; });
+
+  // ── Constellation overlay: connect adjacent star tiles in Skymap mode ──
+  if (g.playModeId === 'skymap' || g.playModeId === 'ritual_space') {
+    // Collect all INSIGHT (6) and ARCHETYPE (11) positions
+    const starTiles = [];
+    for (let y = 0; y < sz; y++) {
+      for (let x = 0; x < sz; x++) {
+        if (g.grid[y][x] === T.INSIGHT || g.grid[y][x] === T.ARCHETYPE) {
+          starTiles.push({ y, x, t: g.grid[y][x] });
+        }
+      }
+    }
+    // Draw constellation lines between stars within 4 tiles (Manhattan distance)
+    const CONST_MAX_DIST  = 4;    // max tile distance to draw a line
+    const CONST_ALPHA_BASE = 0.18; // base line opacity
+    const CONST_ALPHA_PULSE = 0.10; // oscillation amplitude
+    const CONST_PULSE_SPEED = 0.002; // angular speed of pulse animation
+    ctx.save();
+    for (let i = 0; i < starTiles.length; i++) {
+      for (let j = i + 1; j < starTiles.length; j++) {
+        const a = starTiles[i], b = starTiles[j];
+        const dist = Math.abs(a.y - b.y) + Math.abs(a.x - b.x);
+        if (dist <= CONST_MAX_DIST) {
+          const ax = sx + a.x * (CELL + GAP) + CELL / 2;
+          const ay = sy + a.y * (CELL + GAP) + CELL / 2;
+          const bx = sx + b.x * (CELL + GAP) + CELL / 2;
+          const by = sy + b.y * (CELL + GAP) + CELL / 2;
+          // Closer stars = brighter line; archetype connections = gold
+          const lineAlpha = (CONST_ALPHA_BASE + CONST_ALPHA_PULSE * Math.sin(ts * CONST_PULSE_SPEED + i + j)) * (1 - dist / (CONST_MAX_DIST + 1));
+          const lineColor = (a.t === T.ARCHETYPE || b.t === T.ARCHETYPE) ? '#ffdd88' : '#00eeff';
+          ctx.globalAlpha = lineAlpha;
+          ctx.strokeStyle = lineColor;
+          ctx.shadowColor = lineColor;
+          ctx.shadowBlur  = 6;
+          ctx.lineWidth   = 1;
+          ctx.setLineDash([3, 5]);
+          ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+    }
+    // Gentle star glow pulse on each star tile in skymap
+    for (const s of starTiles) {
+      const px2 = sx + s.x * (CELL + GAP) + CELL / 2;
+      const py2 = sy + s.y * (CELL + GAP) + CELL / 2;
+      const pulse2 = 0.3 + 0.2 * Math.sin(ts * 0.004 + s.x * 1.7 + s.y * 1.3);
+      ctx.globalAlpha = pulse2;
+      ctx.shadowColor = s.t === T.ARCHETYPE ? '#ffdd88' : '#00eeff';
+      ctx.shadowBlur = 20;
+      ctx.strokeStyle = s.t === T.ARCHETYPE ? '#ffdd88' : '#00eeff';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(px2, py2, CELL * 0.44, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0; ctx.restore();
+  }
 
   // Consequence preview ghost path
   if (ghostPath && ghostPath.length > 0) {
@@ -162,6 +267,27 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     ctx.strokeStyle = `rgba(255,0,68,${0.4 * (cz.timer / 300)})`; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
     ctx.beginPath(); ctx.arc(sx + cz.x * (CELL + GAP) + CELL / 2, sy + cz.y * (CELL + GAP) + CELL / 2, (cz.r + 0.5) * (CELL + GAP), 0, Math.PI * 2); ctx.stroke();
     ctx.setLineDash([]);
+  }
+
+  // Containment zones (C-key: player-placed, stun enemies inside)
+  if (g.contZones) {
+    const CONT_ZONE_MAX_ALPHA = 0.6;
+    for (const cz of g.contZones) {
+      const czAlpha = Math.min(1, cz.timer / cz.maxTimer) * CONT_ZONE_MAX_ALPHA;
+      const czR = 3.5 * (CELL + GAP);
+      const czX = sx + cz.x * (CELL + GAP) + CELL / 2;
+      const czY = sy + cz.y * (CELL + GAP) + CELL / 2;
+      ctx.shadowColor = '#00ffcc'; ctx.shadowBlur = 12;
+      ctx.strokeStyle = `rgba(0,255,200,${czAlpha})`; ctx.lineWidth = 2; ctx.setLineDash([4, 5]);
+      ctx.beginPath(); ctx.arc(czX, czY, czR, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = `rgba(0,255,200,${czAlpha * 0.07})`; ctx.beginPath(); ctx.arc(czX, czY, czR, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      // Label
+      ctx.fillStyle = `rgba(0,200,160,${czAlpha})`; ctx.font = '7px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('CONTAIN', czX, czY - czR - 4);
+      ctx.textAlign = 'left';
+    }
   }
 
   // Echoes
@@ -210,16 +336,43 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     ctx.beginPath(); ctx.arc(px + CELL / 2, py + CELL / 2 + 2, 4, 0, Math.PI * 2); ctx.fill();
   }
 
-  // Boss
+  // Boss — multi-phase render
   if (g.boss && g.boss.hp > 0) {
     const b = g.boss;
-    const px = sx + b.x * (CELL + GAP), py = sy + b.y * (CELL + GAP);
+    const bx = sx + b.x * (CELL + GAP), by = sy + b.y * (CELL + GAP);
     const pulse = 0.5 + 0.5 * Math.sin(ts * 0.005);
-    ctx.shadowColor = '#ff00aa'; ctx.shadowBlur = 28 * pulse;
-    ctx.fillStyle = '#330022'; ctx.beginPath(); ctx.roundRect(px + 1, py + 1, CELL - 2, CELL - 2, 8); ctx.fill();
-    ctx.fillStyle = '#ff00aa'; ctx.beginPath(); ctx.arc(px + CELL / 2, py + CELL / 2, CELL * 0.3 + 4 * pulse, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ffccee'; ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'center';
-    ctx.fillText('HP:' + b.hp, px + CELL / 2, py + CELL / 2 + 4);
+    const bColor = b.color || '#ff00aa', bGlow = b.glow || '#ff00aa';
+    const bPhase = b.phaseIdx || 0;
+    ctx.shadowColor = bGlow; ctx.shadowBlur = 36 * pulse;
+    // Background cell — phase-tinted
+    const bgColors = ['#330022', '#220033', '#0d0d0d'];
+    ctx.fillStyle = bgColors[bPhase] || '#330022';
+    ctx.beginPath(); ctx.roundRect(bx + 1, by + 1, CELL - 2, CELL - 2, 8); ctx.fill();
+    // Core orb
+    ctx.fillStyle = bColor;
+    ctx.beginPath();
+    ctx.arc(bx + CELL / 2, by + CELL / 2, (CELL * 0.28 + 4 * pulse) * (1 + bPhase * 0.1), 0, Math.PI * 2);
+    ctx.fill();
+    // Phase 2+: orbital ring
+    if (bPhase >= 1) {
+      ctx.strokeStyle = bColor + 'aa'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(bx + CELL / 2, by + CELL / 2, CELL * 0.44 + 2 * pulse, 0, Math.PI * 2); ctx.stroke();
+    }
+    // Phase 3: orbiting sparkles
+    if (bPhase >= 2) {
+      const ang = ts * 0.015;
+      for (let i = 0; i < 3; i++) {
+        const a = ang + i * Math.PI * 2 / 3, r = CELL * 0.44;
+        ctx.fillStyle = bColor;
+        ctx.beginPath(); ctx.arc(bx + CELL / 2 + Math.cos(a) * r, by + CELL / 2 + Math.sin(a) * r, 3, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    // HP + phase label text
+    const hpPct = b.hp / (b.maxHp || b.hp);
+    ctx.fillStyle = '#ffccee'; ctx.shadowBlur = 0;
+    ctx.font = 'bold 7px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText((b.phaseLabel || 'BOSS'), bx + CELL / 2, by + CELL / 2 - 3);
+    ctx.fillText(Math.round(hpPct * 100) + '%', bx + CELL / 2, by + CELL / 2 + 8);
     ctx.textAlign = 'left'; ctx.shadowBlur = 0;
   }
 
@@ -349,6 +502,22 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     ctx.fillStyle = pChr >= 1 ? '#ff00ff' : '#553355'; ctx.font = '7px Courier New'; ctx.fillText('PULSE' + (pChr >= 1 ? ' READY' : ''), 32 + eBarW + 4, 65);
   }
 
+  // Freeze cooldown strip (shows Q-key freeze charge/cooldown)
+  if (UPG_ref.freeze) {
+    const fTimer = UPG_ref.freezeTimer || 0;
+    if (fTimer > 0) {
+      const fPct = fTimer / 2500;
+      ctx.fillStyle = '#001a22'; ctx.fillRect(32, 59 + (UPG_ref.glitchPulse ? 7 : 0), eBarW, 4);
+      ctx.fillStyle = '#0088ff'; ctx.fillRect(32, 59 + (UPG_ref.glitchPulse ? 7 : 0), eBarW * fPct, 4);
+      ctx.strokeStyle = 'rgba(0,136,255,0.2)'; ctx.strokeRect(32, 59 + (UPG_ref.glitchPulse ? 7 : 0), eBarW, 4);
+      ctx.fillStyle = '#0088ff'; ctx.font = '6px Courier New';
+      ctx.fillText('FREEZE ' + Math.ceil(fTimer / 1000) + 's', 32 + eBarW + 4, 63 + (UPG_ref.glitchPulse ? 7 : 0));
+    } else {
+      ctx.fillStyle = '#334455'; ctx.font = '6px Courier New';
+      ctx.fillText('Q=FREEZE', 32 + eBarW + 4, 63 + (UPG_ref.glitchPulse ? 7 : 0));
+    }
+  }
+
   // ImpulseBuffer hold progress (shown when holding into hazard)
   {
     const prog = window._impulseProgress || 0;
@@ -400,7 +569,7 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = '#445566'; ctx.font = '10px Courier New'; ctx.fillText('LVL ' + g.level, w - 12, 30);
   ctx.fillStyle = '#005533'; ctx.fillText('◈×' + g.peaceLeft, w - 12, 44);
   ctx.fillStyle = '#223344'; ctx.font = '8px Courier New';
-  ctx.fillText((window._dreamIdx + 1 || 1) + '/10 DREAMS', w - 12, 58);
+  ctx.fillText((window._dreamIdx + 1 || 1) + '/18 DREAMS', w - 12, 58);
   // Temporal system info (lunar + planet)
   const tmods = window._tmods;
   if (tmods) {
@@ -531,6 +700,97 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
 
+  // ── Boss phase banner ─────────────────────────────────────────────────
+  const bpb = window._bossPhaseBanner;
+  if (bpb && bpb.alpha > 0.02) {
+    ctx.globalAlpha = Math.min(1, bpb.alpha);
+    ctx.fillStyle = 'rgba(0,0,0,0.88)'; ctx.fillRect(w/2 - 170, h * 0.14, 340, 60);
+    ctx.strokeStyle = bpb.color + '88'; ctx.lineWidth = 2;
+    ctx.strokeRect(w/2 - 170, h * 0.14, 340, 60);
+    ctx.fillStyle = bpb.color; ctx.shadowColor = bpb.color; ctx.shadowBlur = 14;
+    ctx.font = 'bold 13px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(bpb.text, w/2, h * 0.14 + 20); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#aa8888'; ctx.font = 'italic 9px Courier New';
+    ctx.fillText('"' + (bpb.quote || '') + '"', w/2, h * 0.14 + 38);
+    ctx.fillStyle = '#553333'; ctx.font = '7px Courier New';
+    ctx.fillText('hold your ground', w/2, h * 0.14 + 52);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Quest completion flash ────────────────────────────────────────────
+  const qf = window._questFlash;
+  if (qf && qf.alpha > 0.02) {
+    ctx.globalAlpha = Math.min(1, qf.alpha);
+    ctx.fillStyle = 'rgba(0,0,0,0.88)'; ctx.fillRect(w/2 - 170, h * 0.82, 340, 54);
+    ctx.strokeStyle = '#ffdd88aa'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 170, h * 0.82, 340, 54);
+    ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 10;
+    ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(qf.emoji + '  QUEST COMPLETE  ' + qf.emoji, w/2, h * 0.82 + 16); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ddeedd'; ctx.font = '9px Courier New';
+    ctx.fillText(qf.text, w/2, h * 0.82 + 32);
+    ctx.fillStyle = '#556644'; ctx.font = '7px Courier New';
+    ctx.fillText(qf.name, w/2, h * 0.82 + 46);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Skymap/Ritual: Named constellation reward flash ──────────────────
+  const cfl = window._constellationFlash;
+  if (cfl && cfl.alpha > 0.02) {
+    ctx.globalAlpha = Math.min(1, cfl.alpha);
+    ctx.fillStyle = 'rgba(0,0,12,0.92)'; ctx.fillRect(w/2 - 190, h * 0.35, 380, 54);
+    ctx.strokeStyle = 'rgba(0,238,255,0.55)'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 190, h * 0.35, 380, 54);
+    ctx.fillStyle = '#00eeff'; ctx.shadowColor = '#00ccff'; ctx.shadowBlur = 14;
+    ctx.font = 'bold 14px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('✦ ' + cfl.name + ' ✦', w/2, h * 0.35 + 22); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#446688'; ctx.font = '8px Courier New';
+    ctx.fillText('CONSTELLATION DISCOVERED  ·  +score', w/2, h * 0.35 + 40);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Alchemy flash ─────────────────────────────────────────────────────
+  const af = window._alchemyFlash;
+  if (af && af.alpha > 0.02) {
+    ctx.globalAlpha = Math.min(1, af.alpha);
+    const afColor = af.color || '#cc88ff';
+    ctx.fillStyle = 'rgba(0,0,0,0.90)'; ctx.fillRect(w/2 - 175, h * 0.55, 350, 52);
+    ctx.strokeStyle = afColor + '88'; ctx.lineWidth = af.stone ? 2 : 1;
+    ctx.strokeRect(w/2 - 175, h * 0.55, 350, 52);
+    ctx.fillStyle = afColor; ctx.shadowColor = afColor; ctx.shadowBlur = af.stone ? 20 : 10;
+    ctx.font = 'bold ' + (af.stone ? '12' : '10') + 'px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(af.text, w/2, h * 0.55 + 18); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#998877'; ctx.font = '7px Courier New';
+    ctx.fillText('⚗️  ' + af.name + '  ·  the Great Work continues', w/2, h * 0.55 + 34);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Alchemy HUD strip (alchemist mode only) ───────────────────────────
+  const alch = window._alchemy;
+  if (alch && alch.active && (alch.seedsDisplay || alch.phase)) {
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#0a0008'; ctx.fillRect(w/2 - 170, h - 34, 340, 20);
+    ctx.strokeStyle = 'rgba(200,100,255,0.2)'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 170, h - 34, 340, 20);
+    ctx.fillStyle = '#cc88ff'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
+    const phaseLabel = { nigredo: '🜏 Nigredo', albedo: '🜃 Albedo', rubedo: '🜔 Rubedo', aurora: '✦ Aurora' }[alch.phase] || alch.phase;
+    const seedStr = alch.seedsDisplay ? '  ·  ' + alch.seedsDisplay : '';
+    ctx.fillText('⚗️  ' + phaseLabel + seedStr + '  ·  X to transmute', w/2, h - 21);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Play mode label (ornithology / mycology / architecture etc.) ──────
+  const pml = window._playModeLabel;
+  if (pml) {
+    ctx.globalAlpha = 0.65;
+    ctx.fillStyle = '#001408'; ctx.fillRect(w/2 - 140, sy + gp + 8, 280, 18);
+    ctx.strokeStyle = 'rgba(0,255,136,0.15)'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 140, sy + gp + 8, 280, 18);
+    ctx.fillStyle = '#00aa55'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(pml, w/2, sy + gp + 21);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
   // ── Phase 8: Emergence indicator flash ───────────────────────────────
   const em = window._emergence;
   if (em && em.flash) {
@@ -572,6 +832,15 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = '#1a1a2a'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
   ctx.fillText('WASD/ARROWS · SHIFT=matrix · J=arch · R=pulse · Q=freeze · C=contain · ESC=pause · H=dashboard', w / 2, h - 11);
   ctx.textAlign = 'left';
+
+  // ── Rhythm mode: beat pulse indicator in bottom bar ──────────────────
+  const beatPulse = window._beatPulse || 0;
+  if (beatPulse > 0.05) {
+    ctx.globalAlpha = beatPulse * 0.7;
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillRect(0, h - 28, w * beatPulse, 2);
+    ctx.globalAlpha = 1;
+  }
 
   // ── Phase 9: Empathy flash (enemy behavior label shown after freeze) ──
   const iqData = window._iqData;

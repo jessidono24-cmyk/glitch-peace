@@ -4,7 +4,7 @@
 //  Entry point: state machine + game loop.
 //  All game logic lives in src/game/, src/ui/, src/core/.
 // ═══════════════════════════════════════════════════════════════════════
-import { DREAMSCAPES, UPGRADE_SHOP, VISION_WORDS, CELL, GAP, PAL_A, PAL_B } from './core/constants.js';
+import { T, DREAMSCAPES, UPGRADE_SHOP, VISION_WORDS, CELL, GAP, PAL_A, PAL_B, CONSTELLATION_NAMES } from './core/constants.js';
 import { CFG, UPG, CURSOR, phase, setPhase, resetUpgrades, resetSession,
          checkOwned, matrixActive, setMatrix, matrixHoldTime, setMatrixHoldTime, addMatrixHoldTime,
          insightTokens, addInsightToken, spendInsightTokens,
@@ -21,7 +21,7 @@ import { burst, resonanceWave } from './game/particles.js';
 import { drawGame } from './ui/renderer.js';
 import { drawTitle, drawDreamSelect, drawOptions, drawHighScores,
          drawUpgradeShop, drawPause, drawInterlude, drawDead,
-         drawOnboarding, drawLanguageOptions } from './ui/menus.js';
+         drawOnboarding, drawLanguageOptions, drawHowToPlay } from './ui/menus.js';
 // ─── Phase 2-5 systems ───────────────────────────────────────────────────
 import { sfxManager } from './audio/sfx-manager.js';
 import { temporalSystem } from './systems/temporal-system.js';
@@ -65,6 +65,12 @@ import { dreamYoga } from './systems/awareness/dream-yoga.js';
 // ─── Phase M5: RPG Basics ─────────────────────────────────────────────────
 import { characterStats } from './systems/rpg/character-stats.js';
 import { archetypeDialogue } from './systems/rpg/archetype-dialogue.js';
+// ─── Phase M3.5: Boss System ──────────────────────────────────────────────
+import { bossSystem, BOSS_TYPES } from './systems/boss-system.js';
+// ─── Phase M5: Quest System ───────────────────────────────────────────────
+import { questSystem } from './systems/rpg/quest-system.js';
+// ─── Phase M6: Alchemy System ─────────────────────────────────────────────
+import { alchemySystem, TILE_ELEMENT_MAP } from './systems/alchemy-system.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -98,12 +104,15 @@ const shooterMode = new ShooterMode(shooterSharedSystems);
 let game       = null;
 let deadGame   = null; // snapshot used by death screen (survives game=null)
 let animId     = null;
-let prevTs     = 0;
+let prevTs     = performance.now(); // initialise to now so first dt ≈ 0
 let lastMove   = 0;
 let gameMode   = 'grid'; // 'grid' | 'shooter'
-const EMOTION_THRESHOLD = 0.15; // emotion must exceed this to affect gameplay
-const INTERLUDE_TIMER_FRAMES = 280; // frames at ~60fps ≈ 4.67s
-const INTERLUDE_TIMEOUT_MS   = Math.round(INTERLUDE_TIMER_FRAMES / 60 * 1000) + 200; // safety margin
+const EMOTION_THRESHOLD      = 0.15;   // emotion must exceed this to affect gameplay
+const INTERLUDE_DURATION_MS  = 10000;  // auto-advance after 10 s
+const INTERLUDE_MIN_ADVANCE_MS = 3500; // player may skip after 3.5 s (all content visible)
+// Pre-allocated tile-type sets to avoid array creation in the hot path
+const SOMATIC_TILES  = new Set([17, 18, 19, 20]);
+const HAZARD_TILES   = new Set([1, 2, 3, 8, 9, 10, 14, 16]);
 
 // ─── Onboarding state ────────────────────────────────────────────────────
 // LANG_LIST is imported from language-system.js — single canonical source
@@ -128,7 +137,8 @@ let anomalyActive = false, anomalyData = { row:-1, col:-1, t:0 };
 let hallucinations = [];
 let backgroundStars = [];
 let visions = [];
-let interludeState = { text:'', subtext:'', timer:0, ds:null };
+let interludeState = { text:'', subtext:'', elapsed:0, duration: INTERLUDE_DURATION_MS, minAdvanceMs: INTERLUDE_MIN_ADVANCE_MS, ds:null, nextGame:null };
+let _prevAlchemyPhase = 'nigredo'; // track to call onAuroraPhase only once on transition
 
 const keys = new Set();
 
@@ -202,6 +212,69 @@ function triggerEnvironmentEvent(g) {
     // Aztec: seal off random corridors with walls, penalising predictable routes
     let n=0, itr=0; while (n<4&&itr<999) { itr++; const y=1+rnd(sz-2),x=1+rnd(sz-2); if(g.grid[y][x]===0){g.grid[y][x]=5;n++;} }
     _showMsg('THE LABYRINTH SHIFTS…','#cc8800',40);
+  } else if (event === 'bird_migration') {
+    // Forest Sanctuary: spawn clusters of somatic + peace tiles
+    const habTiles = [T.BODY_SCAN, T.BREATH_SYNC, T.ENERGY_NODE, T.GROUNDING, T.PEACE]; // somatic + peace
+    let n=0, itr=0;
+    while (n < 5 && itr < 999) { itr++; const y=rnd(sz),x=rnd(sz); if(g.grid[y][x]===0){g.grid[y][x]=pick(habTiles);n++;} }
+    _showMsg('MIGRATION WAVE — BIRDS ARRIVE','#88ffaa',55);
+  } else if (event === 'mycelium_growth') {
+    // Mycelium Depths: spread ENERGY_NODE / GROUNDING tiles around player
+    for (let dy=-2;dy<=2;dy++) for (let dx=-2;dx<=2;dx++) {
+      const ny=g.player.y+dy, nx=g.player.x+dx;
+      if (ny>=0&&ny<sz&&nx>=0&&nx<sz&&g.grid[ny][nx]===T.VOID&&Math.random()<0.3) {
+        g.grid[ny][nx] = Math.random()<0.5 ? T.ENERGY_NODE : T.GROUNDING;
+      }
+    }
+    _showMsg('MYCELIUM GROWS…','#88ddaa',50);
+  } else if (event === 'structure_reveal') {
+    // Ancient Structure: reveal HIDDEN→INSIGHT; spawn COVER + MEMORY tiles
+    let n=0;
+    for (let y=0;y<sz&&n<4;y++) for (let x=0;x<sz&&n<4;x++) {
+      if (g.grid[y][x]===T.HIDDEN) { g.grid[y][x]=T.INSIGHT; n++; }
+    }
+    let m=0,itr=0; while(m<3&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===T.VOID){g.grid[y][x]=Math.random()<0.5?T.COVER:T.MEMORY;m++;}}
+    _showMsg('ANCIENT STRUCTURE REVEALS…','#aa88cc',50);
+  } else if (event === 'solar_pulse') {
+    // Solar Temple: ENERGY_NODE tiles pulse outward, RAGE→PEACE in ring around player
+    for (let dy=-3;dy<=3;dy++) for (let dx=-3;dx<=3;dx++) {
+      const ny=g.player.y+dy, nx=g.player.x+dx;
+      if (ny>=0&&ny<sz&&nx>=0&&nx<sz&&g.grid[ny][nx]===T.RAGE) g.grid[ny][nx]=T.PEACE;
+    }
+    let n=0,itr=0; while(n<3&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===T.VOID){g.grid[y][x]=T.ENERGY_NODE;n++;}}
+    _showMsg('SOLAR PULSE — fire transforms rage','#ff8800',55);
+  } else if (event === 'ocean_surge') {
+    // Deep Ocean: BREATH_SYNC tiles surge; DESPAIR→HOPELESS→BREATH_SYNC wave
+    for (let y=0;y<sz;y++) {
+      if (Math.random()<0.25) {
+        for (let x=0;x<sz;x++) {
+          if (g.grid[y][x]===T.DESPAIR) g.grid[y][x]=T.BREATH_SYNC;
+        }
+      }
+    }
+    _showMsg('OCEAN SURGE — breathe through the wave','#0088ff',55);
+  } else if (event === 'crystal_resonance') {
+    // Crystal Cave: HIDDEN→INSIGHT; INSIGHT tiles pulse; MEMORY nodes appear
+    let n=0;
+    for (let y=0;y<sz&&n<5;y++) for (let x=0;x<sz&&n<5;x++) {
+      if (g.grid[y][x]===T.HIDDEN){g.grid[y][x]=T.INSIGHT;n++;}
+    }
+    let m=0,itr=0; while(m<2&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===T.VOID){g.grid[y][x]=T.MEMORY;m++;}}
+    _showMsg('CRYSTAL RESONANCE — truth surfaces','#88ccff',50);
+  } else if (event === 'wind_drift') {
+    // Cloud City: random gentle nudge + BODY_SCAN tiles appear
+    const dir=[[-1,0],[1,0],[0,-1],[0,1]][rnd(4)];
+    const ny=g.player.y+dir[0], nx=g.player.x+dir[1];
+    if (ny>=0&&ny<sz&&nx>=0&&nx<sz&&g.grid[ny][nx]!==T.WALL){g.player.y=ny;g.player.x=nx;}
+    let n=0,itr=0; while(n<3&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===T.VOID){g.grid[y][x]=T.BODY_SCAN;n++;}}
+    _showMsg('WIND DRIFT — rise above','#aaddff',45);
+  } else if (event === 'void_expansion') {
+    // Void Nexus: VOID tiles expand; some hazards vanish; INSIGHT appears
+    let ni=0,itr=0; while(ni<3&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===T.VOID){g.grid[y][x]=T.INSIGHT;ni++;}}
+    for (let y=0;y<sz;y++) for (let x=0;x<sz;x++) {
+      if ([T.PAIN,T.HOPELESS].includes(g.grid[y][x])&&Math.random()<0.3) g.grid[y][x]=T.VOID;
+    }
+    _showMsg('VOID EXPANSION — dissolution is not death','#cc88ff',55);
   }
   if (Math.random() < 0.4) {
     const row = rnd(sz);
@@ -267,6 +340,8 @@ function startGame(dreamIdx) {
   // Phase M5: reset RPG session
   characterStats.resetSession();
   archetypeDialogue.reset();
+  bossSystem.reset();
+  alchemySystem.resetSession();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -276,7 +351,7 @@ function nextDreamscape() {
   const nextIdx = (CFG.dreamIdx + 1) % DREAMSCAPES.length;
   CFG.dreamIdx = nextIdx; window._dreamIdx = nextIdx;
   pushDreamHistory(g.ds.id);
-  sfxManager.playLevelComplete();
+  sfxManager.playDreamComplete();
   sessionTracker.onDreamscapeComplete();
   // Phase 8: get a reflection prompt for the completed dreamscape
   const prompt = selfReflection.getPrompt(g.ds.emotion);
@@ -295,12 +370,40 @@ function nextDreamscape() {
   const milestone = campaignManager.onDreamscapeComplete(g.ds.id % DREAMSCAPES.length, g.score);
   // Phase M5: RPG — reward XP on dreamscape completion
   characterStats.onDreamComplete();
+  // Quest: dream completion
+  questSystem.onDreamComplete(g.ds.id);
+  // Boss system: reset on dreamscape change
+  bossSystem.reset();
+
+  // Pre-build next game immediately so it is ready when the player dismisses the interlude.
+  // Storing it in interludeState avoids any setTimeout race conditions.
+  resizeCanvas();
+  const nextGame = initGame(nextIdx, g.score + 400 + g.level * 60, g.level, g.hp);
+  nextGame.msg = DREAMSCAPES[nextIdx].name; nextGame.msgColor = '#ffdd00'; nextGame.msgTimer = 90;
+
+  // Boss spawn: integration/ancient_structure/void_nexus/summit get bosses
+  if (DREAMSCAPES[nextIdx].id === 'integration' && !nextGame.boss) {
+    bossSystem.spawnBossForGame(nextGame, 'integration_master');
+    sfxManager.playBossEnter();
+  } else if (DREAMSCAPES[nextIdx].id === 'ancient_structure' && !nextGame.boss) {
+    bossSystem.spawnBossForGame(nextGame, 'void_keeper');
+    sfxManager.playBossEnter();
+  } else if (DREAMSCAPES[nextIdx].id === 'void_nexus' && !nextGame.boss) {
+    bossSystem.spawnBossForGame(nextGame, 'fear_guardian');
+    sfxManager.playBossEnter();
+  } else if (DREAMSCAPES[nextIdx].id === 'summit' && nextGame.level >= 6 && !nextGame.boss) {
+    bossSystem.spawnBossForGame(nextGame, 'void_keeper');
+    sfxManager.playBossEnter();
+  }
+
   interludeState = {
     text: g.ds.completionText,
     subtext: DREAMSCAPES[nextIdx].narrative,
-    timer: INTERLUDE_TIMER_FRAMES,
-    totalTimer: INTERLUDE_TIMER_FRAMES,
+    elapsed: 0,
+    duration: INTERLUDE_DURATION_MS,
+    minAdvanceMs: INTERLUDE_MIN_ADVANCE_MS,
     ds: DREAMSCAPES[nextIdx],
+    nextGame,
     reflectionPrompt: prompt,
     affirmation,
     vocabWord,
@@ -308,14 +411,15 @@ function nextDreamscape() {
     milestone,
   };
   setPhase('interlude');
-  setTimeout(() => {
-    resizeCanvas();
-    game = initGame(nextIdx, g.score + 400 + g.level * 60, g.level, g.hp);
-    game.msg = DREAMSCAPES[nextIdx].name; game.msgColor = '#ffdd00'; game.msgTimer = 90;
-    // Phase M3: start tutorial for new dreamscape (if first visit)
-    campaignManager.startTutorial(nextIdx);
-    if (phase === 'interlude') setPhase('playing');
-  }, INTERLUDE_TIMEOUT_MS);
+}
+
+// Transition out of the interlude into the pre-built next game.
+function _advanceFromInterlude() {
+  if (phase !== 'interlude') return;
+  if (!interludeState.nextGame) return; // safety guard
+  game = interludeState.nextGame;
+  campaignManager.startTutorial(CFG.dreamIdx);
+  setPhase('playing');
 }
 
 function buyUpgrade(id) {
@@ -335,11 +439,13 @@ function buyUpgrade(id) {
 
 // ─── Main loop ───────────────────────────────────────────────────────────
 function loop(ts) {
-  const dt = ts - prevTs; prevTs = ts;
+  const dt = Math.min(ts - prevTs, 100); prevTs = ts; // cap at 100 ms to absorb tab-switch spikes
   const w = CW(), h = CH();
+  pollGamepad(); // Controller support — runs every frame
 
   if (phase === 'onboarding')  { drawOnboarding(ctx, w, h, onboardState); animId=requestAnimationFrame(loop); return; }
   if (phase === 'langopts')    { drawLanguageOptions(ctx, w, h, langOptState); animId=requestAnimationFrame(loop); return; }
+  if (phase === 'howtoplay')   { drawHowToPlay(ctx, w, h); animId=requestAnimationFrame(loop); return; }
   if (phase === 'title')       { drawTitle(ctx, w, h, backgroundStars, ts, CURSOR.menu, gameMode); animId=requestAnimationFrame(loop); return; }
   if (phase === 'dreamselect') { drawDreamSelect(ctx, w, h, CFG.dreamIdx); animId=requestAnimationFrame(loop); return; }
   if (phase === 'options')     { drawOptions(ctx, w, h, CURSOR.opt); animId=requestAnimationFrame(loop); return; }
@@ -347,7 +453,12 @@ function loop(ts) {
   if (phase === 'upgrade')     { drawUpgradeShop(ctx, w, h, CURSOR.shop, insightTokens, checkOwned); animId=requestAnimationFrame(loop); return; }
   if (phase === 'dead')        { drawDead(ctx, w, h, deadGame, highScores, dreamHistory, insightTokens, sessionRep); animId=requestAnimationFrame(loop); return; }
   if (phase === 'paused')      { drawPause(ctx, w, h, game, CURSOR.pause); animId=requestAnimationFrame(loop); return; }
-  if (phase === 'interlude')   { drawInterlude(ctx, w, h, interludeState, ts); interludeState.timer--; if (interludeState.timer <= 0 && phase === 'interlude') setPhase('playing'); animId=requestAnimationFrame(loop); return; }
+  if (phase === 'interlude') {
+    interludeState.elapsed = (interludeState.elapsed || 0) + dt;
+    drawInterlude(ctx, w, h, interludeState, ts);
+    if (interludeState.elapsed >= interludeState.duration) _advanceFromInterlude();
+    animId = requestAnimationFrame(loop); return;
+  }
 
   // ── Shooter mode ─────────────────────────────────────────────────────
   if (gameMode === 'shooter') {
@@ -392,6 +503,20 @@ function loop(ts) {
     }
   }
 
+  // ── Play Mode: Rhythm beat tracker ──────────────────────────────────
+  if (game.rhythmTimer !== undefined) {
+    game.rhythmTimer -= dt;
+    if (game.rhythmTimer <= 0) {
+      game.rhythmTimer = game.rhythmBeatMs;
+      game.rhythmBeat = true; // pulse flag
+      window._beatPulse = 1.0;
+    } else {
+      game.rhythmBeat = false;
+      window._beatPulse = Math.max(0, (window._beatPulse || 0) - dt / 200);
+    }
+    window._rhythmTimeToNext = game.rhythmTimer;
+  }
+
   // ── Play Mode: Zen auto-heal ─────────────────────────────────────────
   if (game.autoHealRate > 0) {
     game.hp = Math.min(UPG.maxHp, game.hp + game.autoHealRate * dt / 1000);
@@ -407,6 +532,7 @@ function loop(ts) {
     topSign:   dreamYoga.topDreamSign,
     checks:    dreamYoga.totalChecks,
   };
+  if (dreamYoga.lucidity >= 50) questSystem.onLucidityReached();
 
   const MOVE_DELAY = UPG.moveDelay * (game.slowMoves ? 1.5 : 1) * (game.ritualSlowMul || 1);
   const DIRS = {
@@ -442,10 +568,20 @@ function loop(ts) {
         if (targetTile === 4) { // T.PEACE
           patternRecognition.onPeaceCollected(game.peaceLeft);
           dreamYoga.onPeaceCollect();
+          questSystem.onPeaceCollect();
         }
         // Phase 8: Record emergence events on tile step
-        if (targetTile === 6) { emergenceIndicators.record('insight_accumulation'); dreamYoga.onInsightCollect(); }
+        if (targetTile === 6) { emergenceIndicators.record('insight_accumulation'); dreamYoga.onInsightCollect(); questSystem.onInsightCollect(); }
         if (targetTile === 4 && UPG.comboCount >= 4) emergenceIndicators.record('peace_chain'); // T.PEACE
+        // Skymap/Ritual Space: track star-tile collections and reward named constellation
+        if ((game.playModeId === 'skymap' || game.playModeId === 'ritual_space') && (targetTile === 6 || targetTile === 11)) {
+          game._starsCollected = (game._starsCollected || 0) + 1;
+          if (game._starsCollected % 3 === 0) {
+            const nameIdx = Math.floor(game._starsCollected / 3 - 1) % CONSTELLATION_NAMES.length;
+            window._constellationFlash = { name: CONSTELLATION_NAMES[nameIdx], alpha: 0, timer: 210 };
+            game.score += 400 + game._starsCollected * 50;
+          }
+        }
         // Sigil system: show sigil on INSIGHT(6), ARCHETYPE(11), PEACE(4), MEMORY(15), GLITCH(10)
         if ([4, 6, 10, 11, 15].includes(targetTile)) {
           const sigil = sigilSystem.onSpecialTile(targetTile, adaptiveDifficulty.tier.vocabTier || 'advanced');
@@ -453,21 +589,56 @@ function loop(ts) {
         }
         // Dream yoga: record dream sign for every special tile
         dreamYoga.onTileStep(targetTile);
+        // Quest: somatic tile hooks
+        if (targetTile === T.BODY_SCAN)    questSystem.onBodyScanTile();
+        if (targetTile === T.BREATH_SYNC)  questSystem.onBreathSyncTile();
+        if (targetTile === T.ENERGY_NODE)  questSystem.onEnergyNodeTile();
+        if (targetTile === T.GROUNDING)    questSystem.onGroundingTile();
+        // Alchemy: collect element seed when stepping on element tile
+        // Ritual Space mode doubles the seed yield
+        if (TILE_ELEMENT_MAP[targetTile]) {
+          const seedCount = game.ritualSeedMultiplier || 1;
+          const seedResult = alchemySystem.onElementTile(targetTile, seedCount);
+          if (seedResult) {
+            const ed = seedResult.elementDef;
+            _showMsg(ed.symbol + '  ' + ed.name + ' SEED ×' + seedResult.seeds + (seedCount > 1 ? ' (×2 ritual)' : ''), ed.color, 50);
+          }
+        }
       }
       // Phase 9: track move mindfulness
       const wasPreviewActive = consequencePreview.active && consequencePreview.ghostPath.length > 0;
       const wasImpulseActive = !!impulseBuffer.activeDirection;
-      if (wasPreviewActive || wasImpulseActive) { strategicThinking.onMindfulMove(); characterStats.onMindfulMove(); }
-      else strategicThinking.onImpulsiveMove();
+      if (wasPreviewActive || wasImpulseActive) {
+        strategicThinking.onMindfulMove(); characterStats.onMindfulMove();
+        questSystem.onPreviewMove();
+        alchemySystem.onMindfulMove(); // ether charge
+      } else strategicThinking.onImpulsiveMove();
       logicPuzzles.onMove(wasPreviewActive, wasImpulseActive);
       // Phase M5: RPG stat events on each move
+      const _prevLevel = characterStats.level;
       if (targetTile === 6) characterStats.onInsightCollect();                         // T.INSIGHT
-      if ([17,18,19,20].includes(targetTile)) characterStats.onEmbodimentTile();       // somatic tiles
+      if (SOMATIC_TILES.has(targetTile)) characterStats.onEmbodimentTile();            // somatic tiles
       // Award hazard-survival XP when player moves to a safe tile while enemies are nearby
       if (targetTile === 0 || targetTile === 4) {   // T.VOID or T.PEACE
         const nearbyEnemies = game.enemies.filter(e =>
           Math.abs(e.y - game.player.y) + Math.abs(e.x - game.player.x) <= 2).length;
         if (nearbyEnemies > 0) characterStats.onHazardSurvived();
+      }
+      if (characterStats.level > _prevLevel) {
+        sfxManager.playLevelUp();
+        _showMsg('LEVEL UP!  RPG·' + characterStats.level, '#ffdd88', 90);
+      }
+      // Quest: ×4 combo check
+      if (UPG.resonanceMultiplier >= 4) questSystem.onComboX4();
+      sfxManager.resume();
+      if (targetTile === 4)              sfxManager.playPeaceCollect();   // T.PEACE
+      else if (targetTile === 6)         sfxManager.playInsightCollect(); // T.INSIGHT
+      else if (SOMATIC_TILES.has(targetTile)) sfxManager.playSomaticTile();   // somatic
+      else if (HAZARD_TILES.has(targetTile))  sfxManager.playDamage();        // hazards
+      // Quest flash → play quest SFX exactly once on new quest completion
+      if (window._questFlash?.playSound) {
+        sfxManager.playQuestComplete();
+        window._questFlash.playSound = false;
       }
       // Play Mode: count moves for puzzle mode
       if (game.moveLimit) {
@@ -478,8 +649,26 @@ function loop(ts) {
           game.hp = 0; // end run
         }
       }
+      // Play Mode: Rhythm on-beat bonus
+      if (game.rhythmTimer !== undefined) {
+        const RHYTHM_BASE_BONUS = 50, RHYTHM_MAX_STREAK = 8;
+        const distToNext = game.rhythmTimer, distToPrev = game.rhythmBeatMs - game.rhythmTimer;
+        const onBeat = distToNext < game.rhythmWindow || distToPrev < game.rhythmWindow;
+        if (onBeat) {
+          game.rhythmStreak = (game.rhythmStreak || 0) + 1;
+          const bonus = Math.round(RHYTHM_BASE_BONUS * Math.min(game.rhythmStreak, RHYTHM_MAX_STREAK));
+          game.score += bonus;
+          _showMsg('🎵 ON BEAT ×' + game.rhythmStreak + ' +' + bonus, '#ffcc00', 30);
+          window._beatPulse = 1.0;
+        } else {
+          game.rhythmStreak = 0;
+        }
+      }
+      const _hpBeforeMove = game.hp;
       tryMove(game, dy, dx, matrixActive, nextDreamscape, _showMsg, insightTokens,
         (n) => { while (insightTokens < n) addInsightToken(); window._insightTokens = insightTokens; });
+      // Nightmare mode: peace tiles don't heal (revert any HP gain from peace tile)
+      if (game.nightmareMode && targetTile === 4 && game.hp > _hpBeforeMove) game.hp = _hpBeforeMove;
       lastMove = ts;
       impulseBuffer.reset();
     }
@@ -637,12 +826,52 @@ function loop(ts) {
   // Trigger archetype dialogue if archetype tile was just activated
   if (game.lastArchetypeActivated) {
     archetypeDialogue.onArchetypeCollect(game.lastArchetypeActivated);
+    questSystem.onArchetypeActivated();
     game.lastArchetypeActivated = null;
   }
   window._archetypeDialogue = archetypeDialogue.active;
   window._characterStats    = characterStats.statObj;
 
+  // ── Phase M3.5: Boss System tick ────────────────────────────────────
+  if (game.boss) {
+    const _wasBossAlive = game.boss.hp > 0;
+    bossSystem.update(game, dt, sfxManager, _showMsg, burst);
+    if (_wasBossAlive && game.boss.hp <= 0) {
+      questSystem.onBossSurvived();
+      emergenceIndicators.record('dream_completion'); // boss defeat = emergence event
+    }
+  }
+  // ── Quest system tick ────────────────────────────────────────────────
+  questSystem.tick();
+  // ── Constellation flash tick ─────────────────────────────────────────
+  const cf = window._constellationFlash;
+  if (cf && cf.timer > 0) {
+    cf.timer--;
+    cf.alpha = cf.timer > 180 ? (210 - cf.timer) / 30 : cf.timer > 30 ? 1 : cf.timer / 30;
+    if (cf.timer === 0) window._constellationFlash = null;
+  }
+  // ── Alchemy system tick ──────────────────────────────────────────────
+  alchemySystem.tick();
+  // Aurora phase quest trigger: only fire once on phase transition to 'aurora'
+  const _curAlchPhase = alchemySystem.phase;
+  if (_curAlchPhase === 'aurora' && _prevAlchemyPhase !== 'aurora') questSystem.onAuroraPhase();
+  _prevAlchemyPhase = _curAlchPhase;
+
+  // ── Expose all system data to window globals (grouped) ──────────────
+  window._questData     = questSystem.getAllProgress();
+  window._alchemy = {
+    seeds:               alchemySystem.seeds,
+    seedsDisplay:        alchemySystem.seedsDisplay,
+    phase:               alchemySystem.phase,
+    transmutations:      alchemySystem.transmutations,
+    stones:              alchemySystem.philosopherStones,
+    classicElements:     alchemySystem.classicElementsUsed,
+    active:              game.playModeId === 'alchemist' || game.playModeId === 'ritual_space',
+  };
+  window._playModeLabel = game.playModeLabel || null;
+
   if (game.hp <= 0) {
+    sfxManager.playDeath();
     deadGame = game; // snapshot for death screen
     sessionTracker.endSession(game.score, sessionTracker.dreamscapesCompleted);
     saveScore(game.score, game.level, game.ds);
@@ -733,9 +962,26 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
 
+  if (phase === 'howtoplay') {
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      sfxManager.resume();
+      setPhase('title');
+      CURSOR.menu = 2;
+    }
+    e.preventDefault(); return;
+  }
+
+  // Interlude: player can advance once minimum display time has elapsed
+  if (phase === 'interlude') {
+    if ((e.key === 'Enter' || e.key === ' ') && (interludeState.elapsed || 0) >= (interludeState.minAdvanceMs || INTERLUDE_MIN_ADVANCE_MS)) {
+      sfxManager.resume();
+      _advanceFromInterlude();
+    }
+    e.preventDefault(); return;
+  }
   if (phase === 'title') {
-    if (e.key==='ArrowUp')   { CURSOR.menu=(CURSOR.menu-1+5)%5; sfxManager.resume(); sfxManager.playMenuNav(); }
-    if (e.key==='ArrowDown') { CURSOR.menu=(CURSOR.menu+1)%5; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowUp')   { CURSOR.menu=(CURSOR.menu-1+6)%6; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowDown') { CURSOR.menu=(CURSOR.menu+1)%6; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='m'||e.key==='M') {
       gameMode = gameMode === 'grid' ? 'shooter' : 'grid';
       sfxManager.resume(); sfxManager.playMatrixSwitch(gameMode === 'grid');
@@ -744,9 +990,10 @@ window.addEventListener('keydown', e => {
       sfxManager.resume(); sfxManager.playMenuSelect();
       if (CURSOR.menu===0)      startGame(CFG.dreamIdx);
       else if (CURSOR.menu===1) setPhase('dreamselect');
-      else if (CURSOR.menu===2) { CURSOR.opt=0; CURSOR.optFrom='title'; setPhase('options'); }
-      else if (CURSOR.menu===3) setPhase('highscores');
-      else if (CURSOR.menu===4) { CURSOR.shop=0; CURSOR.upgradeFrom='title'; setPhase('upgrade'); }
+      else if (CURSOR.menu===2) setPhase('howtoplay');
+      else if (CURSOR.menu===3) { CURSOR.opt=0; CURSOR.optFrom='title'; setPhase('options'); }
+      else if (CURSOR.menu===4) setPhase('highscores');
+      else if (CURSOR.menu===5) { CURSOR.shop=0; CURSOR.upgradeFrom='title'; setPhase('upgrade'); }
     }
     e.preventDefault(); return;
   }
@@ -839,12 +1086,13 @@ window.addEventListener('keydown', e => {
       if (e.key==='Escape') { shooterMode.paused = true; CURSOR.pause=0; setPhase('paused'); }
       e.preventDefault(); return;
     }
-    if (e.key==='Escape') { CURSOR.pause=0; sessionTracker.pauseSession(); emergenceIndicators.record('pause_frequency'); characterStats.onPauseUsed(); dashboard.hide(); setPhase('paused'); }
+    if (e.key==='Escape') { CURSOR.pause=0; sessionTracker.pauseSession(); emergenceIndicators.record('pause_frequency'); characterStats.onPauseUsed(); questSystem.onPause(); dashboard.hide(); setPhase('paused'); }
     if ((e.key==='h'||e.key==='H') && !e.repeat) dashboard.toggle();
     if (e.key==='Shift' && !e.repeat) {
       const next = matrixActive === 'A' ? 'B' : 'A';
       setMatrix(next); setMatrixHoldTime(0);
       sfxManager.resume(); sfxManager.playMatrixSwitch(next === 'A');
+      questSystem.onMatrixSwitch();
       emergenceIndicators.record('matrix_mastery');
       logicPuzzles.onMatrixSwitch();  // Phase 9
       dreamYoga.onMatrixSwitch();     // Phase 2.5
@@ -880,11 +1128,32 @@ window.addEventListener('keydown', e => {
         }
       }
     }
+    // Alchemy transmutation — X key: cycle elements and transmute
+    // Available in Alchemist mode and Ritual Space mode
+    if ((e.key==='x'||e.key==='X') && !e.repeat && (game.playModeId === 'alchemist' || game.playModeId === 'ritual_space')) {
+      const seeds = alchemySystem.seeds;
+      const elements = ['fire','water','earth','air','ether'];
+      const ready = elements.find(el => seeds[el] >= 3);
+      if (ready) {
+        alchemySystem.tryTransmute(ready, game, burst, _showMsg);
+        sfxManager.resume();
+        // Quest hooks: transmutation count + distinct elements used
+        questSystem.onTransmutation();
+        // Philosopher's stone quest hook + SFX
+        if (window._alchemyFlash?.stone) {
+          sfxManager.playPhilosopherStone();
+          questSystem.onPhilosopherStone();
+        } else sfxManager.playTransmutation();
+      } else {
+        const display = alchemySystem.seedsDisplay || 'none';
+        _showMsg('⚗️  NEED 3 OF ONE ELEMENT  ·  seeds: ' + display, '#cc88ff', 50);
+      }
+    }
     if ((e.key==='c'||e.key==='C') && !e.repeat) {
       if (insightTokens>=2) {
         spendInsightTokens(2); window._insightTokens=insightTokens;
         if (!game.contZones) game.contZones=[];
-        game.contZones.push({x:game.player.x,y:game.player.y,timer:240,maxTimer:240});
+        game.contZones.push({x:game.player.x,y:game.player.y,timer:4000,maxTimer:4000});
         strategicThinking.onContainmentZone();  // Phase 9
         characterStats.onContainmentUsed();     // Phase M5
         _showMsg('CONTAINMENT ZONE','#00ffcc',38);
@@ -896,6 +1165,59 @@ window.addEventListener('keydown', e => {
 });
 
 window.addEventListener('keyup', e => keys.delete(e.key));
+
+// ─── Gamepad / Controller support ─────────────────────────────────────────
+// Polls the Gamepad API each frame for Steam-compatible controller input.
+// Left stick / D-pad → movement  |  A(0)=J archetype  |  B(1)=ESC
+// X(2)=transmute  |  Y(3)=glitch pulse  |  LB(4)=freeze  |  RB(5)=matrix toggle
+// START(9)=pause  |  SELECT(8)=dashboard
+let gpLastButtons = [];
+function pollGamepad() {
+  const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const gp = gamepads[0];
+  if (!gp) return;
+
+  const GAMEPAD_DEADZONE = 0.28;
+  const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+
+  // Movement: left stick + D-pad
+  if (ax > GAMEPAD_DEADZONE || gp.buttons[15]?.pressed) keys.add('ArrowRight'); else keys.delete('ArrowRight');
+  if (ax < -GAMEPAD_DEADZONE || gp.buttons[14]?.pressed) keys.add('ArrowLeft'); else keys.delete('ArrowLeft');
+  if (ay > GAMEPAD_DEADZONE || gp.buttons[13]?.pressed) keys.add('ArrowDown'); else keys.delete('ArrowDown');
+  if (ay < -GAMEPAD_DEADZONE || gp.buttons[12]?.pressed) keys.add('ArrowUp'); else keys.delete('ArrowUp');
+
+  const pressed = (i) => gp.buttons[i]?.pressed && !gpLastButtons[i];
+
+  if (pressed(0) && phase === 'playing' && gameMode === 'grid') { // A: archetype
+    if (game?.archetypeActive) executeArchetypePower(game);
+  }
+  if (pressed(3) && phase === 'playing' && gameMode === 'grid') { // Y: glitch pulse
+    if (UPG.glitchPulse && UPG.glitchPulseCharge >= 100) triggerGlitchPulse(game, _showMsg);
+  }
+  if (pressed(4) && phase === 'playing' && gameMode === 'grid') { // LB: freeze
+    if (UPG.freeze && UPG.freezeTimer <= 0) {
+      UPG.freezeTimer = 2500; _showMsg('FREEZE ACTIVE!', '#0088ff', 50);
+    }
+  }
+  if (pressed(5) && phase === 'playing' && gameMode === 'grid') { // RB: matrix toggle
+    const next = matrixActive === 'A' ? 'B' : 'A';
+    setMatrix(next); setMatrixHoldTime(0);
+    sfxManager.resume(); sfxManager.playMatrixSwitch(next === 'A');
+  }
+  if (pressed(9)) { // START: pause/resume
+    if (phase === 'playing') { CURSOR.pause = 0; sessionTracker.pauseSession(); setPhase('paused'); }
+    else if (phase === 'paused') { sessionTracker.resumeSession(); setPhase('playing'); }
+    else if (phase === 'title') startGame(CFG.dreamIdx);
+  }
+  if (pressed(8) && phase === 'playing') dashboard.toggle(); // SELECT: dashboard
+
+  // Save button states for edge detection
+  gpLastButtons = gp.buttons.map(b => b?.pressed || false);
+}
+
+// Gamepad connect/disconnect events
+window.addEventListener('gamepadconnected',    e => { _showMsg('CONTROLLER CONNECTED  ·  Left Stick=move  A=arch  B=back  Y=pulse', '#00ccff', 90); console.log('[Gamepad] connected:', e.gamepad.id); });
+window.addEventListener('gamepaddisconnected', e => { console.log('[Gamepad] disconnected:', e.gamepad.id); gpLastButtons = []; });
 
 // ─── Mouse events for shooter mode ────────────────────────────────────
 canvas.addEventListener('mousemove', e => {

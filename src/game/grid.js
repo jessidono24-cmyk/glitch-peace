@@ -92,12 +92,9 @@ export function buildDreamscape(ds, sz, level, prevScore, prevHp, maxHp, dreamHi
     });
   }
 
-  let boss = null;
-  if (level >= 6 && (ds.id === 'summit' || ds.id === 'integration')) {
-    const bx = Math.floor(sz / 2), by = Math.floor(sz / 2);
-    grid[by][bx] = T.VOID;
-    boss = { y: by, x: bx, hp: 5 + level, timer: 0, stunTimer: 0, phase: 'chase', phaseTimer: 400 };
-  }
+  // Note: bosses are spawned by boss-system.js in main.js (nextDreamscape)
+  // The legacy boss below is removed to avoid conflicts with boss-system phase management.
+  const boss = null;
 
   return {
     grid, enemies, boss, sz, level, ds,

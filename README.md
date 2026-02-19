@@ -2,11 +2,11 @@
 
 > **A multidimensional consciousness awakening platform** for healing, learning, and transformation — playable today as an HTML5 game, building toward a free Steam release.
 
-[![Version](https://img.shields.io/badge/version-1.5.0--alpha-blue.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
+[![Version](https://img.shields.io/badge/version-1.6.1--alpha-blue.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
 [![Lines of Code](https://img.shields.io/badge/LOC-10%2C000%2B-orange.svg)](src/)
-[![Progress](https://img.shields.io/badge/completion-52%25-yellow.svg)](#-development-roadmap)
+[![Progress](https://img.shields.io/badge/completion-54%25-yellow.svg)](#-development-roadmap)
 
 *Begin in stillness. Emerge through pattern recognition. Transform through play.*
 
@@ -94,8 +94,8 @@ Visible in the dreamscape selection screen for each level:
 | Source files | 43 JS modules |
 | Lines of code | ~10,000 |
 | Bundle size | 254 KB (85 KB gzipped) |
-| Build time | ~620ms |
-| Completion | ~52% of full vision |
+| Build time | ~550ms |
+| Completion | ~54% of full vision |
 
 ### What's In This Build
 - ✅ **Complete base game** (Phases 1-5): 17 tile types + **4 embodiment tiles**, 10 dreamscapes, 5 archetypes, 9 enemy AI behaviors
@@ -120,6 +120,8 @@ Visible in the dreamscape selection screen for each level:
 - ✅ **Campaign manager** (Phase M3) — tutorial hints for all 10 dreamscapes, narrative arc
 - ✅ **Procedural audio** — 8 distinct SFX via Web Audio API
 - ✅ **Onboarding flow** — age group, language, difficulty selection; ESC saves preference
+- ✅ **HOW TO PLAY screen** — built-in tile guide, controls, matrix system, first-steps walkthrough
+- ✅ **Smooth level transitions** — 10-second readable interlude; player can advance with ENTER/SPACE after 3.5 s; frame-rate independent; race-condition free
 
 ---
 
@@ -260,7 +262,7 @@ glitch-peace/
 │   ├── audio/                   # Procedural SFX
 │   └── intelligence/            # IQ/EQ proxy metrics
 ├── docs/                        # Research & design documents
-├── dist/                        # Production build (238 KB)
+├── dist/                        # Production build (254 KB)
 ├── index.html
 ├── vite.config.js
 └── package.json
@@ -275,22 +277,22 @@ glitch-peace/
 Phase 1-5   ████████████████████ 100% ✅  Foundation, base game
 Phase M1-2  ████████████████████ 100% ✅  Mode system, Shooter
 Phase M3    ████████████████████ 100% ✅  Campaign structure
-Phase M4    ████████████████████ 100% ✅  13 Play Styles ← NEW
-Phase 2.5   ████████████████████ 100% ✅  Dream Yoga ← NEW
+Phase M4    ████████████████████ 100% ✅  13 Play Styles
+Phase 2.5   ████████████████████ 100% ✅  Dream Yoga
 Phase 6-11  ████████████████████ 100% ✅  Learning/Awareness/IQ/Chakra
-Cosmologies ████████████████████ 100% ✅  12 frameworks mapped ← NEW
+Cosmologies ████████████████████ 100% ✅  12 frameworks mapped
+Phase 2.6   ████████████████████ 100% ✅  Embodiment Tiles (BODY_SCAN, BREATH_SYNC, ENERGY_NODE, GROUNDING)
+UX Polish   ████████████████████ 100% ✅  HOW TO PLAY screen; smooth level transitions
 
-Phase 2.6   ████████████████████ 100% ✅  Embodiment Tiles (BODY_SCAN, BREATH_SYNC, ENERGY_NODE, GROUNDING) ← NEW
-Phase M5    ██░░░░░░░░░░░░░░░░░░  10% 🔨  RPG Mode (character stats + archetype dialogue started) ← IN PROGRESS
+Phase M5    ██░░░░░░░░░░░░░░░░░░  10% 🔨  RPG Mode (character stats + archetype dialogue started)
 Phase M6    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Constellation Mode
-Dream deep  ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Body scan / breath / somatic tiles
 Boss System ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Multi-phase bosses
 8 new dreams░░░░░░░░░░░░░░░░░░░░   0% ⬜  Expanded dreamscapes
 Phase M7    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Platformer / Rhythm
 Phase M8    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Multiplayer / Co-op
 Steam pack  ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Electron + Steamworks
 
-Overall: ~10,000 / 20,000+ lines (~52%)
+Overall: ~10,000 / 20,000+ lines (~54%)
 ```
 
 ### 🚧 Next Steps
@@ -358,7 +360,42 @@ GLITCH·PEACE has a clear path to **free Steam release**:
 
 ---
 
-## 🚂 Relationship to glitch-peace-vite
+## 📊 Current Completion Status (February 2026)
+
+| Layer | What's built | Status |
+|-------|-------------|--------|
+| **Core engine** | Canvas loop, state machine, DPR scaling, dt-clamping | ✅ Complete |
+| **Tile system** | 21 tile types, Matrix A/B palette, particle effects | ✅ Complete |
+| **Grid gameplay** | Movement, consequence preview, impulse buffer, spread | ✅ Complete |
+| **Enemy AI** | 9 behaviors (chase, patrol, orbit, adaptive, labyrinth…) | ✅ Complete |
+| **Shooter mode** | Twin-stick, 4 weapons, wave system | ✅ Complete |
+| **10 Dreamscapes** | Unique layouts, narratives, environment events | ✅ Complete |
+| **13 Play Styles** | Zen, Speedrun, Puzzle, Horror, Roguelike, Training… | ✅ Complete |
+| **Onboarding** | Age group, language, difficulty; saved profile | ✅ Complete |
+| **HOW TO PLAY screen** | Tile guide, controls, matrix system, first-steps | ✅ Complete |
+| **Level transitions** | 10 s readable interlude; player-skippable; race-condition free | ✅ Complete |
+| **Learning systems** | 19-language vocabulary, sigils, pattern recognition | ✅ Complete |
+| **Dream Yoga** | Lucidity meter, reality checks, dream sign tracking | ✅ Complete |
+| **Emotional engine** | 10-emotion field, 7 synergy patterns, coherence | ✅ Complete |
+| **Temporal system** | 8 lunar phases × 7 planetary days | ✅ Complete |
+| **Cessation tools** | Session tracker, urge management, wellness monitor | ✅ Complete |
+| **Awareness systems** | Self-reflection, emergence indicators, chakra, tarot | ✅ Complete |
+| **Intelligence layer** | IQ/EQ proxy metrics, strategic coaching, logic puzzles | ✅ Complete |
+| **Cosmologies** | 12 frameworks mapped to dreamscapes | ✅ Complete |
+| **Integration dashboard** | H-key overlay with cross-session progress | ✅ Complete |
+| **RPG basics (M5)** | STR/INT/WIS/VIT stats, XP, level, archetype dialogue | 🔨 10% |
+| **Boss system** | Multi-phase bosses, special rewards | ⬜ 0% |
+| **8 new dreamscapes** | Expand to 18 total | ⬜ 0% |
+| **Constellation mode (M6)** | Skymap navigation layer | ⬜ 0% |
+| **Platformer/Rhythm (M7)** | New movement mode | ⬜ 0% |
+| **Multiplayer (M8)** | Shared emotional field, co-op | ⬜ 0% |
+| **Steam packaging** | Electron wrapper, Steamworks SDK | ⬜ 0% |
+
+**Overall: ~54% complete.** The game is fully playable end-to-end today. All core healing/learning systems are wired. The remaining 46% is content expansion, deeper RPG systems, and Steam packaging.
+
+---
+
+
 
 **[glitch-peace-vite](https://github.com/jessidono24-cmyk/glitch-peace-vite)** is a parallel experimental branch exploring:
 - Plugin/registry architecture (ModeRegistry, service injection)
@@ -438,7 +475,7 @@ Built on:
 
 ---
 
-**v1.6.0-alpha · February 2026 · 52% Complete**
+**v1.6.1-alpha · February 2026 · 54% Complete**
 [glitch-peace](https://github.com/jessidono24-cmyk/glitch-peace) · [glitch-peace-vite](https://github.com/jessidono24-cmyk/glitch-peace-vite)
 
 *Built with intention. Shared with love. Free always.*

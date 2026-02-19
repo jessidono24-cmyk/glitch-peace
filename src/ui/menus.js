@@ -249,82 +249,107 @@ export function drawPause(ctx, w, h, game, pauseIdx) {
 }
 
 export function drawInterlude(ctx, w, h, interludeState, ts) {
-  const totalTimer = interludeState.totalTimer || 280;
-  const prog = 1 - (interludeState.timer / totalTimer);
-  const alpha = prog < 0.08 ? prog / 0.08 : prog > 0.92 ? (1 - prog) / 0.08 : 1;
+  // ── Timing (ms-based, frame-rate independent) ─────────────────────────
+  const elapsed   = interludeState.elapsed  || 0;
+  const duration  = interludeState.duration || 10000;
+  const minAdv    = interludeState.minAdvanceMs || 3500;
+
+  // Global fade-in (first 600 ms) and fade-out (last 800 ms)
+  const FADE_IN  = 600;
+  const FADE_OUT = 800;
+  let alpha;
+  if      (elapsed < FADE_IN)             alpha = elapsed / FADE_IN;
+  else if (elapsed > duration - FADE_OUT) alpha = Math.max(0, (duration - elapsed) / FADE_OUT);
+  else                                    alpha = 1;
+
+  // Helper: per-element fade-in starting at `startMs`, taking 350 ms
+  const elemAlpha = (startMs) => Math.min(1, Math.max(0, (elapsed - startMs) / 350));
+
   const ds = interludeState.ds || DREAMSCAPES[0];
   ctx.fillStyle = ds.bgColor || '#02020a'; ctx.fillRect(0, 0, w, h);
+
+  // Animated scan lines
   for (let i = 0; i < 7; i++) {
     const lx = (ts * 0.02 + i * w / 7) % w;
-    ctx.strokeStyle = `rgba(0,255,136,${0.02 * alpha})`; ctx.lineWidth = 1;
+    ctx.strokeStyle = `rgba(0,255,136,${0.025 * alpha})`; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx - 100, h); ctx.stroke();
   }
   ctx.globalAlpha = alpha; ctx.textAlign = 'center';
 
-  // ── Completion text ───────────────────────────────────────────────────
+  // ── Completion text (immediate) ────────────────────────────────────────
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 20;
-  ctx.font = 'bold 14px Courier New'; ctx.fillText(interludeState.text, w / 2, h / 2 - 68); ctx.shadowBlur = 0;
+  ctx.font = 'bold 16px Courier New'; ctx.fillText(interludeState.text, w / 2, h / 2 - 76); ctx.shadowBlur = 0;
 
-  // ── Phase 8: Reflection prompt ────────────────────────────────────────
+  // ── Reflection prompt (1.0 s) ──────────────────────────────────────────
   if (interludeState.reflectionPrompt) {
     const rp = interludeState.reflectionPrompt;
-    // Fade the prompt in after 1s (prog > 0.3)
-    const rpAlpha = Math.min(1, Math.max(0, (prog - 0.25) / 0.1));
-    ctx.globalAlpha = alpha * rpAlpha;
+    ctx.globalAlpha = alpha * elemAlpha(1000);
     ctx.fillStyle = '#aaffcc'; ctx.shadowColor = '#00cc88'; ctx.shadowBlur = 8;
     ctx.font = 'italic 13px Courier New';
-    ctx.fillText('\u201c' + rp.prompt + '\u201d', w / 2, h / 2 - 32); ctx.shadowBlur = 0;
+    ctx.fillText('\u201c' + rp.prompt + '\u201d', w / 2, h / 2 - 42); ctx.shadowBlur = 0;
     ctx.globalAlpha = alpha;
   }
 
-  // ── Affirmation ───────────────────────────────────────────────────────
+  // ── Affirmation (1.8 s) ────────────────────────────────────────────────
   if (interludeState.affirmation) {
-    const affAlpha = Math.min(1, Math.max(0, (prog - 0.4) / 0.1));
-    ctx.globalAlpha = alpha * affAlpha;
+    ctx.globalAlpha = alpha * elemAlpha(1800);
     ctx.fillStyle = '#446644'; ctx.font = '9px Courier New';
-    ctx.fillText(interludeState.affirmation, w / 2, h / 2 - 10);
+    ctx.fillText(interludeState.affirmation, w / 2, h / 2 - 18);
     ctx.globalAlpha = alpha;
   }
 
-  // ── Next dreamscape info ──────────────────────────────────────────────
-  ctx.fillStyle = '#223322'; ctx.font = '11px Courier New'; ctx.fillText('ENTERING: ' + ds.name, w / 2, h / 2 + 12);
-  ctx.fillStyle = '#334455'; ctx.font = '10px Courier New'; ctx.fillText(ds.narrative, w / 2, h / 2 + 30);
+  // ── Next dreamscape info (2.2 s) ──────────────────────────────────────
+  ctx.globalAlpha = alpha * elemAlpha(2200);
+  ctx.fillStyle = '#223322'; ctx.font = '12px Courier New'; ctx.fillText('ENTERING: ' + ds.name, w / 2, h / 2 + 6);
+  ctx.fillStyle = '#334455'; ctx.font = '10px Courier New'; ctx.fillText(ds.narrative, w / 2, h / 2 + 24);
+  ctx.globalAlpha = alpha;
 
-  // ── Phase 6: Vocabulary word ──────────────────────────────────────────
+  // ── Vocabulary word (2.8 s) ───────────────────────────────────────────
   if (interludeState.vocabWord) {
     const vw = interludeState.vocabWord;
-    const vwAlpha = Math.min(1, Math.max(0, (prog - 0.5) / 0.12));
-    ctx.globalAlpha = alpha * vwAlpha;
+    ctx.globalAlpha = alpha * elemAlpha(2800);
     ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 6;
     ctx.font = 'bold 12px Courier New';
-    ctx.fillText(vw.word + '  [' + vw.pos + ']', w / 2, h / 2 + 56); ctx.shadowBlur = 0;
+    ctx.fillText(vw.word + '  [' + vw.pos + ']', w / 2, h / 2 + 50); ctx.shadowBlur = 0;
     ctx.fillStyle = '#554422'; ctx.font = '9px Courier New';
-    ctx.fillText(vw.def, w / 2, h / 2 + 72);
+    ctx.fillText(vw.def, w / 2, h / 2 + 66);
     ctx.globalAlpha = alpha;
   }
 
+  // ── Archetype (3.1 s) ─────────────────────────────────────────────────
   if (ds.archetype && ARCHETYPES[ds.archetype]) {
     const arch = ARCHETYPES[ds.archetype];
+    ctx.globalAlpha = alpha * elemAlpha(3100);
     ctx.fillStyle = arch.glow; ctx.shadowColor = arch.glow; ctx.shadowBlur = 10;
-    ctx.font = '10px Courier New'; ctx.fillText('archetype: ' + arch.name, w / 2, h / 2 + 92); ctx.shadowBlur = 0;
-  }
-
-  // ── Phase 9: Empathy reflection ───────────────────────────────────────
-  if (interludeState.empathyReflection) {
-    const erAlpha = Math.min(1, Math.max(0, (prog - 0.65) / 0.12));
-    ctx.globalAlpha = alpha * erAlpha;
-    ctx.fillStyle = '#887755'; ctx.font = 'italic 9px Courier New';
-    ctx.fillText(interludeState.empathyReflection, w / 2, h / 2 + 110);
+    ctx.font = '10px Courier New'; ctx.fillText('archetype: ' + arch.name, w / 2, h / 2 + 86); ctx.shadowBlur = 0;
     ctx.globalAlpha = alpha;
   }
 
-  // ── Phase M3: Campaign milestone ──────────────────────────────────────
+  // ── Empathy reflection (3.5 s) ────────────────────────────────────────
+  if (interludeState.empathyReflection) {
+    ctx.globalAlpha = alpha * elemAlpha(3500);
+    ctx.fillStyle = '#887755'; ctx.font = 'italic 9px Courier New';
+    ctx.fillText(interludeState.empathyReflection, w / 2, h / 2 + 104);
+    ctx.globalAlpha = alpha;
+  }
+
+  // ── Campaign milestone (4.0 s) ────────────────────────────────────────
   if (interludeState.milestone) {
-    const msAlpha = Math.min(1, Math.max(0, (prog - 0.75) / 0.12));
-    ctx.globalAlpha = alpha * msAlpha;
+    ctx.globalAlpha = alpha * elemAlpha(4000);
     ctx.fillStyle = '#ffdd44'; ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 8;
     ctx.font = 'bold 10px Courier New';
-    ctx.fillText('✦  ' + interludeState.milestone, w / 2, h / 2 + 128); ctx.shadowBlur = 0;
+    ctx.fillText('✦  ' + interludeState.milestone, w / 2, h / 2 + 122); ctx.shadowBlur = 0;
+    ctx.globalAlpha = alpha;
+  }
+
+  // ── "Continue" prompt — appears once all content is visible ───────────
+  if (elapsed >= minAdv) {
+    const contAlpha = Math.min(1, (elapsed - minAdv) / 400);
+    const pulse = 0.65 + 0.35 * Math.sin(ts * 0.003);
+    ctx.globalAlpha = alpha * contAlpha * pulse;
+    ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 5;
+    ctx.font = '10px Courier New';
+    ctx.fillText('ENTER · SPACE  to continue', w / 2, h - 20); ctx.shadowBlur = 0;
     ctx.globalAlpha = alpha;
   }
 

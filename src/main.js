@@ -98,12 +98,12 @@ const shooterMode = new ShooterMode(shooterSharedSystems);
 let game       = null;
 let deadGame   = null; // snapshot used by death screen (survives game=null)
 let animId     = null;
-let prevTs     = 0;
+let prevTs     = performance.now(); // initialise to now so first dt ≈ 0
 let lastMove   = 0;
 let gameMode   = 'grid'; // 'grid' | 'shooter'
-const EMOTION_THRESHOLD = 0.15; // emotion must exceed this to affect gameplay
-const INTERLUDE_TIMER_FRAMES = 280; // frames at ~60fps ≈ 4.67s
-const INTERLUDE_TIMEOUT_MS   = Math.round(INTERLUDE_TIMER_FRAMES / 60 * 1000) + 200; // safety margin
+const EMOTION_THRESHOLD      = 0.15;   // emotion must exceed this to affect gameplay
+const INTERLUDE_DURATION_MS  = 10000;  // auto-advance after 10 s
+const INTERLUDE_MIN_ADVANCE_MS = 3500; // player may skip after 3.5 s (all content visible)
 
 // ─── Onboarding state ────────────────────────────────────────────────────
 // LANG_LIST is imported from language-system.js — single canonical source
@@ -128,7 +128,7 @@ let anomalyActive = false, anomalyData = { row:-1, col:-1, t:0 };
 let hallucinations = [];
 let backgroundStars = [];
 let visions = [];
-let interludeState = { text:'', subtext:'', timer:0, ds:null };
+let interludeState = { text:'', subtext:'', elapsed:0, duration: INTERLUDE_DURATION_MS, minAdvanceMs: INTERLUDE_MIN_ADVANCE_MS, ds:null, nextGame:null };
 
 const keys = new Set();
 
@@ -295,12 +295,21 @@ function nextDreamscape() {
   const milestone = campaignManager.onDreamscapeComplete(g.ds.id % DREAMSCAPES.length, g.score);
   // Phase M5: RPG — reward XP on dreamscape completion
   characterStats.onDreamComplete();
+
+  // Pre-build next game immediately so it is ready when the player dismisses the interlude.
+  // Storing it in interludeState avoids any setTimeout race conditions.
+  resizeCanvas();
+  const nextGame = initGame(nextIdx, g.score + 400 + g.level * 60, g.level, g.hp);
+  nextGame.msg = DREAMSCAPES[nextIdx].name; nextGame.msgColor = '#ffdd00'; nextGame.msgTimer = 90;
+
   interludeState = {
     text: g.ds.completionText,
     subtext: DREAMSCAPES[nextIdx].narrative,
-    timer: INTERLUDE_TIMER_FRAMES,
-    totalTimer: INTERLUDE_TIMER_FRAMES,
+    elapsed: 0,
+    duration: INTERLUDE_DURATION_MS,
+    minAdvanceMs: INTERLUDE_MIN_ADVANCE_MS,
     ds: DREAMSCAPES[nextIdx],
+    nextGame,
     reflectionPrompt: prompt,
     affirmation,
     vocabWord,
@@ -308,14 +317,15 @@ function nextDreamscape() {
     milestone,
   };
   setPhase('interlude');
-  setTimeout(() => {
-    resizeCanvas();
-    game = initGame(nextIdx, g.score + 400 + g.level * 60, g.level, g.hp);
-    game.msg = DREAMSCAPES[nextIdx].name; game.msgColor = '#ffdd00'; game.msgTimer = 90;
-    // Phase M3: start tutorial for new dreamscape (if first visit)
-    campaignManager.startTutorial(nextIdx);
-    if (phase === 'interlude') setPhase('playing');
-  }, INTERLUDE_TIMEOUT_MS);
+}
+
+// Transition out of the interlude into the pre-built next game.
+function _advanceFromInterlude() {
+  if (phase !== 'interlude') return;
+  if (!interludeState.nextGame) return; // safety guard
+  game = interludeState.nextGame;
+  campaignManager.startTutorial(CFG.dreamIdx);
+  setPhase('playing');
 }
 
 function buyUpgrade(id) {
@@ -335,7 +345,7 @@ function buyUpgrade(id) {
 
 // ─── Main loop ───────────────────────────────────────────────────────────
 function loop(ts) {
-  const dt = ts - prevTs; prevTs = ts;
+  const dt = Math.min(ts - prevTs, 100); prevTs = ts; // cap at 100 ms to absorb tab-switch spikes
   const w = CW(), h = CH();
 
   if (phase === 'onboarding')  { drawOnboarding(ctx, w, h, onboardState); animId=requestAnimationFrame(loop); return; }
@@ -348,7 +358,12 @@ function loop(ts) {
   if (phase === 'upgrade')     { drawUpgradeShop(ctx, w, h, CURSOR.shop, insightTokens, checkOwned); animId=requestAnimationFrame(loop); return; }
   if (phase === 'dead')        { drawDead(ctx, w, h, deadGame, highScores, dreamHistory, insightTokens, sessionRep); animId=requestAnimationFrame(loop); return; }
   if (phase === 'paused')      { drawPause(ctx, w, h, game, CURSOR.pause); animId=requestAnimationFrame(loop); return; }
-  if (phase === 'interlude')   { drawInterlude(ctx, w, h, interludeState, ts); interludeState.timer--; if (interludeState.timer <= 0 && phase === 'interlude') setPhase('playing'); animId=requestAnimationFrame(loop); return; }
+  if (phase === 'interlude') {
+    interludeState.elapsed = (interludeState.elapsed || 0) + dt;
+    drawInterlude(ctx, w, h, interludeState, ts);
+    if (interludeState.elapsed >= interludeState.duration) _advanceFromInterlude();
+    animId = requestAnimationFrame(loop); return;
+  }
 
   // ── Shooter mode ─────────────────────────────────────────────────────
   if (gameMode === 'shooter') {
@@ -743,6 +758,14 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
 
+  // Interlude: player can advance once minimum display time has elapsed
+  if (phase === 'interlude') {
+    if ((e.key === 'Enter' || e.key === ' ') && (interludeState.elapsed || 0) >= (interludeState.minAdvanceMs || INTERLUDE_MIN_ADVANCE_MS)) {
+      sfxManager.resume();
+      _advanceFromInterlude();
+    }
+    e.preventDefault(); return;
+  }
   if (phase === 'title') {
     if (e.key==='ArrowUp')   { CURSOR.menu=(CURSOR.menu-1+6)%6; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowDown') { CURSOR.menu=(CURSOR.menu+1)%6; sfxManager.resume(); sfxManager.playMenuNav(); }

@@ -56,6 +56,12 @@ import { empathyTraining }    from './intelligence/emotional/empathy-training.js
 import { emotionRecognition } from './intelligence/emotional/emotion-recognition.js';
 // ─── Phase M3: Campaign Structure ────────────────────────────────────────
 import { campaignManager } from './modes/campaign-manager.js';
+// ─── Phase M4+: Play Modes System (from glitch-peace-vite) ───────────────
+import { PLAY_MODES, PLAY_MODE_LIST, applyPlayMode, getPlayModeMeta } from './systems/play-modes.js';
+// ─── Phase 10+: Cosmologies (from glitch-peace-vite) ─────────────────────
+import { COSMOLOGIES, DREAMSCAPE_COSMOLOGY, getCosmologyForDreamscape } from './systems/cosmology/cosmologies.js';
+// ─── Phase 2.5: Dream Yoga System ────────────────────────────────────────
+import { dreamYoga } from './systems/awareness/dream-yoga.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -211,6 +217,10 @@ function initGame(dreamIdx, prevScore, prevLevel, prevHp) {
   const ds = DREAMSCAPES[dreamIdx % DREAMSCAPES.length];
   setMatrix(ds.matrixDefault);
   const g = buildDreamscape(ds, SZ(), level, prevScore, prevHp, UPG.maxHp, dreamHistory);
+  // Apply cosmology data for display
+  g.cosmology = getCosmologyForDreamscape(ds.id);
+  // Apply active play mode
+  applyPlayMode(g, CFG.playMode || 'arcade');
   spawnVisions(CW(), CH()); hallucinations = []; glitchTimer = 500 + rnd(500);
   initStars(CW(), CH());
   return g;
@@ -246,6 +256,8 @@ function startGame(dreamIdx) {
   strategicThinking.resetSession();
   empathyTraining.resetSession();
   emotionRecognition.resetSession();
+  // Phase 2.5: reset dream yoga
+  dreamYoga.resetSession();
   // Phase M3: start tutorial for first dreamscape
   campaignManager.startTutorial(CFG.dreamIdx);
   campaignManager.markTutorialShown(CFG.dreamIdx);
@@ -360,7 +372,34 @@ function loop(ts) {
   window._emotionSynergy = emotionalField.synergy;
   window._purgDepth = emotionalField.purgDepth;
 
-  const MOVE_DELAY = game.slowMoves ? UPG.moveDelay * 1.5 : UPG.moveDelay;
+  // ── Play Mode: Speedrun countdown ───────────────────────────────────
+  if (game.speedrunActive && game.speedrunTimer > 0) {
+    game.speedrunTimer -= dt;
+    window._speedrunTimer = game.speedrunTimer;
+    if (game.speedrunTimer <= 0) {
+      _showMsg('TIME\'S UP!', '#ff4422', 60);
+      game.speedrunTimer = 0; game.speedrunActive = false;
+      game.hp = 0; // end run
+    }
+  }
+
+  // ── Play Mode: Zen auto-heal ─────────────────────────────────────────
+  if (game.autoHealRate > 0) {
+    game.hp = Math.min(UPG.maxHp, game.hp + game.autoHealRate * dt / 1000);
+  }
+
+  // ── Dream Yoga: tick + expose to renderer ───────────────────────────
+  dreamYoga.tick(dt);
+  window._dreamYoga = {
+    lucidity:  dreamYoga.lucidity,
+    rcActive:  dreamYoga.rcActive,
+    rcPrompt:  dreamYoga.rcPrompt,
+    rcAlpha:   dreamYoga.rcAlpha,
+    topSign:   dreamYoga.topDreamSign,
+    checks:    dreamYoga.totalChecks,
+  };
+
+  const MOVE_DELAY = UPG.moveDelay * (game.slowMoves ? 1.5 : 1) * (game.ritualSlowMul || 1);
   const DIRS = {
     ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1],
     w:[-1,0],s:[1,0],a:[0,-1],d:[0,1],W:[-1,0],S:[1,0],A:[0,-1],D:[0,1],
@@ -393,15 +432,18 @@ function loop(ts) {
         // Phase 6: pattern recognition on peace collect
         if (targetTile === 4) { // T.PEACE
           patternRecognition.onPeaceCollected(game.peaceLeft);
+          dreamYoga.onPeaceCollect();
         }
         // Phase 8: Record emergence events on tile step
-        if (targetTile === 6) emergenceIndicators.record('insight_accumulation'); // T.INSIGHT
+        if (targetTile === 6) { emergenceIndicators.record('insight_accumulation'); dreamYoga.onInsightCollect(); }
         if (targetTile === 4 && UPG.comboCount >= 4) emergenceIndicators.record('peace_chain'); // T.PEACE
         // Sigil system: show sigil on INSIGHT(6), ARCHETYPE(11), PEACE(4), MEMORY(15), GLITCH(10)
         if ([4, 6, 10, 11, 15].includes(targetTile)) {
           const sigil = sigilSystem.onSpecialTile(targetTile, adaptiveDifficulty.tier.vocabTier || 'advanced');
           if (sigil) { window._activeSigil = sigil; window._sigilAlpha = 1; }
         }
+        // Dream yoga: record dream sign for every special tile
+        dreamYoga.onTileStep(targetTile);
       }
       // Phase 9: track move mindfulness
       const wasPreviewActive = consequencePreview.active && consequencePreview.ghostPath.length > 0;
@@ -409,6 +451,15 @@ function loop(ts) {
       if (wasPreviewActive || wasImpulseActive) strategicThinking.onMindfulMove();
       else strategicThinking.onImpulsiveMove();
       logicPuzzles.onMove(wasPreviewActive, wasImpulseActive);
+      // Play Mode: count moves for puzzle mode
+      if (game.moveLimit) {
+        game.movesRemaining = Math.max(0, (game.movesRemaining || game.moveLimit) - 1);
+        window._movesRemaining = game.movesRemaining;
+        if (game.movesRemaining === 0 && game.peaceLeft > 0) {
+          _showMsg('OUT OF MOVES!', '#ff8800', 60);
+          game.hp = 0; // end run
+        }
+      }
       tryMove(game, dy, dx, matrixActive, nextDreamscape, _showMsg, insightTokens,
         (n) => { while (insightTokens < n) addInsightToken(); window._insightTokens = insightTokens; });
       lastMove = ts;
@@ -436,9 +487,16 @@ function loop(ts) {
 
   stepTileSpread(game, dt);
   const _hpBeforeEnemies = game.hp;
-  stepEnemies(game, dt, keys, matrixActive, hallucinations, _showMsg, setEmotion);
+  // Play mode: scale enemy timing by enemySpeedMul (zenMode enemies already cleared)
+  if (!game.zenMode) {
+    const eSpeedDt = dt * (game.enemySpeedMul || 1);
+    stepEnemies(game, eSpeedDt, keys, matrixActive, hallucinations, _showMsg, setEmotion);
+  }
   // Phase 9: track damage events for strategic analysis
-  if (game.hp < _hpBeforeEnemies) strategicThinking.onDamage(matrixActive);
+  if (game.hp < _hpBeforeEnemies) {
+    strategicThinking.onDamage(matrixActive);
+    dreamYoga.onHazardHit();
+  }
 
   // ── Phase 6: Learning Systems tick ─────────────────────────────────
   vocabularyEngine.tick();
@@ -666,18 +724,22 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
   if (phase === 'options') {
-    if (e.key==='ArrowUp')   { CURSOR.opt=(CURSOR.opt-1+5)%5; sfxManager.resume(); sfxManager.playMenuNav(); }
-    if (e.key==='ArrowDown') { CURSOR.opt=(CURSOR.opt+1)%5; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowUp')   { CURSOR.opt=(CURSOR.opt-1+6)%6; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowDown') { CURSOR.opt=(CURSOR.opt+1)%6; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowLeft'||e.key==='ArrowRight') {
       const dir=e.key==='ArrowLeft'?-1:1;
       if(CURSOR.opt===0){const i=['small','medium','large'].indexOf(CFG.gridSize);CFG.gridSize=['small','medium','large'][(i+dir+3)%3];}
       else if(CURSOR.opt===1){const i=['easy','normal','hard'].indexOf(CFG.difficulty);CFG.difficulty=['easy','normal','hard'][(i+dir+3)%3];}
       else if(CURSOR.opt===2) CFG.particles=!CFG.particles;
+      else if(CURSOR.opt===3) {  // PLAY STYLE cycling
+        const i=PLAY_MODE_LIST.indexOf(CFG.playMode||'arcade');
+        CFG.playMode=PLAY_MODE_LIST[(i+dir+PLAY_MODE_LIST.length)%PLAY_MODE_LIST.length];
+      }
       sfxManager.resume(); sfxManager.playMenuNav();
     }
     if (e.key==='Enter') {
-      if(CURSOR.opt===3) { setPhase('langopts'); }  // Language settings
-      else if(CURSOR.opt===4||e.key==='Escape') setPhase(game?'paused':'title');
+      if(CURSOR.opt===4) { setPhase('langopts'); }  // Language settings
+      else if(CURSOR.opt===5) setPhase(game?'paused':'title');
     }
     if (e.key==='Escape') setPhase(game?'paused':'title');
     e.preventDefault(); return;
@@ -743,10 +805,16 @@ window.addEventListener('keydown', e => {
       sfxManager.resume(); sfxManager.playMatrixSwitch(next === 'A');
       emergenceIndicators.record('matrix_mastery');
       logicPuzzles.onMatrixSwitch();  // Phase 9
+      dreamYoga.onMatrixSwitch();     // Phase 2.5
       const lbl = next==='A'?'MATRIX·A  ⟨ERASURE⟩':'MATRIX·B  ⟨COHERENCE⟩';
       const col = next==='A'?'#ff0055':'#00ff88';
       _showMsg(lbl, col, 55);
       if (CFG.particles) burst(game, game.player.x, game.player.y, col, 22, 4);
+    }
+    // Dream yoga: any key dismisses the reality check prompt
+    if (dreamYoga.rcActive && !e.repeat) {
+      dreamYoga.acknowledgeRealityCheck();
+      _showMsg('REALITY CHECK ✓ +LUCIDITY', '#aaddff', 45);
     }
     if ((e.key==='j'||e.key==='J') && !e.repeat) {
       if (game.archetypeActive) { executeArchetypePower(game); sfxManager.resume(); sfxManager.playArchetypePower(); }

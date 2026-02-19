@@ -101,21 +101,31 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
 
   if (tileType === T.PEACE) {
     const pts = Math.round((150 + g.level * 20) * UPG.resonanceMultiplier);
-    g.score += pts; g.hp = Math.min(UPG.maxHp, g.hp + 20);
-    g.grid[ny][nx] = T.VOID; g.peaceLeft--;
-    burst(g, nx, ny, UPG.particleColor, 18, 3.5);
-    UPG.shieldCount++; UPG.comboCount++;
-    UPG.resonanceMultiplier = Math.min(4, 1 + UPG.comboCount * 0.25);
-    UPG.glitchPulseCharge = Math.min(100, UPG.glitchPulseCharge + 15);
-    if (UPG.comboCount >= 3 && !UPG.shield) {
-      UPG.shield = true; UPG.shieldTimer = 20;
-      resonanceWave(g, nx, ny, '#00ffcc');
-      burst(g, nx, ny, '#00ffcc', 26, 5);
-      onMsg('SHIELD ACTIVE! ×' + UPG.resonanceMultiplier.toFixed(1), '#00ffcc', 55);
+    g.score += pts;
+    // Reverse mode: peace tiles damage instead of healing
+    if (g.reverseMode) {
+      g.hp = Math.max(0, g.hp - 15);
+      g.grid[ny][nx] = T.VOID; g.peaceLeft--;
+      burst(g, nx, ny, '#ff2244', 12, 3);
+      onMsg('REVERSED! PEACE DAMAGES -15', '#ff2244', 45);
+      g.shakeFrames = 4;
     } else {
-      onMsg('+PEACE +' + pts + (UPG.comboCount > 1 ? ' ×' + UPG.resonanceMultiplier.toFixed(1) : ''), '#00ffcc', 38);
+      g.hp = Math.min(UPG.maxHp, g.hp + 20);
+      g.grid[ny][nx] = T.VOID; g.peaceLeft--;
+      burst(g, nx, ny, UPG.particleColor, 18, 3.5);
+      UPG.shieldCount++; UPG.comboCount++;
+      UPG.resonanceMultiplier = Math.min(4, 1 + UPG.comboCount * 0.25);
+      UPG.glitchPulseCharge = Math.min(100, UPG.glitchPulseCharge + 15);
+      if (UPG.comboCount >= 3 && !UPG.shield) {
+        UPG.shield = true; UPG.shieldTimer = 20;
+        resonanceWave(g, nx, ny, '#00ffcc');
+        burst(g, nx, ny, '#00ffcc', 26, 5);
+        onMsg('SHIELD ACTIVE! ×' + UPG.resonanceMultiplier.toFixed(1), '#00ffcc', 55);
+      } else {
+        onMsg('+PEACE +' + pts + (UPG.comboCount > 1 ? ' ×' + UPG.resonanceMultiplier.toFixed(1) : ''), '#00ffcc', 38);
+      }
+      setEmotion(g, 'peace');
     }
-    setEmotion(g, 'peace');
     if (g.peaceLeft === 0) onNextDreamscape();
 
   } else if (tileType === T.INSIGHT) {
@@ -153,7 +163,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
       onMsg('SHIELDED', '#00ffcc', 20);
     } else {
       const def = TILE_DEF[tileType];
-      let dmg = Math.round(def.dmg * d.dmgMul * (matrixActive === 'A' ? 1.25 : 1));
+      let dmg = Math.round(def.dmg * d.dmgMul * (matrixActive === 'A' ? 1.25 : 1) * (g.dmgMul ?? 1));
       if (tileType === T.RAGE && def.push > 0) {
         const pby = ny + dy * def.push, pbx = nx + dx * def.push;
         if (pby >= 0 && pby < sz && pbx >= 0 && pbx < sz && g.grid[pby][pbx] !== T.WALL) {

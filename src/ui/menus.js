@@ -3,6 +3,8 @@ import { DREAMSCAPES, ARCHETYPES, UPGRADE_SHOP, MAIN_MENU, PAUSE_MENU, OPT_GRID,
 import { CFG, PLAYER_PROFILE } from '../core/state.js';
 import { LANGUAGES, LANGUAGE_PATHS, LANG_LIST } from '../systems/learning/language-system.js';
 import { DIFFICULTY_TIERS } from '../systems/difficulty/adaptive-difficulty.js';
+import { PLAY_MODES, PLAY_MODE_LIST, getPlayModeMeta } from '../systems/play-modes.js';
+import { getCosmologyForDreamscape } from '../systems/cosmology/cosmologies.js';
 
 function stars(ctx, backgroundStars, ts) {
   for (const s of backgroundStars) {
@@ -58,9 +60,17 @@ export function drawDreamSelect(ctx, w, h, dreamIdx) {
     ctx.fillText((di + 1) + '.  ' + ds.name, w / 2, y);
     ctx.fillStyle = sel ? '#334455' : '#1a2a1a'; ctx.font = '9px Courier New';
     ctx.fillText(ds.subtitle + '  ·  ' + ds.emotion, w / 2, y + 16);
-    if (sel && ds.archetype && ARCHETYPES[ds.archetype]) {
-      const arch = ARCHETYPES[ds.archetype];
-      ctx.fillStyle = '#665522'; ctx.fillText('archetype: ' + arch.name + ' — ' + arch.powerDesc, w / 2, y + 30);
+    if (sel) {
+      if (ds.archetype && ARCHETYPES[ds.archetype]) {
+        const arch = ARCHETYPES[ds.archetype];
+        ctx.fillStyle = '#665522'; ctx.fillText('archetype: ' + arch.name + ' — ' + arch.powerDesc, w / 2, y + 30);
+      }
+      // Show cosmological theme for selected dreamscape
+      const cosmo = getCosmologyForDreamscape(ds.id);
+      if (cosmo) {
+        ctx.fillStyle = '#334466'; ctx.font = '8px Courier New';
+        ctx.fillText((cosmo.emoji || '') + ' ' + cosmo.name + '  ·  ' + cosmo.tradition, w / 2, y + 42);
+      }
     }
   }
   ctx.fillStyle = '#131328'; ctx.font = '8px Courier New'; ctx.fillText('↑↓ select  ·  ENTER start here  ·  ESC back', w / 2, h - 20);
@@ -72,34 +82,37 @@ export function drawOptions(ctx, w, h, optIdx) {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 16;
   ctx.font = 'bold 20px Courier New'; ctx.fillText('OPTIONS', w / 2, 50); ctx.shadowBlur = 0;
-  const langMeta = LANGUAGES[PLAYER_PROFILE.nativeLang] || {};
-  const tgtMeta  = LANGUAGES[PLAYER_PROFILE.targetLang]  || {};
+  const langMeta  = LANGUAGES[PLAYER_PROFILE.nativeLang] || {};
+  const tgtMeta   = LANGUAGES[PLAYER_PROFILE.targetLang]  || {};
+  const playMeta  = getPlayModeMeta(CFG.playMode || 'arcade');
   const rows = [
-    { label:'GRID SIZE',  opts:OPT_GRID, cur:CFG.gridSize },
-    { label:'DIFFICULTY', opts:OPT_DIFF, cur:CFG.difficulty },
-    { label:'PARTICLES',  opts:['on','off'], cur:CFG.particles ? 'on' : 'off' },
-    { label:'LANGUAGES',  opts:['OPEN →'], cur:'OPEN →', hint: (langMeta.emoji||'') + ' → ' + (tgtMeta.emoji||'') + ' ' + (tgtMeta.name||'') },
-    { label:'',           opts:['← BACK'], cur:'← BACK' },
+    { label:'GRID SIZE',   opts:OPT_GRID, cur:CFG.gridSize },
+    { label:'DIFFICULTY',  opts:OPT_DIFF, cur:CFG.difficulty },
+    { label:'PARTICLES',   opts:['on','off'], cur:CFG.particles ? 'on' : 'off' },
+    { label:'PLAY STYLE',  opts:['‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›'], cur:'‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›',
+      hint: playMeta.desc },
+    { label:'LANGUAGES',   opts:['OPEN →'], cur:'OPEN →', hint: (langMeta.emoji||'') + ' → ' + (tgtMeta.emoji||'') + ' ' + (tgtMeta.name||'') },
+    { label:'',            opts:['← BACK'], cur:'← BACK' },
   ];
   rows.forEach((row, i) => {
-    const sel = i === optIdx, baseY = 95 + i * 60;
+    const sel = i === optIdx, baseY = 80 + i * 52;
     if (row.label) {
       ctx.fillStyle = '#334455'; ctx.font = '9px Courier New'; ctx.fillText(row.label, w / 2, baseY);
-      if (row.hint) { ctx.fillStyle = '#445566'; ctx.font = '8px Courier New'; ctx.fillText(row.hint, w / 2, baseY + 12); }
+      if (row.hint) { ctx.fillStyle = '#445566'; ctx.font = '8px Courier New'; ctx.fillText(row.hint.slice(0, 55), w / 2, baseY + 12); }
     }
     const rowOpts = row.opts;
     rowOpts.forEach((opt, j) => {
       const active = opt === row.cur;
-      const oy_off = row.hint ? 34 : 24;
+      const oy_off = row.hint ? 30 : 22;
       const ox = w / 2 + (j - (rowOpts.length - 1) / 2) * 110, oy = baseY + oy_off;
-      ctx.fillStyle = (sel && active) ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.02)'; ctx.fillRect(ox - 44, oy - 16, 88, 24);
-      ctx.strokeStyle = (sel && active) ? 'rgba(0,255,136,0.5)' : active ? 'rgba(0,255,136,0.18)' : 'rgba(255,255,255,0.04)'; ctx.strokeRect(ox - 44, oy - 16, 88, 24);
+      ctx.fillStyle = (sel && active) ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.02)'; ctx.fillRect(ox - 60, oy - 14, 120, 22);
+      ctx.strokeStyle = (sel && active) ? 'rgba(0,255,136,0.5)' : active ? 'rgba(0,255,136,0.18)' : 'rgba(255,255,255,0.04)'; ctx.strokeRect(ox - 60, oy - 14, 120, 22);
       ctx.fillStyle = active ? '#00ff88' : '#334455'; ctx.shadowColor = active ? '#00ff88' : 'transparent'; ctx.shadowBlur = active ? 5 : 0;
-      ctx.font = active ? 'bold 11px Courier New' : '10px Courier New'; ctx.fillText(opt.toUpperCase(), ox, oy); ctx.shadowBlur = 0;
+      ctx.font = active ? 'bold 10px Courier New' : '9px Courier New'; ctx.fillText(opt.toUpperCase().slice(0, 22), ox, oy); ctx.shadowBlur = 0;
     });
-    if (sel) { ctx.fillStyle = '#00ff88'; ctx.font = '12px Courier New'; ctx.fillText('▶', w / 2 - 154, baseY + (row.hint ? 34 : 24)); }
+    if (sel) { ctx.fillStyle = '#00ff88'; ctx.font = '12px Courier New'; ctx.fillText('▶', w / 2 - 154, baseY + (row.hint ? 30 : 22)); }
   });
-  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New'; ctx.fillText('↑↓ row  ·  ←→ value  ·  ENTER/ESC back', w / 2, h - 20);
+  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New'; ctx.fillText('↑↓ row  ·  ←→ value  ·  ENTER opens  ·  ESC back', w / 2, h - 20);
   ctx.textAlign = 'left';
 }
 

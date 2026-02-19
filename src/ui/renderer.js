@@ -597,5 +597,67 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
       hints.slice(0, 2).forEach((h, i) => ctx.fillText(h, sx + gp / 2, sy - 18 + i * 13));
       ctx.textAlign = 'left'; ctx.globalAlpha = 1;
     }
+
+    // Phase 2.5: Dream Yoga — lucidity meter (bottom-left of grid)
+    const dy = window._dreamYoga;
+    if (dy) {
+      const lx = sx + 2, ly = sy + gp - 18;
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(lx, ly, 88, 14);
+      ctx.strokeStyle = 'rgba(100,200,255,0.2)'; ctx.lineWidth = 1;
+      ctx.strokeRect(lx, ly, 88, 14);
+      // bar
+      ctx.fillStyle = 'rgba(100,180,255,' + Math.min(1, 0.3 + dy.lucidity * 0.005) + ')'; ctx.fillRect(lx + 1, ly + 1, Math.round(dy.lucidity * 0.86), 12);
+      ctx.fillStyle = '#88aadd'; ctx.font = '7px Courier New'; ctx.textAlign = 'left';
+      ctx.fillText('◐ LUCIDITY ' + dy.lucidity + '%', lx + 3, ly + 10);
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+
+      // Reality check prompt — centred overlay
+      if (dy.rcActive && dy.rcAlpha > 0.02 && dy.rcPrompt) {
+        const pa = Math.min(1, dy.rcAlpha);
+        ctx.globalAlpha = pa;
+        ctx.fillStyle = 'rgba(0,5,20,0.92)'; ctx.fillRect(w / 2 - 200, h / 2 - 55, 400, 100);
+        ctx.strokeStyle = 'rgba(100,200,255,0.5)'; ctx.lineWidth = 1;
+        ctx.strokeRect(w / 2 - 200, h / 2 - 55, 400, 100);
+        ctx.fillStyle = '#aaccff'; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 10;
+        ctx.font = 'bold 11px Courier New'; ctx.textAlign = 'center';
+        ctx.fillText('◐ REALITY CHECK', w / 2, h / 2 - 36); ctx.shadowBlur = 0;
+        ctx.fillStyle = '#ddeeff'; ctx.font = '13px Courier New';
+        ctx.fillText(dy.rcPrompt.q, w / 2, h / 2 - 14);
+        ctx.fillStyle = '#556688'; ctx.font = '9px Courier New';
+        ctx.fillText(dy.rcPrompt.hint, w / 2, h / 2 + 6);
+        ctx.fillStyle = '#334466'; ctx.font = '8px Courier New';
+        ctx.fillText('press any key to acknowledge', w / 2, h / 2 + 26);
+        ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+      }
+    }
+
+    // Phase M4: Speedrun timer overlay
+    const srt = window._speedrunTimer;
+    if (srt !== undefined && srt !== null && srt >= 0) {
+      const secLeft = Math.floor(srt / 1000);
+      const timerColor = secLeft <= 30 ? '#ff4422' : secLeft <= 60 ? '#ffaa00' : '#88ddff';
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(w - 80, sy - 2, 74, 20);
+      ctx.strokeStyle = timerColor + '55'; ctx.lineWidth = 1;
+      ctx.strokeRect(w - 80, sy - 2, 74, 20);
+      ctx.fillStyle = timerColor; ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'center';
+      const mm = Math.floor(secLeft / 60), ss = secLeft % 60;
+      ctx.fillText('⏱ ' + mm + ':' + String(ss).padStart(2, '0'), w - 43, sy + 12);
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    }
+
+    // Phase M4: Move limit overlay (puzzle mode)
+    const mr = window._movesRemaining;
+    if (mr !== undefined && mr !== null) {
+      const mrColor = mr <= 10 ? '#ff6622' : '#88bbff';
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(w - 80, sy + 22, 74, 18);
+      ctx.strokeStyle = mrColor + '44'; ctx.lineWidth = 1;
+      ctx.strokeRect(w - 80, sy + 22, 74, 18);
+      ctx.fillStyle = mrColor; ctx.font = 'bold 9px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('MOVES: ' + mr, w - 43, sy + 34);
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    }
   }
 }

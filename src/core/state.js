@@ -8,6 +8,7 @@ export const CFG = {
   difficulty: 'normal',
   particles:  true,
   dreamIdx:   0,
+  playMode:   'arcade',  // see src/systems/play-modes.js
 };
 
 // ═══════════════════════════════════════════════════════════

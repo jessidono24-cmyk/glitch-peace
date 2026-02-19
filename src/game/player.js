@@ -131,7 +131,8 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
 
   } else if (tileType === T.ARCHETYPE) {
     g.grid[ny][nx] = T.VOID;
-    activateArchetype(g, g.ds.archetype || 'orb', matrixActive);
+    const archKey = g.ds.archetype === 'all' ? pick(Object.keys(ARCHETYPES)) : (g.ds.archetype || 'orb');
+    activateArchetype(g, archKey, matrixActive);
 
   } else if (tileType === T.TELEPORT) {
     let tries = 0, ty = rnd(sz), tx = rnd(sz);

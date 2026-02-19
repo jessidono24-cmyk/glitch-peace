@@ -152,6 +152,32 @@ export function stepEnemies(game, dt, keys, matrixActive, hallucinations, showMs
           if (ny >= 0 && ny < sz && nx >= 0 && nx < sz && g.grid[ny][nx] !== T.WALL) { e.y = ny; e.x = nx; break; }
         }
       }
+    } else if (beh === 'labyrinth') {
+      // Aztec: hugs walls (right-hand rule approximation) and closes in when near player
+      if (dist < 4) {
+        const pref = Math.abs(tdy) >= Math.abs(tdx)
+          ? [[tdy > 0 ? 1 : -1, 0], [0, tdx > 0 ? 1 : -1]]
+          : [[0, tdx > 0 ? 1 : -1], [tdy > 0 ? 1 : -1, 0]];
+        for (const [dy, dx] of pref) {
+          const ny = e.y + dy, nx = e.x + dx;
+          if (ny >= 0 && ny < sz && nx >= 0 && nx < sz && g.grid[ny][nx] !== T.WALL) { e.y = ny; e.x = nx; moved = true; break; }
+        }
+      }
+      if (!moved) {
+        // Follow the wall: prefer directions that have a wall to the right
+        e.patrolAngle += (Math.random() < 0.35 ? (Math.random() - 0.5) * 1.2 : 0);
+        const dy = Math.round(Math.sin(e.patrolAngle)), dx = Math.round(Math.cos(e.patrolAngle));
+        const ny = e.y + clamp(dy, -1, 1), nx = e.x + clamp(dx, -1, 1);
+        if (ny >= 0 && ny < sz && nx >= 0 && nx < sz && g.grid[ny][nx] !== T.WALL) { e.y = ny; e.x = nx; moved = true; }
+        if (!moved) {
+          e.patrolAngle += Math.PI * 0.5; // turn 90° when blocked
+          const dirs = [[1,0],[-1,0],[0,1],[0,-1]].sort(() => Math.random() - 0.5);
+          for (const [dy2, dx2] of dirs) {
+            const ny2 = e.y + dy2, nx2 = e.x + dx2;
+            if (ny2 >= 0 && ny2 < sz && nx2 >= 0 && nx2 < sz && g.grid[ny2][nx2] !== T.WALL) { e.y = ny2; e.x = nx2; break; }
+          }
+        }
+      }
     } else {
       const dirs = [[1,0],[-1,0],[0,1],[0,-1]].sort(() => Math.random() - 0.5);
       for (const [dy, dx] of dirs) {

@@ -319,8 +319,9 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   }
 
   if (g.archetypeActive && g.archetypeType) {
-    const { ARCHETYPES: ARC } = import.meta ? {} : {};
-    ctx.fillStyle = '#ffdd00'; ctx.font = '8px Courier New'; ctx.fillText('[ARCH ACTIVE]', 14, 68);
+    const arch = ARCHETYPES[g.archetypeType];
+    ctx.fillStyle = arch ? arch.color : '#ffdd00'; ctx.shadowColor = arch ? arch.glow : '#ffdd00'; ctx.shadowBlur = 4;
+    ctx.font = '8px Courier New'; ctx.fillText(arch ? arch.name + ' ACTIVE' : '[ARCH ACTIVE]', 14, 68); ctx.shadowBlur = 0;
   } else if (UPG_ref.shield && UPG_ref.shieldTimer > 0) {
     ctx.fillStyle = '#00ffff'; ctx.font = '8px Courier New'; ctx.fillText('SHIELD×' + UPG_ref.shieldTimer, 14, 68);
   } else if (UPG_ref.shieldCount > 0) {

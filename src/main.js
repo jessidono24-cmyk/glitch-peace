@@ -116,6 +116,15 @@ function triggerEnvironmentEvent(g) {
     const otherDs = pick(DREAMSCAPES.filter(d => d.id !== g.ds.id));
     if (otherDs.hazardSet[0]) { let n=0,itr=0; while(n<3&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===0){g.grid[y][x]=otherDs.hazardSet[0];n++;}} }
     _showMsg('DREAMSCAPES MERGE…','#ffaaff',40);
+  } else if (event === 'line_of_sight') {
+    // Summit: enemies become alert and terror tiles appear at player's periphery
+    for (const e of g.enemies) if (e.stunTimer > 0) e.stunTimer = 0;
+    let n=0, itr=0; while (n<3&&itr<999) { itr++; const y=rnd(sz),x=rnd(sz); if(g.grid[y][x]===0&&Math.random()<0.5){g.grid[y][x]=2;n++;} }
+    _showMsg('THE SUMMIT WATCHES…','#ff4422',40);
+  } else if (event === 'dead_ends') {
+    // Aztec: seal off random corridors with walls, penalising predictable routes
+    let n=0, itr=0; while (n<4&&itr<999) { itr++; const y=1+rnd(sz-2),x=1+rnd(sz-2); if(g.grid[y][x]===0){g.grid[y][x]=5;n++;} }
+    _showMsg('THE LABYRINTH SHIFTS…','#cc8800',40);
   }
   if (Math.random() < 0.4) {
     const row = rnd(sz);

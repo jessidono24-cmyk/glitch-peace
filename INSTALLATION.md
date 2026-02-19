@@ -11,6 +11,9 @@ Welcome to GLITCH·PEACE! This guide will help you download, install, and run th
    - Click the green "Code" button
    - Select "Download ZIP"
    - Extract the ZIP file to your computer
+   - ⚠️ **IMPORTANT:** Extract to a folder path WITHOUT SPACES
+     - ✅ Good: `C:\glitch-peace` or `C:\Games\glitch-peace`
+     - ❌ Bad: `C:\New folder\glitch-peace` or `C:\My Games\glitch-peace`
 
 2. **Run the game:**
    - Navigate to the extracted folder
@@ -61,11 +64,17 @@ Welcome to GLITCH·PEACE! This guide will help you download, install, and run th
    git clone https://github.com/jessidono24-cmyk/glitch-peace.git
    cd glitch-peace
    ```
+   
+   ⚠️ **IMPORTANT:** Clone to a path WITHOUT SPACES in the folder name
+   - ✅ Good: `C:\projects\glitch-peace`
+   - ❌ Bad: `C:\My Projects\glitch-peace`
 
 2. **Install dependencies:**
    ```bash
    npm install
    ```
+   
+   **Troubleshooting:** If you get errors, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
 3. **Run in development mode:**
    ```bash
@@ -93,7 +102,15 @@ Welcome to GLITCH·PEACE! This guide will help you download, install, and run th
 
 1. **Download and extract:**
    - Download ZIP from GitHub
-   - Extract to a folder
+   - Extract to a folder WITHOUT SPACES in the path
+   - ⚠️ **Important:** Use paths like `C:\glitch-peace` not `C:\New folder\glitch-peace`
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+   
+   **If you get errors:** See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for solutions
 
 2. **Install dependencies:**
    ```bash

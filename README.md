@@ -93,8 +93,8 @@ Visible in the dreamscape selection screen for each level:
 |--------|-------|
 | Source files | 43 JS modules |
 | Lines of code | ~10,000 |
-| Bundle size | 249 KB (83 KB gzipped) |
-| Build time | ~600ms |
+| Bundle size | 254 KB (85 KB gzipped) |
+| Build time | ~620ms |
 | Completion | ~52% of full vision |
 
 ### What's In This Build
@@ -123,21 +123,79 @@ Visible in the dreamscape selection screen for each level:
 
 ---
 
-## 🚀 Quick Start
+## 🎮 How to Play
+
+> **New to GLITCH·PEACE?** Here's everything you need to know before your first dreamscape.
+
+### The Objective
+Move through the dreamscape grid and **collect ◈ PEACE tiles** to fill your progress bar. When it's full, an exit opens — step into it to advance to the next dreamscape. Avoid hazard tiles (they drain HP). Survive long enough to awaken.
+
+**ESC pauses the game at any moment. Your state is always safe to leave.**
+
+### Tile Reference
+| Symbol | Name | Effect |
+|--------|------|--------|
+| ◈ | **PEACE** | Collect to progress — your primary goal |
+| ◆ | **INSIGHT** | Earns upgrade tokens (spend in Upgrades menu) |
+| ↓ | **DESPAIR** | Hazard — damages + spreads to nearby tiles |
+| ! | **TERROR** | High-damage hazard |
+| ✕ | **SELF-HARM** | Moderate damage |
+| ~ | **HOPELESS** | Hazard — spreads slowly |
+| ▲ | **RAGE** | Damage + pushes you back |
+| ? | **GLITCH** | Teleports you to a random empty tile |
+| ⇒ | **TELEPORT** | Fast-travel portal (step on to jump) |
+| ☆ | **ARCHETYPE** | Activates a guardian power — press **J** to use it |
+| ◯ | **BODY SCAN** | Somatic tile — restores energy |
+| ≋ | **BREATH SYNC** | Calming tile — syncs pace |
+| ✦ | **ENERGY NODE** | Energy boost |
+| ⊕ | **GROUNDING** | Rooting heal |
+
+### Controls Quick-Reference
+| Key | Action |
+|-----|--------|
+| **WASD** / **Arrow Keys** | Move |
+| **SHIFT** | Toggle Matrix A (Erasure) ↔ B (Coherence) |
+| **J** | Archetype power (when ☆ is active) |
+| **R** | Glitch Pulse (when charge is full) |
+| **Q** | Freeze all enemies (requires upgrade) |
+| **C** | Containment zone — costs 2 ◆ |
+| **H** | Toggle integration dashboard |
+| **ESC** | Pause (always safe) |
+
+> **In-game**: Select **HOW TO PLAY** from the title menu for a built-in visual reference.
+
+### The Matrix System
+Press **SHIFT** to switch between two matrices:
+- **MATRIX A ⟨ERASURE⟩** — red glow. More dangerous, reveals hidden tiles, empowers archetype abilities.
+- **MATRIX B ⟨COHERENCE⟩** — green glow. Safer, enables slow passive healing, better for recovery.
+
+Holding Matrix B for 4+ seconds slowly heals you. Holding Matrix A for 2.5+ seconds slowly drains HP. Choose wisely.
+
+### Your First Steps
+1. Select **▶ START JOURNEY** — the game begins in **VOID STATE** (the first dreamscape, gently paced)
+2. Move with WASD/Arrows and collect every ◈ you see
+3. When HP is low: switch to Matrix B (SHIFT) and avoid hazards
+4. Collect ☆ ARCHETYPE tiles to activate a guardian — press J to use the power
+5. Advance through all 10 dreamscapes to reach **DREAMSCAPE INTEGRATION** — the final awakening
+
+---
+
+
 
 ### Just Want to Play? (2 minutes)
 1. Click **Code** → **Download ZIP** above
 2. Extract anywhere
 3. Open `dist/index.html` in browser
 4. Play immediately — no installation needed
+5. Select **HOW TO PLAY** from the title menu for an in-game guide
 
 ### For Developers
 ```bash
 git clone https://github.com/jessidono24-cmyk/glitch-peace.git
 cd glitch-peace
 npm install
-npm run dev        # http://localhost:5173
-npm run build      # → dist/ (238 KB)
+npm run dev        # http://localhost:3000
+npm run build      # → dist/ (~254 KB)
 ```
 
 ---

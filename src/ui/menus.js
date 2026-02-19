@@ -548,3 +548,124 @@ export function drawLanguageOptions(ctx, w, h, langOb) {
   ctx.fillText('↑↓ row  ·  ←→ value  ·  ENTER/ESC back', w / 2, h - 20);
   ctx.textAlign = 'left';
 }
+
+// ─── How To Play screen ───────────────────────────────────────────────
+// A first-time-player reference: objective, tile guide, controls, matrix.
+export function drawHowToPlay(ctx, w, h) {
+  ctx.fillStyle = '#02020a'; ctx.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 3) { ctx.fillStyle = 'rgba(0,0,0,0.08)'; ctx.fillRect(0, y, w, 1); }
+  ctx.textAlign = 'center';
+
+  // ── Title ──────────────────────────────────────────────────────────────
+  ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 18;
+  ctx.font = 'bold 22px Courier New'; ctx.fillText('HOW TO PLAY', w / 2, 40); ctx.shadowBlur = 0;
+  ctx.fillStyle = '#1a3a1a'; ctx.font = '9px Courier New';
+  ctx.fillText('a consciousness engine disguised as a tile game', w / 2, 56);
+
+  // ── Objective ─────────────────────────────────────────────────────────
+  ctx.fillStyle = '#00cc77'; ctx.font = 'bold 11px Courier New'; ctx.fillText('OBJECTIVE', w / 2, 78);
+  ctx.fillStyle = '#334455'; ctx.font = '9px Courier New';
+  ctx.fillText('Use WASD or Arrow Keys to move through the dreamscape grid.', w / 2, 93);
+  ctx.fillText('Collect ◈ PEACE tiles to fill your bar and clear the level.', w / 2, 107);
+  ctx.fillText('Avoid hazard tiles. Reach the exit to enter the next dreamscape.', w / 2, 121);
+  ctx.fillText('Press ESC any time to pause — your state is always safe to leave.', w / 2, 135);
+
+  // ── Divider ───────────────────────────────────────────────────────────
+  ctx.strokeStyle = 'rgba(0,255,136,0.12)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(w / 2 - 200, 144); ctx.lineTo(w / 2 + 200, 144); ctx.stroke();
+
+  // ── Tile Guide ────────────────────────────────────────────────────────
+  ctx.fillStyle = '#00cc77'; ctx.font = 'bold 11px Courier New'; ctx.fillText('TILE GUIDE', w / 2, 158);
+
+  const TILES_HELP = [
+    { sym: '◈', name: 'PEACE',      col: '#00ffaa', desc: 'Collect to progress' },
+    { sym: '◆', name: 'INSIGHT',    col: '#00eeff', desc: 'Earn upgrade tokens' },
+    { sym: '↓', name: 'DESPAIR',    col: '#5566ff', desc: 'Hazard — spreads' },
+    { sym: '!', name: 'TERROR',     col: '#ff3333', desc: 'High damage' },
+    { sym: '✕', name: 'SELF-HARM',  col: '#cc2222', desc: 'Moderate damage' },
+    { sym: '~', name: 'HOPELESS',   col: '#2266ff', desc: 'Spreads slowly' },
+    { sym: '▲', name: 'RAGE',       col: '#ff2266', desc: 'Damage + pushback' },
+    { sym: '?', name: 'GLITCH',     col: '#dd00ff', desc: 'Random teleport' },
+    { sym: '⇒', name: 'TELEPORT',   col: '#00ccff', desc: 'Fast travel portal' },
+    { sym: '☆', name: 'ARCHETYPE',  col: '#ffdd00', desc: 'Guardian power — J' },
+    { sym: '◯', name: 'BODY SCAN',  col: '#00aa44', desc: 'Somatic restore' },
+    { sym: '≋', name: 'BREATH',     col: '#6688ff', desc: 'Energy / calm sync' },
+    { sym: '✦', name: 'ENERGY NODE',col: '#cc44ff', desc: 'Energy boost' },
+    { sym: '⊕', name: 'GROUNDING',  col: '#886644', desc: 'Root / heal' },
+  ];
+
+  const tStartY = 172, rowH = 21, colL = w / 2 - 205, colR = w / 2 + 5;
+  TILES_HELP.forEach((t, i) => {
+    const col = i % 2 === 0 ? colL : colR;
+    const ty = tStartY + Math.floor(i / 2) * rowH;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = t.col; ctx.font = 'bold 9px Courier New';
+    ctx.fillText(t.sym + ' ' + t.name, col, ty);
+    ctx.fillStyle = '#445566'; ctx.font = '8px Courier New';
+    ctx.fillText('— ' + t.desc, col + 76, ty);
+  });
+  ctx.textAlign = 'center';
+
+  // ── Divider ───────────────────────────────────────────────────────────
+  const afterTiles = tStartY + Math.ceil(TILES_HELP.length / 2) * rowH + 4;
+  ctx.strokeStyle = 'rgba(0,255,136,0.12)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(w / 2 - 200, afterTiles); ctx.lineTo(w / 2 + 200, afterTiles); ctx.stroke();
+
+  // ── Controls ─────────────────────────────────────────────────────────
+  const ctrlY = afterTiles + 14;
+  ctx.fillStyle = '#00cc77'; ctx.font = 'bold 11px Courier New'; ctx.fillText('CONTROLS', w / 2, ctrlY);
+
+  const CONTROLS_HELP = [
+    ['WASD / ↑↓←→', 'Move',                 'ESC',   'Pause (always safe)'],
+    ['SHIFT',        'Switch Matrix A ↔ B',  'H',     'Toggle dashboard'],
+    ['J',            'Archetype power',       'R',     'Glitch Pulse (charged)'],
+    ['Q',            'Freeze enemies',        'C',     'Containment zone (2◆)'],
+  ];
+  CONTROLS_HELP.forEach(([k1, v1, k2, v2], i) => {
+    const cy2 = ctrlY + 16 + i * 18;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#00aa66'; ctx.font = 'bold 9px Courier New'; ctx.fillText(k1, w / 2 - 205, cy2);
+    ctx.fillStyle = '#334455'; ctx.font = '8px Courier New'; ctx.fillText(v1, w / 2 - 130, cy2);
+    ctx.fillStyle = '#00aa66'; ctx.font = 'bold 9px Courier New'; ctx.fillText(k2, w / 2 + 10, cy2);
+    ctx.fillStyle = '#334455'; ctx.font = '8px Courier New'; ctx.fillText(v2, w / 2 + 46, cy2);
+  });
+  ctx.textAlign = 'center';
+
+  // ── Matrix System ─────────────────────────────────────────────────────
+  const matY = ctrlY + 16 + CONTROLS_HELP.length * 18 + 12;
+  ctx.strokeStyle = 'rgba(0,255,136,0.12)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(w / 2 - 200, matY - 6); ctx.lineTo(w / 2 + 200, matY - 6); ctx.stroke();
+
+  ctx.fillStyle = '#00cc77'; ctx.font = 'bold 11px Courier New'; ctx.fillText('MATRIX SYSTEM  (SHIFT to toggle)', w / 2, matY + 6);
+  ctx.fillStyle = '#ff3366'; ctx.font = '9px Courier New';
+  ctx.fillText('MATRIX A  ⟨ERASURE⟩   — red glow · reveals hidden tiles · more dangerous', w / 2, matY + 22);
+  ctx.fillStyle = '#00ff88';
+  ctx.fillText('MATRIX B  ⟨COHERENCE⟩ — green glow · restores health · safer recovery', w / 2, matY + 38);
+  ctx.fillStyle = '#334455'; ctx.font = '8px Courier New';
+  ctx.fillText('Holding Matrix B heals slowly. Holding Matrix A drains slowly. Choose wisely.', w / 2, matY + 54);
+
+  // ── First Steps ───────────────────────────────────────────────────────
+  const fsY = matY + 68;
+  ctx.strokeStyle = 'rgba(0,255,136,0.12)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(w / 2 - 200, fsY - 6); ctx.lineTo(w / 2 + 200, fsY - 6); ctx.stroke();
+
+  ctx.fillStyle = '#00cc77'; ctx.font = 'bold 11px Courier New'; ctx.fillText('YOUR FIRST STEPS', w / 2, fsY + 6);
+  const STEPS = [
+    '1.  Choose START JOURNEY from the title — the first dreamscape is VOID STATE.',
+    '2.  Move with WASD or Arrow Keys. Collect every ◈ you see.',
+    '3.  When your HP bar gets low, switch to Matrix B (SHIFT) and move to green tiles.',
+    '4.  Collect ☆ ARCHETYPE tiles — then press J to release their power.',
+    '5.  Reach the far edge of the grid to enter the next dreamscape.',
+  ];
+  STEPS.forEach((s, i) => {
+    ctx.fillStyle = '#335544'; ctx.font = '8px Courier New';
+    ctx.fillText(s, w / 2, fsY + 22 + i * 16);
+  });
+
+  // ── Footer ────────────────────────────────────────────────────────────
+  ctx.fillStyle = '#1a2a1a'; ctx.font = 'italic 7px Courier New';
+  ctx.fillText('All data stays local · No shame spirals · Pause any time · Your identity is always safe.', w / 2, h - 30);
+  ctx.fillStyle = '#131328'; ctx.font = '9px Courier New';
+  ctx.fillText('ENTER / ESC  ·  return to title', w / 2, h - 16);
+  ctx.textAlign = 'left';
+}

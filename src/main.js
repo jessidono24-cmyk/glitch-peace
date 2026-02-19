@@ -21,7 +21,7 @@ import { burst, resonanceWave } from './game/particles.js';
 import { drawGame } from './ui/renderer.js';
 import { drawTitle, drawDreamSelect, drawOptions, drawHighScores,
          drawUpgradeShop, drawPause, drawInterlude, drawDead,
-         drawOnboarding, drawLanguageOptions } from './ui/menus.js';
+         drawOnboarding, drawLanguageOptions, drawHowToPlay } from './ui/menus.js';
 // ─── Phase 2-5 systems ───────────────────────────────────────────────────
 import { sfxManager } from './audio/sfx-manager.js';
 import { temporalSystem } from './systems/temporal-system.js';
@@ -340,6 +340,7 @@ function loop(ts) {
 
   if (phase === 'onboarding')  { drawOnboarding(ctx, w, h, onboardState); animId=requestAnimationFrame(loop); return; }
   if (phase === 'langopts')    { drawLanguageOptions(ctx, w, h, langOptState); animId=requestAnimationFrame(loop); return; }
+  if (phase === 'howtoplay')   { drawHowToPlay(ctx, w, h); animId=requestAnimationFrame(loop); return; }
   if (phase === 'title')       { drawTitle(ctx, w, h, backgroundStars, ts, CURSOR.menu, gameMode); animId=requestAnimationFrame(loop); return; }
   if (phase === 'dreamselect') { drawDreamSelect(ctx, w, h, CFG.dreamIdx); animId=requestAnimationFrame(loop); return; }
   if (phase === 'options')     { drawOptions(ctx, w, h, CURSOR.opt); animId=requestAnimationFrame(loop); return; }
@@ -733,9 +734,18 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
 
+  if (phase === 'howtoplay') {
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      sfxManager.resume();
+      setPhase('title');
+      CURSOR.menu = 2;
+    }
+    e.preventDefault(); return;
+  }
+
   if (phase === 'title') {
-    if (e.key==='ArrowUp')   { CURSOR.menu=(CURSOR.menu-1+5)%5; sfxManager.resume(); sfxManager.playMenuNav(); }
-    if (e.key==='ArrowDown') { CURSOR.menu=(CURSOR.menu+1)%5; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowUp')   { CURSOR.menu=(CURSOR.menu-1+6)%6; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowDown') { CURSOR.menu=(CURSOR.menu+1)%6; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='m'||e.key==='M') {
       gameMode = gameMode === 'grid' ? 'shooter' : 'grid';
       sfxManager.resume(); sfxManager.playMatrixSwitch(gameMode === 'grid');
@@ -744,9 +754,10 @@ window.addEventListener('keydown', e => {
       sfxManager.resume(); sfxManager.playMenuSelect();
       if (CURSOR.menu===0)      startGame(CFG.dreamIdx);
       else if (CURSOR.menu===1) setPhase('dreamselect');
-      else if (CURSOR.menu===2) { CURSOR.opt=0; CURSOR.optFrom='title'; setPhase('options'); }
-      else if (CURSOR.menu===3) setPhase('highscores');
-      else if (CURSOR.menu===4) { CURSOR.shop=0; CURSOR.upgradeFrom='title'; setPhase('upgrade'); }
+      else if (CURSOR.menu===2) setPhase('howtoplay');
+      else if (CURSOR.menu===3) { CURSOR.opt=0; CURSOR.optFrom='title'; setPhase('options'); }
+      else if (CURSOR.menu===4) setPhase('highscores');
+      else if (CURSOR.menu===5) { CURSOR.shop=0; CURSOR.upgradeFrom='title'; setPhase('upgrade'); }
     }
     e.preventDefault(); return;
   }

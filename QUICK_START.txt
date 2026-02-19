@@ -1,0 +1,91 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                                                                      ║
+║                       GLITCH·PEACE QUICK START                       ║
+║                                                                      ║
+║        Download and play in under 2 minutes - no install needed!    ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+
+📥 STEP 1: DOWNLOAD
+═══════════════════════════════════════════════════════════════════════
+
+Visit: https://github.com/jessidono24-cmyk/glitch-peace
+
+Click the green "Code" button → Select "Download ZIP"
+
+Your browser will download: glitch-peace-main.zip
+
+
+📦 STEP 2: EXTRACT
+═══════════════════════════════════════════════════════════════════════
+
+Find the downloaded ZIP file (usually in Downloads folder)
+
+Right-click → "Extract All" or "Extract Here"
+
+You'll get a folder called: glitch-peace-main/
+
+
+🎮 STEP 3: PLAY
+═══════════════════════════════════════════════════════════════════════
+
+Open the glitch-peace-main folder
+
+Open the "dist" folder inside
+
+Find "index.html" and double-click it
+
+The game will open in your web browser!
+
+
+🎯 CONTROLS
+═══════════════════════════════════════════════════════════════════════
+
+🔲 GRID MODE (Tactical):
+   WASD or Arrow Keys = Move
+   Shift = Toggle Matrix A/B
+   J = Archetype power
+   R = Glitch pulse
+   ESC = Pause
+
+◎ SHOOTER MODE (Action):
+   WASD = Move continuously
+   Mouse = Aim
+   Left Click = Shoot
+   ESC = Pause
+
+🔄 SWITCH MODES:
+   Press "M" on the title screen!
+
+
+❓ TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════════
+
+Problem: Double-clicking doesn't work
+Solution: Right-click index.html → "Open With" → Choose your browser
+
+Problem: Black screen or nothing happens
+Solution: Try a different browser (Chrome or Firefox work best)
+
+Problem: Game is laggy
+Solution: Close other browser tabs, update your browser
+
+
+📚 MORE HELP
+═══════════════════════════════════════════════════════════════════════
+
+Full guide: See INSTALLATION.md in the main folder
+Game info: See README.md
+Issues: Visit the GitHub repository
+
+
+✨ THAT'S IT!
+═══════════════════════════════════════════════════════════════════════
+
+You're ready to explore consciousness through play!
+
+Enjoy GLITCH·PEACE! 🎮✨
+
+
+════════════════════════════════════════════════════════════════════════

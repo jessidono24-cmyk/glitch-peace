@@ -42,6 +42,13 @@ import { chakraSystem } from './systems/cosmology/chakra-system.js';
 import { TAROT_ARCHETYPES, getRandomArchetype } from './systems/cosmology/tarot-archetypes.js';
 // ─── Phase 11: Integration Dashboard ─────────────────────────────────────
 import { drawDashboard, dashboard } from './systems/integration/progress-dashboard.js';
+// ─── Phase 9: Intelligence Enhancement ───────────────────────────────────
+import { logicPuzzles }       from './intelligence/cognitive/logic-puzzles.js';
+import { strategicThinking }  from './intelligence/cognitive/strategic-thinking.js';
+import { empathyTraining }    from './intelligence/emotional/empathy-training.js';
+import { emotionRecognition } from './intelligence/emotional/emotion-recognition.js';
+// ─── Phase M3: Campaign Structure ────────────────────────────────────────
+import { campaignManager } from './modes/campaign-manager.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -213,6 +220,14 @@ function startGame(dreamIdx) {
   emergenceIndicators.resetSession();
   sessionTracker.startSession();
   patternRecognition.onScoreChange(0);
+  // Phase 9: reset intelligence systems
+  logicPuzzles.resetSession();
+  strategicThinking.resetSession();
+  empathyTraining.resetSession();
+  emotionRecognition.resetSession();
+  // Phase M3: start tutorial for first dreamscape
+  campaignManager.startTutorial(CFG.dreamIdx);
+  campaignManager.markTutorialShown(CFG.dreamIdx);
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -234,6 +249,11 @@ function nextDreamscape() {
   if (prompt.depth === 'mid' || prompt.depth === 'deep') emergenceIndicators.record('reflection_depth');
   // Phase 6: record vocabulary growth
   if (vocabularyEngine.sessionCount >= 8) emergenceIndicators.record('vocabulary_growth');
+  // Phase 9: surface sequence challenge + empathy reflection
+  logicPuzzles.onDreamscapeComplete(CFG.dreamIdx);
+  const empathyReflection = empathyTraining.getReflection();
+  // Phase M3: campaign completion
+  const milestone = campaignManager.onDreamscapeComplete(g.ds.id % DREAMSCAPES.length, g.score);
   interludeState = {
     text: g.ds.completionText,
     subtext: DREAMSCAPES[nextIdx].narrative,
@@ -243,12 +263,17 @@ function nextDreamscape() {
     reflectionPrompt: prompt,
     affirmation,
     vocabWord,
+    empathyReflection,
+    milestone,
   };
   setPhase('interlude');
   setTimeout(() => {
     resizeCanvas();
     game = initGame(nextIdx, g.score + 400 + g.level * 60, g.level, g.hp);
     game.msg = DREAMSCAPES[nextIdx].name; game.msgColor = '#ffdd00'; game.msgTimer = 90;
+    // Phase M3: start tutorial for new dreamscape (if first visit)
+    campaignManager.startTutorial(nextIdx);
+    campaignManager.markTutorialShown(nextIdx);
     if (phase === 'interlude') setPhase('playing');
   }, INTERLUDE_TIMEOUT_MS);
 }
@@ -257,6 +282,7 @@ function buyUpgrade(id) {
   const up = UPGRADE_SHOP.find(u => u.id === id);
   if (!up || insightTokens < up.cost || checkOwned(id)) return;
   spendInsightTokens(up.cost); window._insightTokens = insightTokens;
+  strategicThinking.onTokenSpent(id);  // Phase 9: track resource investment
   if (id==='maxhp')  { UPG.maxHp+=25; if(game) game.hp=Math.min(game.hp+25,UPG.maxHp); }
   if (id==='speed')  UPG.moveDelay = Math.max(55, UPG.moveDelay - 15);
   if (id==='magnet') UPG.magnet = true;
@@ -349,12 +375,20 @@ function loop(ts) {
         if (targetTile === 6) emergenceIndicators.record('insight_accumulation'); // T.INSIGHT
         if (targetTile === 4 && UPG.comboCount >= 4) emergenceIndicators.record('peace_chain'); // T.PEACE
       }
+      // Phase 9: track move mindfulness
+      const wasPreviewActive = consequencePreview.active && consequencePreview.ghostPath.length > 0;
+      const wasImpulseActive = !!impulseBuffer.activeDirection;
+      if (wasPreviewActive || wasImpulseActive) strategicThinking.onMindfulMove();
+      else strategicThinking.onImpulsiveMove();
+      logicPuzzles.onMove(wasPreviewActive, wasImpulseActive);
       tryMove(game, dy, dx, matrixActive, nextDreamscape, _showMsg, insightTokens,
         (n) => { while (insightTokens < n) addInsightToken(); window._insightTokens = insightTokens; });
       lastMove = ts;
       impulseBuffer.reset();
     }
   } else if (!activeDir) {
+    // Phase 9: track impulse cancellations (buffer was active, key released)
+    if (impulseBuffer.activeDirection) strategicThinking.onImpulseCancel();
     impulseBuffer.cancel();
     window._impulseProgress = 0;
   }
@@ -373,12 +407,18 @@ function loop(ts) {
   if (game.environmentTimer <= 0) { game.environmentTimer = 900 + rnd(700); if (Math.random()<0.6) triggerEnvironmentEvent(game); }
 
   stepTileSpread(game, dt);
+  const _hpBeforeEnemies = game.hp;
   stepEnemies(game, dt, keys, matrixActive, hallucinations, _showMsg, setEmotion);
+  // Phase 9: track damage events for strategic analysis
+  if (game.hp < _hpBeforeEnemies) strategicThinking.onDamage(matrixActive);
 
   // ── Phase 6: Learning Systems tick ─────────────────────────────────
   vocabularyEngine.tick();
+  const _prevPatterns = patternRecognition.sessionCount;
   patternRecognition.tick();
   patternRecognition.checkScore(game.score);
+  // Phase 9: propagate pattern discovery to logic puzzle IQ tracker
+  if (patternRecognition.sessionCount > _prevPatterns) logicPuzzles.onPatternDiscovered();
   // Expose to renderer
   window._vocabWord      = vocabularyEngine.activeWord;
   window._patternBanner  = patternRecognition.activeBanner;
@@ -429,6 +469,34 @@ function loop(ts) {
     totalSessions: sessionTracker.sessionHistory.length,
   };
   window._dreamscapesThisSession = sessionTracker.dreamscapesCompleted;
+
+  // ── Phase 9: Intelligence Enhancement tick ──────────────────────────
+  logicPuzzles.tick();
+  empathyTraining.tick();
+  emotionRecognition.tick();
+  // EQ observation: feed dominant emotion to emotion-recognition
+  const domEmo = emotionalField.getDominantEmotion();
+  emotionRecognition.observe(domEmo.id, domEmo.value, matrixActive);
+  // Expose intelligence data to window for dashboard + renderer
+  window._iqData = {
+    iqScore:          logicPuzzles.iqScore,
+    strategicScore:   strategicThinking.strategicScore,
+    eqScore:          emotionRecognition.eqScore,
+    empathyScore:     empathyTraining.empathyScore,
+    challenge:        logicPuzzles.activeChallenge,
+    challengeAlpha:   logicPuzzles.challengeAlpha,
+    strategicTip:     strategicThinking.coachingTip,
+    eqInsight:        emotionRecognition.currentInsight,
+    flashEmotion:     empathyTraining.flashEmotion,
+    empathyAlpha:     empathyTraining.flashAlpha,
+    compassPhrase:    empathyTraining.compassPhrase,
+    eqFlash:          emotionRecognition.flashLabel,
+    eqFlashAlpha:     emotionRecognition.flashAlpha,
+    behaviorsWitnessed: empathyTraining.behaviorsWitnessed,
+  };
+  // Campaign tutorial hints
+  window._tutorialHints = campaignManager.getTutorialHints(CFG.dreamIdx);
+  window._campaignTotal = campaignManager.totalComplete;
 
   if (game.hp <= 0) {
     deadGame = game; // snapshot for death screen
@@ -543,6 +611,7 @@ window.addEventListener('keydown', e => {
       setMatrix(next); setMatrixHoldTime(0);
       sfxManager.resume(); sfxManager.playMatrixSwitch(next === 'A');
       emergenceIndicators.record('matrix_mastery');
+      logicPuzzles.onMatrixSwitch();  // Phase 9
       const lbl = next==='A'?'MATRIX·A  ⟨ERASURE⟩':'MATRIX·B  ⟨COHERENCE⟩';
       const col = next==='A'?'#ff0055':'#00ff88';
       _showMsg(lbl, col, 55);
@@ -559,13 +628,22 @@ window.addEventListener('keydown', e => {
       else _showMsg('BUY GLITCH PULSE IN UPGRADES','#334455',28);
     }
     if ((e.key==='q'||e.key==='Q') && !e.repeat) {
-      if (UPG.freeze && UPG.freezeTimer<=0) { UPG.freezeTimer=2500; _showMsg('FREEZE ACTIVE!','#0088ff',50); burst(game,game.player.x,game.player.y,'#0088ff',20,4); }
+      if (UPG.freeze && UPG.freezeTimer<=0) {
+        UPG.freezeTimer=2500; _showMsg('FREEZE ACTIVE!','#0088ff',50); burst(game,game.player.x,game.player.y,'#0088ff',20,4);
+        strategicThinking.onFreezeUsed();  // Phase 9
+        // Phase 9: empathy — stun enemies' behaviors
+        if (game.enemies && game.enemies.length > 0) {
+          const randEnemy = game.enemies[Math.floor(Math.random() * game.enemies.length)];
+          empathyTraining.onEnemyStunned(randEnemy.behavior || randEnemy.type || 'rush');
+        }
+      }
     }
     if ((e.key==='c'||e.key==='C') && !e.repeat) {
       if (insightTokens>=2) {
         spendInsightTokens(2); window._insightTokens=insightTokens;
         if (!game.contZones) game.contZones=[];
         game.contZones.push({x:game.player.x,y:game.player.y,timer:240,maxTimer:240});
+        strategicThinking.onContainmentZone();  // Phase 9
         _showMsg('CONTAINMENT ZONE','#00ffcc',38);
       } else _showMsg('NEED 2 ◆ FOR CONTAINMENT','#334455',28);
     }

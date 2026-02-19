@@ -166,6 +166,18 @@ export function drawPause(ctx, w, h, game, pauseIdx) {
     ctx.fillText('EMERGENCE · ' + em.label, w / 2, h / 2 - 6);
   }
 
+  // Phase 9: Strategic coaching tip + EQ insight
+  const iqData = window._iqData;
+  if (iqData) {
+    ctx.fillStyle = '#223340'; ctx.font = '7px Courier New';
+    ctx.fillText('IQ ' + iqData.iqScore + '  EQ ' + iqData.eqScore + '  STRATEGY ' + iqData.strategicScore + '  EMPATHY ' + iqData.empathyScore, w / 2, h / 2 + 6);
+    ctx.fillStyle = '#334455'; ctx.font = 'italic 7px Courier New';
+    const tipText = iqData.strategicTip
+      ? (iqData.strategicTip.length > 54 ? iqData.strategicTip.slice(0, 54) + '…' : iqData.strategicTip)
+      : '';
+    ctx.fillText(tipText, w / 2, h / 2 + 18);
+  }
+
   // Phase 7: Breathing panel (if active)
   const breath = window._breathState;
   if (breath && breath.isActive) {
@@ -192,7 +204,7 @@ export function drawPause(ctx, w, h, game, pauseIdx) {
   }
 
   PAUSE_MENU.forEach((txt, i) => {
-    const sel = i === pauseIdx, y = h / 2 + 10 + i * 32;
+    const sel = i === pauseIdx, y = h / 2 + 30 + i * 32;
     if (sel) {
       ctx.fillStyle = 'rgba(0,255,136,0.07)'; ctx.fillRect(w / 2 - 110, y - 16, 220, 24);
       ctx.strokeStyle = 'rgba(0,255,136,0.26)'; ctx.strokeRect(w / 2 - 110, y - 16, 220, 24);
@@ -264,6 +276,26 @@ export function drawInterlude(ctx, w, h, interludeState, ts) {
     ctx.fillStyle = arch.glow; ctx.shadowColor = arch.glow; ctx.shadowBlur = 10;
     ctx.font = '10px Courier New'; ctx.fillText('archetype: ' + arch.name, w / 2, h / 2 + 92); ctx.shadowBlur = 0;
   }
+
+  // ── Phase 9: Empathy reflection ───────────────────────────────────────
+  if (interludeState.empathyReflection) {
+    const erAlpha = Math.min(1, Math.max(0, (prog - 0.65) / 0.12));
+    ctx.globalAlpha = alpha * erAlpha;
+    ctx.fillStyle = '#887755'; ctx.font = 'italic 9px Courier New';
+    ctx.fillText(interludeState.empathyReflection, w / 2, h / 2 + 110);
+    ctx.globalAlpha = alpha;
+  }
+
+  // ── Phase M3: Campaign milestone ──────────────────────────────────────
+  if (interludeState.milestone) {
+    const msAlpha = Math.min(1, Math.max(0, (prog - 0.75) / 0.12));
+    ctx.globalAlpha = alpha * msAlpha;
+    ctx.fillStyle = '#ffdd44'; ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 8;
+    ctx.font = 'bold 10px Courier New';
+    ctx.fillText('✦  ' + interludeState.milestone, w / 2, h / 2 + 128); ctx.shadowBlur = 0;
+    ctx.globalAlpha = alpha;
+  }
+
   ctx.globalAlpha = 1; ctx.textAlign = 'left';
 }
 

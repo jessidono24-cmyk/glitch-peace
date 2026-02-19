@@ -11,7 +11,7 @@ export function drawDashboard(ctx, w, h) {
   const data = gatherData();
   const pad = 16;
   const panelW = Math.min(w - 32, 440);
-  const panelH = Math.min(h - 32, 560);
+  const panelH = Math.min(h - 32, 660);  // taller to fit IQ/EQ row
   const px = (w - panelW) / 2;
   const py = (h - panelH) / 2;
 
@@ -85,11 +85,28 @@ export function drawDashboard(ctx, w, h) {
 
   y += 50;
 
-  // ── Row 4: Journey ────────────────────────────────────────────────
+  // ── Row 4: Intelligence (IQ/EQ) ──────────────────────────────────
+  _drawSection(ctx, col1, y, panelW/2 - pad, 76, 'COGNITIVE (IQ)', [
+    { label: 'Logic Score',    val: data.intelligence.iqScore + '/100' },
+    { label: 'Strategy Score', val: data.intelligence.strategicScore + '/100' },
+    { label: 'Challenges Seen', val: String(data.intelligence.challengesSeen) },
+    { label: 'Current Tip',    val: data.intelligence.strategicTip.slice(0, 28) + '…' },
+  ], '#88ddff');
+
+  _drawSection(ctx, col2, y, panelW/2 - pad, 76, 'EMOTIONAL (EQ)', [
+    { label: 'EQ Score',       val: data.intelligence.eqScore + '/100' },
+    { label: 'Empathy Score',  val: data.intelligence.empathyScore + '/100' },
+    { label: 'Labeled',        val: data.intelligence.labelledCount + ' emotions' },
+    { label: 'Behaviors',      val: data.intelligence.behaviorsWitnessed + '/12 witnessed' },
+  ], '#ffcc88');
+
+  y += 92;
+
+  // ── Row 5: Journey ────────────────────────────────────────────────
   _drawSection(ctx, col1, y, panelW - pad * 2, 58, 'JOURNEY', [
     { label: 'Dreamscapes completed', val: data.journey.dreamscapes + '/10 this session' },
+    { label: 'Campaign total',        val: data.journey.campaignTotal + ' completions' },
     { label: 'Total sessions',        val: String(data.journey.totalSessions) },
-    { label: 'Last archetype',        val: data.journey.archetype || '—' },
   ], '#ffaacc');
 
   // ── Footer ─────────────────────────────────────────────────────────
@@ -120,6 +137,7 @@ function gatherData() {
   const em       = window._emergence        || { level: 0, label: 'Dreaming', session: 0 };
   const ck       = window._chakra           || { dominant: { name:'—', color:'#888' }, openness:[], kundalini:0.5 };
   const tracker  = window._trackerData      || {};
+  const iq       = window._iqData           || {};
 
   return {
     session: {
@@ -147,10 +165,20 @@ function gatherData() {
       awakened:      window._chakraAwakened || 0,
       openness:      ck.openness || [],
     },
+    intelligence: {
+      iqScore:           iq.iqScore          || 50,
+      strategicScore:    iq.strategicScore   || 0,
+      eqScore:           iq.eqScore          || 50,
+      empathyScore:      iq.empathyScore     || 0,
+      challengesSeen:    iq.challengesSeen   || (window._campaignTotal || 0),
+      strategicTip:      iq.strategicTip     || 'Preview consequences before each move.',
+      labelledCount:     iq.eqFlash ? 1 : 0,
+      behaviorsWitnessed: iq.behaviorsWitnessed || 0,
+    },
     journey: {
-      dreamscapes:   window._dreamscapesThisSession || 0,
-      totalSessions: tracker.totalSessions          || 0,
-      archetype:     window._lastArchetype          || null,
+      dreamscapes:    window._dreamscapesThisSession || 0,
+      campaignTotal:  window._campaignTotal          || 0,
+      totalSessions:  tracker.totalSessions          || 0,
     },
   };
 }

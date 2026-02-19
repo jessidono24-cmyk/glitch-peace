@@ -495,4 +495,67 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = '#1a1a2a'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
   ctx.fillText('WASD/ARROWS · SHIFT=matrix · J=arch · R=pulse · Q=freeze · C=contain · ESC=pause · H=dashboard', w / 2, h - 11);
   ctx.textAlign = 'left';
+
+  // ── Phase 9: Empathy flash (enemy behavior label shown after freeze) ──
+  const iqData = window._iqData;
+  if (iqData) {
+    const fe = iqData.flashEmotion;
+    if (fe && iqData.empathyAlpha > 0) {
+      ctx.globalAlpha = Math.min(1, iqData.empathyAlpha);
+      ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(sx, sy + gp + 8, gp, 34);
+      ctx.strokeStyle = fe.color + '55'; ctx.lineWidth = 1;
+      ctx.strokeRect(sx, sy + gp + 8, gp, 34);
+      ctx.fillStyle = fe.color; ctx.shadowColor = fe.color; ctx.shadowBlur = 6;
+      ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText(fe.label, sx + gp / 2, sy + gp + 22); ctx.shadowBlur = 0;
+      ctx.fillStyle = '#665544'; ctx.font = '7px Courier New';
+      ctx.fillText(fe.insight, sx + gp / 2, sy + gp + 34);
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    }
+    // Phase 9: EQ emotion recognition flash (dominant emotion label)
+    const eqfl = iqData.eqFlash;
+    if (eqfl && iqData.eqFlashAlpha > 0) {
+      ctx.globalAlpha = Math.min(0.85, iqData.eqFlashAlpha);
+      const eqX = w - 145, eqY = 85;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(eqX, eqY, 136, 28);
+      ctx.strokeStyle = eqfl.color + '44'; ctx.lineWidth = 1;
+      ctx.strokeRect(eqX, eqY, 136, 28);
+      ctx.fillStyle = eqfl.color; ctx.font = 'bold 9px Courier New';
+      ctx.fillText('⟦ ' + eqfl.label.toUpperCase() + ' ⟧', eqX + 4, eqY + 12);
+      ctx.fillStyle = '#554433'; ctx.font = '7px Courier New';
+      ctx.fillText(eqfl.tip.slice(0, 22), eqX + 4, eqY + 24);
+      ctx.globalAlpha = 1;
+    }
+    // Phase 9: Sequence challenge overlay (logic puzzle)
+    const challenge = iqData.challenge;
+    if (challenge && iqData.challengeAlpha > 0) {
+      ctx.globalAlpha = Math.min(1, iqData.challengeAlpha);
+      ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(w/2 - 160, h*0.42, 320, 80);
+      ctx.strokeStyle = 'rgba(136,221,255,0.4)'; ctx.lineWidth = 1;
+      ctx.strokeRect(w/2 - 160, h*0.42, 320, 80);
+      ctx.fillStyle = '#88ddff'; ctx.shadowColor = '#66aaff'; ctx.shadowBlur = 8;
+      ctx.font = 'bold 11px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('◆ PATTERN RECOGNITION: ' + challenge.name.toUpperCase(), w/2, h*0.42 + 16); ctx.shadowBlur = 0;
+      ctx.fillStyle = '#aaccee'; ctx.font = '14px Courier New';
+      ctx.fillText(challenge.seq.join('  ·  ') + '  ·  ?', w/2, h*0.42 + 38);
+      ctx.fillStyle = '#44aa66'; ctx.font = 'bold 12px Courier New';
+      ctx.fillText('next: ' + challenge.next, w/2, h*0.42 + 58);
+      ctx.fillStyle = '#445566'; ctx.font = '7px Courier New';
+      ctx.fillText(challenge.fact, w/2, h*0.42 + 74);
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    }
+    // Phase M3: Tutorial hint overlay (first 3 dreamscapes)
+    const hints = window._tutorialHints;
+    if (hints && hints.length > 0) {
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = 'rgba(0,12,0,0.9)'; ctx.fillRect(sx, sy - 44, gp, 38);
+      ctx.strokeStyle = 'rgba(0,255,136,0.22)'; ctx.lineWidth = 1;
+      ctx.strokeRect(sx, sy - 44, gp, 38);
+      ctx.fillStyle = '#00cc66'; ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('HINT', sx + gp / 2, sy - 30);
+      ctx.fillStyle = '#225533'; ctx.font = '8px Courier New';
+      hints.slice(0, 2).forEach((h, i) => ctx.fillText(h, sx + gp / 2, sy - 18 + i * 13));
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    }
+  }
 }

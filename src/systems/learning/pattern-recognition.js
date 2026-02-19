@@ -68,6 +68,7 @@ export class PatternRecognition {
     this._activeBanner  = null; // { type, timer, description, fact }
     this._sessionCount  = 0;    // total patterns found this session
     this._allTimeCount  = this._loadCount();
+    this._lastTrackedScore = -1; // for change-detection in checkScore()
   }
 
   // ─── Called each time score changes ──────────────────────────────
@@ -75,6 +76,14 @@ export class PatternRecognition {
     this._scoreHistory.push(newScore);
     if (this._scoreHistory.length > 12) this._scoreHistory.shift();
     this._detectPatterns(newScore);
+  }
+
+  // ─── Call every frame — only runs detection when score changed ───
+  checkScore(currentScore) {
+    if (currentScore !== this._lastTrackedScore) {
+      this._lastTrackedScore = currentScore;
+      this.onScoreChange(currentScore);
+    }
   }
 
   // ─── Called each time a combo hits ───────────────────────────────

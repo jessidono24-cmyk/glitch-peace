@@ -20,7 +20,7 @@ const PROMPTS = {
     { prompt: 'The dragon is energy. What will you do with it?', depth: 'deep', tag: 'transmute' },
   ],
   frustration: [
-    { prompt: 'Repetition teaches what linear thinking can\'t.', depth: 'surface', tag: 'pattern' },
+    { prompt: "Repetition teaches what linear thinking can't.", depth: 'surface', tag: 'pattern' },
     { prompt: 'What loop are you ready to exit in your own life?', depth: 'mid',  tag: 'life'    },
     { prompt: 'Who keeps re-entering the loop?',               depth: 'deep',     tag: 'meta'    },
   ],
@@ -35,7 +35,7 @@ const PROMPTS = {
     { prompt: 'From the peak, everything below is smaller.',   depth: 'deep',     tag: 'perspective' },
   ],
   panic: [
-    { prompt: 'You moved even in the fear. That\'s courage.',  depth: 'surface',  tag: 'strength' },
+    { prompt: "You moved even in the fear. That's courage.",  depth: 'surface',  tag: 'strength' },
     { prompt: 'What shadow were you running from?',            depth: 'mid',      tag: 'shadow'  },
     { prompt: 'What if the pursuer is a part of yourself?',    depth: 'deep',     tag: 'meta'    },
   ],
@@ -74,7 +74,7 @@ const AFFIRMATIONS = [
   'Every ending is a portal.',
   'You are larger than what you faced.',
   'Awareness grows each time you look.',
-  'Rest is not retreat — it\'s integration.',
+  "Rest is not retreat — it's integration.",
   'The observer was always already here.',
   'You brought your whole self.',
   'That which watches fear is not afraid.',

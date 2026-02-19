@@ -109,7 +109,10 @@ export const CHAKRAS = [
 
 const STORAGE_KEY = 'gp_chakras';
 
-// ─── Virtue-to-emotion mapping (module-level for performance) ─────────
+// ─── Openness smoothing (lerp toward target each update) ─────────────
+const OPENNESS_SMOOTH_RETAIN = 0.97; // retain this fraction of current openness
+const OPENNESS_SMOOTH_TOWARD = 0.03; // move this fraction toward target
+const OPENNESS_AWAKEN_THRESHOLD = 0.85; // chakra is "awakened" above this level
 const VIRTUE_TO_EMOTION = {
   trust:      'trust', safety:    'hope',      joy:       'joy',
   flow:       'joy',   confidence:'trust',      will:      'trust',
@@ -143,10 +146,10 @@ export class ChakraSystem {
         if (em) openVal = Math.max(openVal, emotions[em] || 0);
       }
       const target = Math.max(0.1, Math.min(1, 0.5 + openVal * 0.5 - blockVal * 0.4));
-      this._openness[i] = this._openness[i] * 0.97 + target * 0.03; // smooth
+      this._openness[i] = this._openness[i] * OPENNESS_SMOOTH_RETAIN + target * OPENNESS_SMOOTH_TOWARD;
 
       // Awaken if consistently open
-      if (this._openness[i] > 0.85 && !this._awakened.has(ch.id)) {
+      if (this._openness[i] > OPENNESS_AWAKEN_THRESHOLD && !this._awakened.has(ch.id)) {
         this._awakened.add(ch.id);
         this._activePowerups.add(ch.id);
         this._flashChakra = ch;

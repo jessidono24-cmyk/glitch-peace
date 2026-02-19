@@ -493,6 +493,6 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.strokeStyle = 'rgba(255,255,255,0.03)';
   ctx.beginPath(); ctx.moveTo(0, h - 28); ctx.lineTo(w, h - 28); ctx.stroke();
   ctx.fillStyle = '#1a1a2a'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
-  ctx.fillText('WASD/ARROWS · SHIFT=matrix · ESC=pause · J=arch · R=pulse · Q=freeze · C=contain', w / 2, h - 11);
+  ctx.fillText('WASD/ARROWS · SHIFT=matrix · J=arch · R=pulse · Q=freeze · C=contain · ESC=pause · H=dashboard', w / 2, h - 11);
   ctx.textAlign = 'left';
 }

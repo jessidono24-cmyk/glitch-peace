@@ -39,6 +39,9 @@ import { selfReflection } from './systems/awareness/self-reflection.js';
 import { emergenceIndicators } from './systems/awareness/emergence-indicators.js';
 // ─── Phase 10: Cosmology Integration ─────────────────────────────────────
 import { chakraSystem } from './systems/cosmology/chakra-system.js';
+import { TAROT_ARCHETYPES, getRandomArchetype } from './systems/cosmology/tarot-archetypes.js';
+// ─── Phase 11: Integration Dashboard ─────────────────────────────────────
+import { drawDashboard, dashboard } from './systems/integration/progress-dashboard.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -375,10 +378,7 @@ function loop(ts) {
   // ── Phase 6: Learning Systems tick ─────────────────────────────────
   vocabularyEngine.tick();
   patternRecognition.tick();
-  if (game.score !== patternRecognition._lastScore) {
-    patternRecognition.onScoreChange(game.score);
-    patternRecognition._lastScore = game.score;
-  }
+  patternRecognition.checkScore(game.score);
   // Expose to renderer
   window._vocabWord      = vocabularyEngine.activeWord;
   window._patternBanner  = patternRecognition.activeBanner;
@@ -414,14 +414,32 @@ function loop(ts) {
     flash: chakraSystem.flashChakra,
     alpha: chakraSystem.flashAlpha,
   };
+  // ── Phase 11: Dashboard data feed ───────────────────────────────────
+  window._emergenceAllTime = emergenceIndicators.allTimeCount;
+  window._reflections      = selfReflection.totalReflections;
+  window._chakraAwakened   = chakraSystem.awakenedCount;
+  window._learnStats       = {
+    words: vocabularyEngine.sessionCount,
+    totalWords: vocabularyEngine.totalCount,
+    patterns: patternRecognition.sessionCount,
+  };
+  window._trackerData = {
+    todayCount:    sessionTracker.sessionsTodayCount,
+    totalTime:     sessionTracker.totalPlayTimeFormatted,
+    totalSessions: sessionTracker.sessionHistory.length,
+  };
+  window._dreamscapesThisSession = sessionTracker.dreamscapesCompleted;
 
   if (game.hp <= 0) {
     deadGame = game; // snapshot for death screen
+    sessionTracker.endSession(game.score, sessionTracker.dreamscapesCompleted);
     saveScore(game.score, game.level, game.ds);
     setPhase('dead'); animId=requestAnimationFrame(loop); return;
   }
 
   drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, hallucinations, anomalyActive, anomalyData, glitchFrames, DPR, consequencePreview.getGhostPath());
+  // Phase 11: Draw dashboard overlay if visible
+  if (dashboard.visible) drawDashboard(ctx, CW(), CH());
   animId = requestAnimationFrame(loop);
 }
 
@@ -518,7 +536,8 @@ window.addEventListener('keydown', e => {
       if (e.key==='Escape') { setPhase('title'); CURSOR.menu=0; }
       e.preventDefault(); return;
     }
-    if (e.key==='Escape') { CURSOR.pause=0; sessionTracker.pauseSession(); emergenceIndicators.record('pause_frequency'); setPhase('paused'); }
+    if (e.key==='Escape') { CURSOR.pause=0; sessionTracker.pauseSession(); emergenceIndicators.record('pause_frequency'); dashboard.hide(); setPhase('paused'); }
+    if ((e.key==='h'||e.key==='H') && !e.repeat) dashboard.toggle();
     if (e.key==='Shift' && !e.repeat) {
       const next = matrixActive === 'A' ? 'B' : 'A';
       setMatrix(next); setMatrixHoldTime(0);

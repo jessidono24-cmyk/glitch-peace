@@ -7,10 +7,10 @@
 
 // ─── Break suggestion thresholds (milliseconds) ───────────────────────
 const BREAK_INTERVALS = [
-  { ms: 20 * 60 * 1000, id: '20min', msg: 'You\'ve been playing 20 minutes — a slow breath helps retention.' },
+  { ms: 20 * 60 * 1000, id: '20min', msg: "You've been playing 20 minutes — a slow breath helps retention." },
   { ms: 45 * 60 * 1000, id: '45min', msg: 'Wonderful focus — 45 minutes in. Stretch your hands if you like.' },
-  { ms: 60 * 60 * 1000, id: '1hr',   msg: 'One hour of dreamscapes. A walk will help integrate what you\'ve felt.' },
-  { ms: 90 * 60 * 1000, id: '90min', msg: 'Beautiful dedication — 90 minutes. Rest is part of the journey.' },
+  { ms: 60 * 60 * 1000, id: '1hr',   msg: "One hour of dreamscapes. A walk will help integrate what you've felt." },
+  { ms: 90 * 60 * 1000, id: '90min', msg: "Beautiful dedication — 90 minutes. Rest is part of the journey." },
 ];
 
 // ─── Session health evaluation ────────────────────────────────────────

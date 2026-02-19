@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GLITCH·PEACE</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #02020a;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      user-select: none;
+    }
+    canvas {
+      display: block;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 8px;
+      box-shadow: 0 0 80px rgba(0,255,136,0.06), 0 0 200px rgba(0,0,0,0.9);
+      image-rendering: pixelated;
+    }
+    #mobile-controls {
+      display: none; position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%); gap: 6px; flex-direction: column;
+      align-items: center; z-index: 10;
+    }
+    #mobile-controls .row { display: flex; gap: 6px; }
+    .dpad {
+      width: 52px; height: 52px;
+      background: rgba(0,255,136,0.08);
+      border: 1px solid rgba(0,255,136,0.25);
+      border-radius: 6px; color: #00ff88; font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent; transition: background 0.1s;
+    }
+    .dpad:active { background: rgba(0,255,136,0.25); }
+    @media (max-width: 700px) { #mobile-controls { display: flex; } }
+  </style>
+  <script type="module" crossorigin src="/assets/index-BIXSaWqI.js"></script>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="mobile-controls">
+    <div class="row"><button class="dpad" id="btn-up">↑</button></div>
+    <div class="row">
+      <button class="dpad" id="btn-left">←</button>
+      <button class="dpad" id="btn-down">↓</button>
+      <button class="dpad" id="btn-right">→</button>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,41 +1,29 @@
-# GLITCH·PEACE
-### A consciousness simulation game
+# PostCSS
 
-> Begin in stillness. Emerge through pattern recognition.
+<img align="right" width="95" height="95"
+     alt="Philosopher’s stone, logo of PostCSS"
+     src="https://postcss.org/logo.svg">
 
-Built with Vite + vanilla JavaScript. No framework dependencies.
+PostCSS is a tool for transforming styles with JS plugins.
+These plugins can lint your CSS, support variables and mixins,
+transpile future CSS syntax, inline images, and more.
 
----
-
-## Quick Start
-
-```bash
-npm install && npm run dev
-```
-
-## What It Is
-
-A tile-based dreamscape navigation game with:
-- **10 dreamscapes** — each a unique emotional biome
-- **17 tile types** — from VOID to PAIN to ARCHETYPE
-- **Matrix A/B system** — toggle between coherence and erasure
-- **5 archetypes** — Dragon, Child Guide, Orb, Captor-Teacher, Protector
-- **Fibonacci peace scaling** — challenge grows organically
-- **Upgrade shop** — insight token economy
-- **Neurodivergent-friendly** — pause anytime, no shame messaging
-
-## Architecture
-
-Neural net style layered architecture. See `CANON.md` for design laws.
-See `AGENT_TASKS.md` for the expansion roadmap.
-
-## Stack
-
-- Vite 5
-- Vanilla JS (ES modules)
-- Canvas 2D API
-- Web Audio API (Phase 5)
+PostCSS is used by industry leaders including Wikipedia, Twitter, Alibaba,
+and JetBrains. The [Autoprefixer] and [Stylelint] PostCSS plugins are some of the most popular CSS tools.
 
 ---
 
-*Made with ◈ for consciousness explorers*
+<img src="https://cdn.evilmartians.com/badges/logo-no-label.svg" alt="" width="22" height="16" />  Built by
+ <b><a href="https://evilmartians.com/devtools?utm_source=postcss&utm_campaign=devtools-button&utm_medium=github">Evil Martians</a></b>, go-to agency for <b>developer tools</b>.
+
+---
+
+[Abstract Syntax Tree]: https://en.wikipedia.org/wiki/Abstract_syntax_tree
+[Evil Martians]:        https://evilmartians.com/?utm_source=postcss
+[Autoprefixer]:         https://github.com/postcss/autoprefixer
+[Stylelint]:            https://stylelint.io/
+[plugins]:              https://github.com/postcss/postcss#plugins
+
+
+## Docs
+Read full docs **[here](https://postcss.org/)**.

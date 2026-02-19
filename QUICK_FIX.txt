@@ -1,0 +1,107 @@
+╔══════════════════════════════════════════════════════════════╗
+║                   GLITCH·PEACE - QUICK FIX                   ║
+║                  Build Error Solution Card                   ║
+╚══════════════════════════════════════════════════════════════╝
+
+📌 YOUR ERROR:
+   "Cannot find module 'C:\New folder\vite\bin\vite.js'"
+
+🎯 THE PROBLEM:
+   Your folder name "New folder" has a SPACE in it
+   This breaks Node.js module resolution
+
+✅ EASIEST SOLUTION (RECOMMENDED):
+
+   1. Open File Explorer
+   2. Go to: C:\New folder\glitch-peace-copilot-organize-folders-structure
+   3. Open the "dist" folder
+   4. Double-click "index.html"
+   5. ✨ Game opens in browser - PLAY NOW!
+
+   ⭐ No npm needed! No installation! Just works!
+
+───────────────────────────────────────────────────────────────
+
+🔧 OTHER SOLUTIONS (If you want npm):
+
+OPTION 2: Rename Folder
+   1. Close all terminals
+   2. Rename "New folder" to "NewFolder" (no space!)
+   3. Open terminal in game folder
+   4. npm install
+   5. npm run dev
+
+OPTION 3: Use npx Directly
+   (Scripts now updated to use npx - better handling)
+   1. npx vite          (instead of npm run dev)
+   2. npx vite build    (instead of npm run build)
+
+OPTION 4: Move Folder
+   1. Move entire folder to C:\glitch-peace
+   2. npm install
+   3. npm run dev
+
+───────────────────────────────────────────────────────────────
+
+📖 MORE HELP:
+
+   📄 TROUBLESHOOTING.md - Comprehensive guide (all issues)
+   📄 BUILD_ISSUE_RESOLVED.md - Technical explanation
+   📄 INSTALLATION.md - Installation instructions
+
+───────────────────────────────────────────────────────────────
+
+🎮 GAME CONTROLS:
+
+GRID MODE (Tactical):
+   • WASD / Arrows: Move
+   • Shift: Matrix toggle
+   • J: Archetype power
+   • Escape: Pause
+   • M (title screen): Switch modes
+
+SHOOTER MODE (Action):
+   • WASD: Move
+   • Mouse: Aim
+   • Click: Shoot
+   • Escape: Pause
+   • M (title screen): Switch modes
+
+───────────────────────────────────────────────────────────────
+
+✨ REMEMBER:
+
+   dist/index.html = ALWAYS WORKS
+   
+   No npm, no installation, no complexity.
+   Just double-click and play!
+
+───────────────────────────────────────────────────────────────
+
+🆘 STILL HAVING ISSUES?
+
+   1. Check TROUBLESHOOTING.md
+   2. GitHub Issues: github.com/jessidono24-cmyk/glitch-peace
+   3. Include:
+      - Your error message
+      - Operating System
+      - Node.js version (node --version)
+      - What you tried
+
+───────────────────────────────────────────────────────────────
+
+💡 PRO TIP:
+
+   Always extract games/software to folders WITHOUT SPACES:
+   
+   ✅ Good: C:\Games\glitch-peace
+   ✅ Good: C:\glitch-peace
+   ✅ Good: C:\MyGames\glitch-peace
+   
+   ❌ Bad: C:\New folder\...
+   ❌ Bad: C:\My Games\...
+   ❌ Bad: C:\Program Files\...
+
+╔══════════════════════════════════════════════════════════════╗
+║            🎮 ENJOY PLAYING GLITCH·PEACE! ✨                 ║
+╚══════════════════════════════════════════════════════════════╝

@@ -293,6 +293,97 @@ export class SFXManager {
   }
 
   /**
+   * Play shooter bullet fire sound (crisp pop)
+   */
+  playShoot() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(200, now + 0.06);
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.06);
+  }
+
+  /**
+   * Play wave complete fanfare (ascending major triad)
+   */
+  playWaveComplete() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    const notes = [392, 494, 587, 784]; // G4, B4, D5, G5
+    notes.forEach((freq, i) => {
+      const osc = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const t = now + i * 0.1;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(t);
+      osc.stop(t + 0.4);
+    });
+  }
+
+  /**
+   * Play power-up collect (bright sparkle)
+   */
+  playPowerUp() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    for (let i = 0; i < 3; i++) {
+      const osc = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880 + i * 440;
+      const t = now + i * 0.05;
+      gain.gain.setValueAtTime(0.1, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(t);
+      osc.stop(t + 0.15);
+    }
+  }
+
+  /**
+   * Play player hurt (low thud + static)
+   */
+  playPlayerHurt() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+    const filter = this.audioContext.createBiquadFilter();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(120, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
+    filter.type = 'bandpass';
+    filter.frequency.value = 300;
+    filter.Q.value = 2;
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.2);
+  }
+
+  /**
    * Clean up
    */
   dispose() {

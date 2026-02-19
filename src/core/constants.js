@@ -7,6 +7,8 @@ export const T = {
   VOID: 0, DESPAIR: 1, TERROR: 2, SELF_HARM: 3, PEACE: 4, WALL: 5,
   INSIGHT: 6, HIDDEN: 7, RAGE: 8, HOPELESS: 9, GLITCH: 10,
   ARCHETYPE: 11, TELEPORT: 12, COVER: 13, TRAP: 14, MEMORY: 15, PAIN: 16,
+  // Phase 2.6: Embodiment / Somatic Tiles
+  BODY_SCAN: 17, BREATH_SYNC: 18, ENERGY_NODE: 19, GROUNDING: 20,
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -30,6 +32,11 @@ export const TILE_DEF = {
   [T.TRAP]:     { dmg:16, spread:false, push:1, bg:'#1a0800', bd:'#cc6600', glow:'#ff8800', sym:'×' },
   [T.MEMORY]:   { dmg:0,  spread:false, push:0, bg:'#06060a', bd:'rgba(100,200,150,0.2)', glow:null, sym:'·' },
   [T.PAIN]:     { dmg:6,  spread:false, push:0, bg:'#200808', bd:'#661111', glow:'#880000', sym:'·' },
+  // Phase 2.6: Embodiment / Somatic Tiles — no damage; somatic healing & grounding
+  [T.BODY_SCAN]:  { dmg:0, spread:false, push:0, bg:'#020a06', bd:'rgba(0,200,100,0.35)',   glow:'#00aa44', sym:'◯' },
+  [T.BREATH_SYNC]:{ dmg:0, spread:false, push:0, bg:'#020812', bd:'rgba(100,150,255,0.35)', glow:'#6688ff', sym:'≋' },
+  [T.ENERGY_NODE]:{ dmg:0, spread:false, push:0, bg:'#0a0820', bd:'rgba(200,100,255,0.35)', glow:'#cc44ff', sym:'✦' },
+  [T.GROUNDING]:  { dmg:0, spread:false, push:0, bg:'#060402', bd:'rgba(160,110,55,0.35)',  glow:'#886644', sym:'⊕' },
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -41,9 +48,13 @@ export const GAP  = 2;
 export const GRID_SIZES = { small: 10, medium: 13, large: 17 };
 
 export const DIFF_CFG = {
-  easy:   { eSpeedBase: 950, eSpeedMin: 350, dmgMul: 0.55, hazMul: 0.7  },
-  normal: { eSpeedBase: 720, eSpeedMin: 210, dmgMul: 1.0,  hazMul: 1.0  },
-  hard:   { eSpeedBase: 520, eSpeedMin: 150, dmgMul: 1.45, hazMul: 1.35 },
+  // Age-accessible tiers (see adaptive-difficulty.js for full profiles)
+  tiny:   { eSpeedBase: 2000, eSpeedMin: 1200, dmgMul: 0.25, hazMul: 0.0  }, // 5+ 🌱
+  gentle: { eSpeedBase: 1400, eSpeedMin:  700, dmgMul: 0.45, hazMul: 0.45 }, // 8+ 🌿
+  // Standard tiers
+  easy:   { eSpeedBase:  950, eSpeedMin:  350, dmgMul: 0.55, hazMul: 0.7  },
+  normal: { eSpeedBase:  720, eSpeedMin:  210, dmgMul: 1.0,  hazMul: 1.0  },
+  hard:   { eSpeedBase:  520, eSpeedMin:  150, dmgMul: 1.45, hazMul: 1.35 },
 };
 
 // ═══════════════════════════════════════════════════════════

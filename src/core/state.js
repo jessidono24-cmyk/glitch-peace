@@ -8,6 +8,7 @@ export const CFG = {
   difficulty: 'normal',
   particles:  true,
   dreamIdx:   0,
+  playMode:   'arcade',  // see src/systems/play-modes.js
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -80,6 +81,34 @@ export function checkOwned(id) {
 }
 
 // ═══════════════════════════════════════════════════════════
+//  PURGATORY DEPTH
+// ═══════════════════════════════════════════════════════════
+export let purgDepth = 0;
+export function setPurgDepth(v) { purgDepth = Math.max(0, Math.min(1, v)); }
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYER PROFILE  (persists across sessions via localStorage)
+//  Stores age group, native language, preferred learning language,
+//  and whether onboarding has been completed.
+// ═══════════════════════════════════════════════════════════
+function _loadProfile() {
+  try { return JSON.parse(localStorage.getItem('gp_player_profile') || 'null') || {}; } catch { return {}; }
+}
+function _saveProfile(p) {
+  try { localStorage.setItem('gp_player_profile', JSON.stringify(p)); } catch {}
+}
+
+const _raw = _loadProfile();
+export const PLAYER_PROFILE = {
+  onboardingDone: _raw.onboardingDone || false,
+  ageGroup:       _raw.ageGroup       || 'adult',
+  nativeLang:     _raw.nativeLang     || 'en',
+  targetLang:     _raw.targetLang     || 'no',
+  diffTier:       _raw.diffTier       || 'standard',
+};
+export function savePlayerProfile() { _saveProfile(PLAYER_PROFILE); }
+
+// ═══════════════════════════════════════════════════════════
 //  PHASE / SCREEN STATE
 // ═══════════════════════════════════════════════════════════
 export let phase = 'title';
@@ -93,4 +122,5 @@ export const CURSOR = {
   shop:    0,
   dream:   0,
   upgradeFrom: 'title',
+  optFrom:     'title',  // tracks which screen opened the options panel
 };

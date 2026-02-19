@@ -4,7 +4,7 @@ import { CFG, UPG } from '../core/state.js';
 
 export function PAL(matrixActive) { return matrixActive === 'A' ? PAL_A : PAL_B; }
 
-export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, hallucinations, anomalyActive, anomalyData, glitchFrames, DPR) {
+export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, hallucinations, anomalyActive, anomalyData, glitchFrames, DPR, ghostPath) {
   const g = game; if (!g) return;
   const sz = g.sz;
   const gp = sz * CELL + (sz - 1) * GAP;
@@ -45,7 +45,7 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     oy = (Math.random() - 0.5) * 9 * (g.shakeFrames / 10);
     g.shakeFrames--;
   }
-  const sx = (w - gp) / 2 + ox, sy = 100 + oy;
+  const sx = (w - gp) / 2 + ox, sy = 110 + oy;
 
   // Vision words
   for (const v of visions) {
@@ -138,6 +138,24 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     }
   }
   g.tileFlicker = g.tileFlicker.filter(f => { f.t--; return f.t > 0; });
+
+  // Consequence preview ghost path
+  if (ghostPath && ghostPath.length > 0) {
+    ghostPath.forEach((step, i) => {
+      const gpx = sx + step.x * (CELL + GAP), gpy = sy + step.y * (CELL + GAP);
+      const alpha = 0.22 - i * 0.05;
+      const col = step.hpDelta > 0 ? '#00ffaa' : step.hpDelta < 0 ? '#ff3333' : '#aaaaff';
+      ctx.globalAlpha = Math.max(0.05, alpha);
+      ctx.strokeStyle = col; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect(gpx + 2, gpy + 2, CELL - 4, CELL - 4, 3); ctx.stroke();
+      if (step.hpDelta !== 0) {
+        ctx.fillStyle = col; ctx.font = '9px Courier New'; ctx.textAlign = 'center'; ctx.globalAlpha = Math.max(0.1, alpha + 0.1);
+        ctx.fillText((step.hpDelta > 0 ? '+' : '') + Math.round(step.hpDelta), gpx + CELL / 2, gpy + CELL / 2 + 4);
+        ctx.textAlign = 'left';
+      }
+    });
+    ctx.globalAlpha = 1;
+  }
 
   // Capture zones
   for (const cz of g.captureZones) {
@@ -283,7 +301,7 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
 
 function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   const UPG_ref = UPG;
-  const hudH = 92;
+  const hudH = 106;
   ctx.fillStyle = '#070714'; ctx.fillRect(0, 0, w, hudH);
   ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, hudH); ctx.lineTo(w, hudH); ctx.stroke();
@@ -310,31 +328,63 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = eC; ctx.shadowColor = eC; ctx.shadowBlur = 4; ctx.fillRect(32, 41, eBarW * (UPG_ref.energy / UPG_ref.energyMax), 9);
   ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.strokeRect(32, 41, eBarW, 9);
 
+  // PurgDepth bar (dark red depth indicator)
+  {
+    const pd = window._purgDepth || 0;
+    ctx.fillStyle = '#1a0000'; ctx.fillRect(32, 52, eBarW, 5);
+    const pdC = pd > 0.7 ? '#ff2222' : pd > 0.4 ? '#aa2200' : '#440000';
+    ctx.fillStyle = pdC; ctx.fillRect(32, 52, eBarW * pd, 5);
+    ctx.strokeStyle = 'rgba(200,0,0,0.2)'; ctx.strokeRect(32, 52, eBarW, 5);
+    if (pd > 0.05) {
+      ctx.fillStyle = pd > 0.7 ? '#ff2222' : '#660000'; ctx.font = '6px Courier New';
+      ctx.fillText('PURG ' + (pd * 100).toFixed(0) + '%', 32 + eBarW + 4, 58);
+    }
+  }
+
   if (UPG_ref.glitchPulse) {
-    ctx.fillStyle = '#220a22'; ctx.fillRect(32, 53, eBarW, 6);
+    ctx.fillStyle = '#220a22'; ctx.fillRect(32, 59, eBarW, 5);
     const pChr = UPG_ref.glitchPulseCharge / 100;
-    ctx.fillStyle = pChr >= 1 ? '#ff00ff' : '#660088'; ctx.fillRect(32, 53, eBarW * pChr, 6);
-    ctx.strokeStyle = 'rgba(150,0,200,0.2)'; ctx.strokeRect(32, 53, eBarW, 6);
-    ctx.fillStyle = pChr >= 1 ? '#ff00ff' : '#553355'; ctx.font = '7px Courier New'; ctx.fillText('PULSE' + (pChr >= 1 ? ' READY' : ''), 32 + eBarW + 4, 59);
+    ctx.fillStyle = pChr >= 1 ? '#ff00ff' : '#660088'; ctx.fillRect(32, 59, eBarW * pChr, 5);
+    ctx.strokeStyle = 'rgba(150,0,200,0.2)'; ctx.strokeRect(32, 59, eBarW, 5);
+    ctx.fillStyle = pChr >= 1 ? '#ff00ff' : '#553355'; ctx.font = '7px Courier New'; ctx.fillText('PULSE' + (pChr >= 1 ? ' READY' : ''), 32 + eBarW + 4, 65);
+  }
+
+  // ImpulseBuffer hold progress (shown when holding into hazard)
+  {
+    const prog = window._impulseProgress || 0;
+    if (prog > 0 && prog < 1) {
+      ctx.fillStyle = '#332200'; ctx.fillRect(32, 66, eBarW, 4);
+      ctx.fillStyle = '#ffaa00'; ctx.fillRect(32, 66, eBarW * prog, 4);
+      ctx.strokeStyle = 'rgba(255,170,0,0.25)'; ctx.strokeRect(32, 66, eBarW, 4);
+      ctx.fillStyle = '#ffaa00'; ctx.font = '6px Courier New'; ctx.fillText('HOLD…', 32 + eBarW + 4, 70);
+    }
   }
 
   if (g.archetypeActive && g.archetypeType) {
-    const { ARCHETYPES: ARC } = import.meta ? {} : {};
-    ctx.fillStyle = '#ffdd00'; ctx.font = '8px Courier New'; ctx.fillText('[ARCH ACTIVE]', 14, 68);
+    const arch = ARCHETYPES[g.archetypeType];
+    ctx.fillStyle = arch ? arch.color : '#ffdd00'; ctx.shadowColor = arch ? arch.glow : '#ffdd00'; ctx.shadowBlur = 4;
+    ctx.font = '8px Courier New'; ctx.fillText(arch ? arch.name + ' ACTIVE' : '[ARCH ACTIVE]', 14, 76); ctx.shadowBlur = 0;
   } else if (UPG_ref.shield && UPG_ref.shieldTimer > 0) {
-    ctx.fillStyle = '#00ffff'; ctx.font = '8px Courier New'; ctx.fillText('SHIELD×' + UPG_ref.shieldTimer, 14, 68);
+    ctx.fillStyle = '#00ffff'; ctx.font = '8px Courier New'; ctx.fillText('SHIELD×' + UPG_ref.shieldTimer, 14, 76);
   } else if (UPG_ref.shieldCount > 0) {
-    ctx.fillStyle = '#334455'; ctx.font = '8px Courier New'; ctx.fillText('streak ' + UPG_ref.shieldCount + '/3', 14, 68);
+    ctx.fillStyle = '#334455'; ctx.font = '8px Courier New'; ctx.fillText('streak ' + UPG_ref.shieldCount + '/3', 14, 76);
+  }
+
+  // Emotional synergy label
+  const synergy = window._emotionSynergy;
+  if (synergy) {
+    ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 5;
+    ctx.font = '7px Courier New'; ctx.fillText('⚡ ' + synergy.label.toUpperCase(), 14, 84); ctx.shadowBlur = 0;
   }
 
   if (UPG_ref.comboCount > 1) {
     ctx.fillStyle = '#ffcc00'; ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 6;
-    ctx.font = '8px Courier New'; ctx.fillText('COMBO ×' + UPG_ref.resonanceMultiplier.toFixed(1), 14, 80);
+    ctx.font = '8px Courier New'; ctx.fillText('COMBO ×' + UPG_ref.resonanceMultiplier.toFixed(1), 14, 91);
     ctx.shadowBlur = 0;
   }
 
   ctx.fillStyle = '#00eeff'; ctx.shadowColor = '#00eeff'; ctx.shadowBlur = 5;
-  ctx.font = '9px Courier New'; ctx.fillText('◆×' + (window._insightTokens || 0), 14, 90); ctx.shadowBlur = 0;
+  ctx.font = '9px Courier New'; ctx.fillText('◆×' + (window._insightTokens || 0), 14, 99); ctx.shadowBlur = 0;
 
   // Score
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 10;
@@ -351,6 +401,24 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = '#005533'; ctx.fillText('◈×' + g.peaceLeft, w - 12, 44);
   ctx.fillStyle = '#223344'; ctx.font = '8px Courier New';
   ctx.fillText((window._dreamIdx + 1 || 1) + '/10 DREAMS', w - 12, 58);
+  // Temporal system info (lunar + planet)
+  const tmods = window._tmods;
+  if (tmods) {
+    ctx.fillStyle = '#223344'; ctx.font = '7px Courier New';
+    ctx.fillText(tmods.lunarName || '', w - 12, 70);
+    ctx.fillText(tmods.planetName || '', w - 12, 80);
+  }
+  // Phase M5: Character level display
+  const cs = window._characterStats;
+  if (cs) {
+    ctx.fillStyle = '#334455'; ctx.font = '7px Courier New';
+    ctx.fillText('LVL·' + cs.level + '  XP ' + Math.round(cs.xpPercent * 100) + '%', w - 12, 90);
+    if (cs.levelUpMsg) {
+      ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 4;
+      ctx.font = '7px Courier New'; ctx.fillText(cs.levelUpMsg, w - 12, 100);
+      ctx.shadowBlur = 0;
+    }
+  }
   ctx.textAlign = 'left';
 
   if (g.msg && g.msgTimer > 0) {
@@ -362,10 +430,276 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     g.msgTimer--;
   }
 
+  // ── Phase 6 + Lang: Vocabulary word flash (multilingual) ─────────────
+  const vocabWord = window._vocabWord;
+  if (vocabWord) {
+    const vAlpha = Math.min(1, (window._vocabTimer || 150) / 30);
+    ctx.globalAlpha = Math.min(1, vAlpha);
+    // Determine if we have a multilingual entry (from language system)
+    const hasMulti = vocabWord.targetWord && vocabWord.targetLang;
+    const boxH = hasMulti ? 56 : 36;
+    ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.fillRect(w/2 - 140, sy - 62, 280, boxH);
+    ctx.strokeStyle = 'rgba(255,221,136,0.3)'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 140, sy - 62, 280, boxH);
+    if (hasMulti) {
+      // Line 1: target language word + lang tag
+      const tl = vocabWord.targetLang;
+      ctx.fillStyle = '#aaddff'; ctx.shadowColor = '#88bbff'; ctx.shadowBlur = 5;
+      ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText(vocabWord.targetWord + '  [' + vocabWord.targetPos + ']', w/2, sy - 44); ctx.shadowBlur = 0;
+      // Line 2: language name
+      ctx.fillStyle = '#446688'; ctx.font = '8px Courier New';
+      ctx.fillText((tl.emoji || '') + ' ' + tl.name + (tl.nativeName !== tl.name ? ' · ' + tl.nativeName : ''), w/2, sy - 30);
+      // Line 3: definition in native language
+      ctx.fillStyle = '#ffdd88'; ctx.font = '9px Courier New';
+      ctx.fillText(vocabWord.nativeDef || vocabWord.targetDef, w/2, sy - 14);
+    } else {
+      ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 5;
+      ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText(vocabWord.word + '  [' + vocabWord.pos + ']', w/2, sy - 44); ctx.shadowBlur = 0;
+      ctx.fillStyle = '#886644'; ctx.font = '9px Courier New';
+      ctx.fillText(vocabWord.def, w/2, sy - 30);
+    }
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Sigil system: pattern flash ─────────────────────────────────────
+  const sigil = window._activeSigil;
+  if (sigil && (window._sigilAlpha || 0) > 0) {
+    ctx.globalAlpha = Math.min(1, window._sigilAlpha);
+    const sgX = w - 160, sgY = 115;
+    ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(sgX, sgY, 152, 62);
+    ctx.strokeStyle = 'rgba(255,220,100,0.3)'; ctx.lineWidth = 1;
+    ctx.strokeRect(sgX, sgY, 152, 62);
+    ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 6;
+    ctx.font = 'bold 18px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(sigil.symbol, sgX + 20, sgY + 24); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffcc66'; ctx.font = 'bold 9px Courier New';
+    ctx.fillText(sigil.tradition.split('(')[0].trim().slice(0, 22), sgX + 80, sgY + 15);
+    ctx.fillStyle = '#aa9966'; ctx.font = '8px Courier New';
+    const meanParts = sigil.meaning.split('·');
+    ctx.fillText((meanParts[0] || '').trim(), sgX + 80, sgY + 28);
+    ctx.fillStyle = '#664422'; ctx.font = '7px Courier New';
+    ctx.fillText((meanParts[1] || meanParts[0] || '').trim(), sgX + 80, sgY + 40);
+    ctx.fillStyle = '#443322'; ctx.font = '7px Courier New';
+    ctx.fillText('✦ sigil · ' + (sigil.patterns || []).join(' + '), sgX + 76, sgY + 54);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Phase M5: Archetype dialogue panel ───────────────────────────────
+  const ad = window._archetypeDialogue;
+  if (ad && ad.text && ad.alpha > 0.02) {
+    const ARCH_COLORS = { dragon:'#ffaa00', child:'#aaffcc', orb:'#aaddff', captor:'#ffaadd', protector:'#88ccff' };
+    const adColor = ARCH_COLORS[ad.key] || '#ffdd88';
+    const adW = 320, adX = w / 2 - adW / 2, adY = Math.round(h * 0.28) - 44;
+    ctx.globalAlpha = Math.min(1, ad.alpha);
+    ctx.fillStyle = 'rgba(2,2,12,0.93)'; ctx.fillRect(adX, adY, adW, 68);
+    ctx.strokeStyle = adColor + '55'; ctx.lineWidth = 1; ctx.strokeRect(adX, adY, adW, 68);
+    ctx.fillStyle = adColor; ctx.shadowColor = adColor; ctx.shadowBlur = 6;
+    ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('◈ ARCHETYPE SPEAKS', w / 2, adY + 14); ctx.shadowBlur = 0;
+    // Word-wrap dialogue text
+    ctx.fillStyle = '#ddeedd'; ctx.font = 'italic 10px Courier New';
+    const words = ad.text.split(' ');
+    let line = '', ly = adY + 32;
+    for (const word of words) {
+      const test = line + (line ? ' ' : '') + word;
+      if (ctx.measureText(test).width > adW - 24 && line) {
+        ctx.fillText(line, w / 2, ly); ly += 15; line = word;
+      } else line = test;
+    }
+    if (line) ctx.fillText(line, w / 2, ly);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Phase 6: Pattern discovery banner ────────────────────────────────
+  const banner = window._patternBanner;
+  if (banner) {
+    const bProg = banner.timer / banner.maxTimer;
+    const bAlpha = bProg > 0.85 ? (1 - bProg) / 0.15 : bProg < 0.1 ? bProg / 0.1 : 1;
+    ctx.globalAlpha = Math.min(1, bAlpha);
+    ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(w/2 - 148, h/2 - 38, 296, 72);
+    ctx.strokeStyle = banner.color + '66'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 148, h/2 - 38, 296, 72);
+    ctx.fillStyle = banner.color; ctx.shadowColor = banner.color; ctx.shadowBlur = 12;
+    ctx.font = 'bold 16px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(banner.symbol + ' ' + banner.name.toUpperCase() + ' DISCOVERED', w/2, h/2 - 14); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ccbbaa'; ctx.font = '9px Courier New';
+    ctx.fillText(banner.description, w/2, h/2 + 4);
+    ctx.fillStyle = '#665544'; ctx.font = '8px Courier New';
+    ctx.fillText(banner.fact, w/2, h/2 + 20);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Phase 8: Emergence indicator flash ───────────────────────────────
+  const em = window._emergence;
+  if (em && em.flash) {
+    ctx.globalAlpha = Math.min(1, em.alpha);
+    ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(w/2 - 150, h*0.72, 300, 56);
+    ctx.strokeStyle = 'rgba(170,200,255,0.4)'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 150, h*0.72, 300, 56);
+    ctx.fillStyle = '#aaccff'; ctx.shadowColor = '#88aaff'; ctx.shadowBlur = 8;
+    ctx.font = 'bold 11px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('✦ EMERGENCE · ' + em.flash.label.toUpperCase(), w/2, h*0.72 + 18); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#667799'; ctx.font = '8px Courier New';
+    ctx.fillText(em.flash.desc, w/2, h*0.72 + 36);
+    ctx.fillStyle = '#334455'; ctx.font = '7px Courier New';
+    ctx.fillText('AWAKENING LEVEL: ' + em.label, w/2, h*0.72 + 50);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Phase 10: Chakra awakening flash ─────────────────────────────────
+  const ck = window._chakra;
+  if (ck && ck.flash) {
+    ctx.globalAlpha = Math.min(1, ck.alpha);
+    const fc = ck.flash;
+    ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(w/2 - 140, h*0.28, 280, 54);
+    ctx.strokeStyle = fc.color + '88'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 140, h*0.28, 280, 54);
+    ctx.fillStyle = fc.glow; ctx.shadowColor = fc.glow; ctx.shadowBlur = 10;
+    ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('◉ ' + fc.name.toUpperCase() + ' CHAKRA AWAKENED', w/2, h*0.28 + 18); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#aa8866'; ctx.font = '9px Courier New';
+    ctx.fillText(fc.sanskrit + '  ·  ' + fc.desc, w/2, h*0.28 + 34);
+    ctx.fillStyle = '#665544'; ctx.font = '8px Courier New';
+    ctx.fillText(fc.powerup, w/2, h*0.28 + 48);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
   ctx.fillStyle = '#070714'; ctx.fillRect(0, h - 28, w, 28);
   ctx.strokeStyle = 'rgba(255,255,255,0.03)';
   ctx.beginPath(); ctx.moveTo(0, h - 28); ctx.lineTo(w, h - 28); ctx.stroke();
   ctx.fillStyle = '#1a1a2a'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
-  ctx.fillText('WASD/ARROWS · SHIFT=matrix · ESC=pause · J=arch · R=pulse · Q=freeze · C=contain', w / 2, h - 11);
+  ctx.fillText('WASD/ARROWS · SHIFT=matrix · J=arch · R=pulse · Q=freeze · C=contain · ESC=pause · H=dashboard', w / 2, h - 11);
   ctx.textAlign = 'left';
+
+  // ── Phase 9: Empathy flash (enemy behavior label shown after freeze) ──
+  const iqData = window._iqData;
+  if (iqData) {
+    const fe = iqData.flashEmotion;
+    if (fe && iqData.empathyAlpha > 0) {
+      ctx.globalAlpha = Math.min(1, iqData.empathyAlpha);
+      ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(sx, sy + gp + 8, gp, 34);
+      ctx.strokeStyle = fe.color + '55'; ctx.lineWidth = 1;
+      ctx.strokeRect(sx, sy + gp + 8, gp, 34);
+      ctx.fillStyle = fe.color; ctx.shadowColor = fe.color; ctx.shadowBlur = 6;
+      ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText(fe.label, sx + gp / 2, sy + gp + 22); ctx.shadowBlur = 0;
+      ctx.fillStyle = '#665544'; ctx.font = '7px Courier New';
+      ctx.fillText(fe.insight, sx + gp / 2, sy + gp + 34);
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    }
+    // Phase 9: EQ emotion recognition flash (dominant emotion label)
+    const eqfl = iqData.eqFlash;
+    if (eqfl && iqData.eqFlashAlpha > 0) {
+      ctx.globalAlpha = Math.min(0.85, iqData.eqFlashAlpha);
+      const eqX = w - 145, eqY = 85;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(eqX, eqY, 136, 28);
+      ctx.strokeStyle = eqfl.color + '44'; ctx.lineWidth = 1;
+      ctx.strokeRect(eqX, eqY, 136, 28);
+      ctx.fillStyle = eqfl.color; ctx.font = 'bold 9px Courier New';
+      ctx.fillText('⟦ ' + eqfl.label.toUpperCase() + ' ⟧', eqX + 4, eqY + 12);
+      ctx.fillStyle = '#554433'; ctx.font = '7px Courier New';
+      ctx.fillText(eqfl.tip.slice(0, 22), eqX + 4, eqY + 24);
+      ctx.globalAlpha = 1;
+    }
+    // Phase 9: Sequence challenge overlay (logic puzzle)
+    const challenge = iqData.challenge;
+    if (challenge && iqData.challengeAlpha > 0) {
+      ctx.globalAlpha = Math.min(1, iqData.challengeAlpha);
+      ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(w/2 - 160, h*0.42, 320, 80);
+      ctx.strokeStyle = 'rgba(136,221,255,0.4)'; ctx.lineWidth = 1;
+      ctx.strokeRect(w/2 - 160, h*0.42, 320, 80);
+      ctx.fillStyle = '#88ddff'; ctx.shadowColor = '#66aaff'; ctx.shadowBlur = 8;
+      ctx.font = 'bold 11px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('◆ PATTERN RECOGNITION: ' + challenge.name.toUpperCase(), w/2, h*0.42 + 16); ctx.shadowBlur = 0;
+      ctx.fillStyle = '#aaccee'; ctx.font = '14px Courier New';
+      ctx.fillText(challenge.seq.join('  ·  ') + '  ·  ?', w/2, h*0.42 + 38);
+      ctx.fillStyle = '#44aa66'; ctx.font = 'bold 12px Courier New';
+      ctx.fillText('next: ' + challenge.next, w/2, h*0.42 + 58);
+      ctx.fillStyle = '#445566'; ctx.font = '7px Courier New';
+      ctx.fillText(challenge.fact, w/2, h*0.42 + 74);
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    }
+    // Phase M3: Tutorial hint overlay — cycles one hint at a time
+    const tut = window._currentTutorialHint;
+    if (tut && tut.text) {
+      const ta = (tut.timer > 30 ? 1 : tut.timer / 30) * 0.95;
+      ctx.globalAlpha = ta;
+      ctx.fillStyle = 'rgba(0,14,4,0.94)'; ctx.fillRect(sx, sy - 50, gp, 44);
+      ctx.strokeStyle = 'rgba(0,255,136,0.3)'; ctx.lineWidth = 1;
+      ctx.strokeRect(sx, sy - 50, gp, 44);
+      ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 4;
+      ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('✦ HOW TO PLAY  ' + (tut.index + 1) + ' / ' + tut.total, sx + gp / 2, sy - 36);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#ccffcc'; ctx.font = '9px Courier New';
+      ctx.fillText(tut.text, sx + gp / 2, sy - 20);
+      ctx.fillStyle = '#334433'; ctx.font = '7px Courier New';
+      ctx.fillText('ESC to open menu · auto-advances…', sx + gp / 2, sy - 8);
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    }
+
+    // Phase 2.5: Dream Yoga — lucidity meter (bottom-left of grid)
+    const dy = window._dreamYoga;
+    if (dy) {
+      const lx = sx + 2, ly = sy + gp - 18;
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(lx, ly, 88, 14);
+      ctx.strokeStyle = 'rgba(100,200,255,0.2)'; ctx.lineWidth = 1;
+      ctx.strokeRect(lx, ly, 88, 14);
+      // bar
+      ctx.fillStyle = 'rgba(100,180,255,' + Math.min(1, 0.3 + dy.lucidity * 0.005) + ')'; ctx.fillRect(lx + 1, ly + 1, Math.round(dy.lucidity * 0.86), 12);
+      ctx.fillStyle = '#88aadd'; ctx.font = '7px Courier New'; ctx.textAlign = 'left';
+      ctx.fillText('◐ LUCIDITY ' + dy.lucidity + '%', lx + 3, ly + 10);
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+
+      // Reality check prompt — centred overlay
+      if (dy.rcActive && dy.rcAlpha > 0.02 && dy.rcPrompt) {
+        const pa = Math.min(1, dy.rcAlpha);
+        ctx.globalAlpha = pa;
+        ctx.fillStyle = 'rgba(0,5,20,0.92)'; ctx.fillRect(w / 2 - 200, h / 2 - 55, 400, 100);
+        ctx.strokeStyle = 'rgba(100,200,255,0.5)'; ctx.lineWidth = 1;
+        ctx.strokeRect(w / 2 - 200, h / 2 - 55, 400, 100);
+        ctx.fillStyle = '#aaccff'; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 10;
+        ctx.font = 'bold 11px Courier New'; ctx.textAlign = 'center';
+        ctx.fillText('◐ REALITY CHECK', w / 2, h / 2 - 36); ctx.shadowBlur = 0;
+        ctx.fillStyle = '#ddeeff'; ctx.font = '13px Courier New';
+        ctx.fillText(dy.rcPrompt.q, w / 2, h / 2 - 14);
+        ctx.fillStyle = '#556688'; ctx.font = '9px Courier New';
+        ctx.fillText(dy.rcPrompt.hint, w / 2, h / 2 + 6);
+        ctx.fillStyle = '#334466'; ctx.font = '8px Courier New';
+        ctx.fillText('press any key to acknowledge', w / 2, h / 2 + 26);
+        ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+      }
+    }
+
+    // Phase M4: Speedrun timer overlay
+    const srt = window._speedrunTimer;
+    if (srt !== undefined && srt !== null && srt >= 0) {
+      const secLeft = Math.floor(srt / 1000);
+      const timerColor = secLeft <= 30 ? '#ff4422' : secLeft <= 60 ? '#ffaa00' : '#88ddff';
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(w - 80, sy - 2, 74, 20);
+      ctx.strokeStyle = timerColor + '55'; ctx.lineWidth = 1;
+      ctx.strokeRect(w - 80, sy - 2, 74, 20);
+      ctx.fillStyle = timerColor; ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'center';
+      const mm = Math.floor(secLeft / 60), ss = secLeft % 60;
+      ctx.fillText('⏱ ' + mm + ':' + String(ss).padStart(2, '0'), w - 43, sy + 12);
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    }
+
+    // Phase M4: Move limit overlay (puzzle mode)
+    const mr = window._movesRemaining;
+    if (mr !== undefined && mr !== null) {
+      const mrColor = mr <= 10 ? '#ff6622' : '#88bbff';
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(w - 80, sy + 22, 74, 18);
+      ctx.strokeStyle = mrColor + '44'; ctx.lineWidth = 1;
+      ctx.strokeRect(w - 80, sy + 22, 74, 18);
+      ctx.fillStyle = mrColor; ctx.font = 'bold 9px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('MOVES: ' + mr, w - 43, sy + 34);
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    }
+  }
 }

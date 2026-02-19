@@ -52,6 +52,19 @@ export function buildDreamscape(ds, sz, level, prevScore, prevHp, maxHp, dreamHi
 
   if (dreamHistory && dreamHistory.length > 0) spawnTile(grid, 3, T.MEMORY, sz, true);
 
+  // Phase 2.6: Embodiment tiles — somatic engagement per dreamscape emotional context
+  // GROUNDING appears in every dreamscape (1 tile) — universally helpful
+  spawnTile(grid, 1, T.GROUNDING, sz, true);
+  // BREATH_SYNC for high-arousal / anxiety / chaos dreamscapes
+  if (['anxiety','panic','chaos','frustration'].includes(ds.emotion))
+    spawnTile(grid, 1, T.BREATH_SYNC, sz, true);
+  // ENERGY_NODE for high-effort / exhaustion / integration dreamscapes
+  if (['exhaustion','integration','fear'].includes(ds.emotion))
+    spawnTile(grid, 1, T.ENERGY_NODE, sz, true);
+  // BODY_SCAN for inward / exploratory / numb dreamscapes
+  if (['numbness','vulnerability','hope'].includes(ds.emotion))
+    spawnTile(grid, 1, T.BODY_SCAN, sz, true);
+
   if (ds.id === 'aztec') {
     for (let i = 0; i < sz * 2; i++) {
       const y = 1 + rnd(sz - 2), x = 1 + rnd(sz - 2);

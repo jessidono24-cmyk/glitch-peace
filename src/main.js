@@ -9,7 +9,8 @@ import { CFG, UPG, CURSOR, phase, setPhase, resetUpgrades, resetSession,
          checkOwned, matrixActive, setMatrix, matrixHoldTime, setMatrixHoldTime, addMatrixHoldTime,
          insightTokens, addInsightToken, spendInsightTokens,
          sessionRep, addSessionRep, dreamHistory, pushDreamHistory,
-         highScores, setHighScores } from './core/state.js';
+         highScores, setHighScores,
+         PLAYER_PROFILE, savePlayerProfile } from './core/state.js';
 import { rnd, pick } from './core/utils.js';
 import { saveHighScores, loadHighScores } from './core/storage.js';
 import { SZ, DIFF, GP, CW, CH, buildDreamscape } from './game/grid.js';
@@ -19,7 +20,8 @@ import { tryMove, triggerGlitchPulse, stepTileSpread, setEmotion, showMsg,
 import { burst, resonanceWave } from './game/particles.js';
 import { drawGame } from './ui/renderer.js';
 import { drawTitle, drawDreamSelect, drawOptions, drawHighScores,
-         drawUpgradeShop, drawPause, drawInterlude, drawDead } from './ui/menus.js';
+         drawUpgradeShop, drawPause, drawInterlude, drawDead,
+         drawOnboarding, drawLanguageOptions } from './ui/menus.js';
 // ─── Phase 2-5 systems ───────────────────────────────────────────────────
 import { sfxManager } from './audio/sfx-manager.js';
 import { temporalSystem } from './systems/temporal-system.js';
@@ -30,6 +32,11 @@ import { ShooterMode } from './modes/shooter-mode.js';
 // ─── Phase 6: Learning Systems ───────────────────────────────────────────
 import { vocabularyEngine } from './systems/learning/vocabulary-engine.js';
 import { patternRecognition } from './systems/learning/pattern-recognition.js';
+// ─── Phase 6+: Language System + Sigil System ────────────────────────────
+import { languageSystem, LANGUAGES, LANGUAGE_PATHS, LANG_LIST } from './systems/learning/language-system.js';
+import { sigilSystem } from './systems/learning/sigil-system.js';
+// ─── Phase 6+: Adaptive Difficulty ───────────────────────────────────────
+import { adaptiveDifficulty, DIFFICULTY_TIERS } from './systems/difficulty/adaptive-difficulty.js';
 // ─── Phase 7: Cessation Tools ────────────────────────────────────────────
 import { sessionTracker } from './systems/cessation/session-tracker.js';
 // ─── Phase 7 continuation: Cessation Tools ───────────────────────────────
@@ -88,6 +95,20 @@ let gameMode   = 'grid'; // 'grid' | 'shooter'
 const EMOTION_THRESHOLD = 0.15; // emotion must exceed this to affect gameplay
 const INTERLUDE_TIMER_FRAMES = 280; // frames at ~60fps ≈ 4.67s
 const INTERLUDE_TIMEOUT_MS   = Math.round(INTERLUDE_TIMER_FRAMES / 60 * 1000) + 200; // safety margin
+
+// ─── Onboarding state ────────────────────────────────────────────────────
+// LANG_LIST is imported from language-system.js — single canonical source
+const onboardState = { step: 0, ageIdx: 4, nativeIdx: 0, targetIdx: 0 };
+
+// ─── Language options state ───────────────────────────────────────────────
+const langOptState = { row: 0, nativeIdx: LANG_LIST.indexOf(PLAYER_PROFILE.nativeLang || 'en'),
+                       targetIdx: 0, modeIdx: 1 };
+
+// ─── Apply adaptive difficulty tier on startup ────────────────────────────
+adaptiveDifficulty.setAgeGroup(PLAYER_PROFILE.ageGroup || 'adult');
+if (PLAYER_PROFILE.diffTier) adaptiveDifficulty.setTier(PLAYER_PROFILE.diffTier);
+languageSystem.setNativeLang(PLAYER_PROFILE.nativeLang || 'en');
+if (PLAYER_PROFILE.targetLang) languageSystem.setTargetLang(PLAYER_PROFILE.targetLang);
 
 // Expose tokens/dreamIdx to renderer via window (avoids circular import)
 window._insightTokens = insightTokens;
@@ -298,6 +319,8 @@ function loop(ts) {
   const dt = ts - prevTs; prevTs = ts;
   const w = CW(), h = CH();
 
+  if (phase === 'onboarding')  { drawOnboarding(ctx, w, h, onboardState); animId=requestAnimationFrame(loop); return; }
+  if (phase === 'langopts')    { drawLanguageOptions(ctx, w, h, langOptState); animId=requestAnimationFrame(loop); return; }
   if (phase === 'title')       { drawTitle(ctx, w, h, backgroundStars, ts, CURSOR.menu, gameMode); animId=requestAnimationFrame(loop); return; }
   if (phase === 'dreamselect') { drawDreamSelect(ctx, w, h, CFG.dreamIdx); animId=requestAnimationFrame(loop); return; }
   if (phase === 'options')     { drawOptions(ctx, w, h, CURSOR.opt); animId=requestAnimationFrame(loop); return; }
@@ -374,6 +397,11 @@ function loop(ts) {
         // Phase 8: Record emergence events on tile step
         if (targetTile === 6) emergenceIndicators.record('insight_accumulation'); // T.INSIGHT
         if (targetTile === 4 && UPG.comboCount >= 4) emergenceIndicators.record('peace_chain'); // T.PEACE
+        // Sigil system: show sigil on INSIGHT(6), ARCHETYPE(11), PEACE(4), MEMORY(15), GLITCH(10)
+        if ([4, 6, 10, 11, 15].includes(targetTile)) {
+          const sigil = sigilSystem.onSpecialTile(targetTile, adaptiveDifficulty.tier.vocabTier || 'advanced');
+          if (sigil) { window._activeSigil = sigil; window._sigilAlpha = 1; }
+        }
       }
       // Phase 9: track move mindfulness
       const wasPreviewActive = consequencePreview.active && consequencePreview.ghostPath.length > 0;
@@ -419,10 +447,34 @@ function loop(ts) {
   patternRecognition.checkScore(game.score);
   // Phase 9: propagate pattern discovery to logic puzzle IQ tracker
   if (patternRecognition.sessionCount > _prevPatterns) logicPuzzles.onPatternDiscovered();
-  // Expose to renderer
-  window._vocabWord      = vocabularyEngine.activeWord;
+
+  // ── Language System: upgrade active vocab word to multilingual ──────
+  const rawVocab = vocabularyEngine.activeWord;
+  const vocabTier = adaptiveDifficulty.tier.vocabTier || 'advanced';
+  let displayVocab = rawVocab;
+  if (rawVocab && languageSystem.targetLang !== languageSystem.nativeLang) {
+    const tileType = rawVocab.tileType || 4;
+    const multiWord = languageSystem.getWordForTile(tileType, vocabTier);
+    if (multiWord) {
+      multiWord.tileType = tileType;
+      // Record word as seen for progressive unlock
+      languageSystem.onWordSeen(multiWord.id, languageSystem.targetLang);
+      displayVocab = multiWord;
+    }
+  }
+  window._vocabWord      = displayVocab;
   window._patternBanner  = patternRecognition.activeBanner;
-  window._learnStats     = { words: vocabularyEngine.sessionCount, patterns: patternRecognition.sessionCount };
+  window._learnStats     = {
+    words: vocabularyEngine.sessionCount,
+    patterns: patternRecognition.sessionCount,
+    langWords: languageSystem.targetWordCount,
+    targetLang: languageSystem.targetLangMeta?.name || '',
+  };
+
+  // ── Sigil system tick + trigger on special tiles ─────────────────────
+  sigilSystem.tick();
+  window._activeSigil = sigilSystem.activeSigil;
+  window._sigilAlpha  = sigilSystem.displayAlpha;
 
   // ── Phase 7: Session tracker + urge management tick ────────────────
   sessionTracker.tick();
@@ -514,6 +566,81 @@ function loop(ts) {
 // ─── Input ───────────────────────────────────────────────────────────────
 window.addEventListener('keydown', e => {
   keys.add(e.key);
+
+  // ── Onboarding screen ───────────────────────────────────────────────
+  if (phase === 'onboarding') {
+    const AGE_OPTS_N = 5;
+    const path = LANGUAGE_PATHS[LANG_LIST[onboardState.nativeIdx] || 'en'] || LANGUAGE_PATHS.en;
+    if (e.key === 'ArrowUp') {
+      if (onboardState.step === 0) onboardState.ageIdx = (onboardState.ageIdx - 1 + AGE_OPTS_N) % AGE_OPTS_N;
+      else if (onboardState.step === 1) onboardState.nativeIdx = (onboardState.nativeIdx - 1 + LANG_LIST.length) % LANG_LIST.length;
+      else if (onboardState.step === 2) onboardState.targetIdx = (onboardState.targetIdx - 1 + Math.min(8, path.length)) % Math.min(8, path.length);
+      sfxManager.resume(); sfxManager.playMenuNav();
+    }
+    if (e.key === 'ArrowDown') {
+      if (onboardState.step === 0) onboardState.ageIdx = (onboardState.ageIdx + 1) % AGE_OPTS_N;
+      else if (onboardState.step === 1) onboardState.nativeIdx = (onboardState.nativeIdx + 1) % LANG_LIST.length;
+      else if (onboardState.step === 2) onboardState.targetIdx = (onboardState.targetIdx + 1) % Math.min(8, path.length);
+      sfxManager.resume(); sfxManager.playMenuNav();
+    }
+    if (e.key === 'Enter') {
+      sfxManager.resume(); sfxManager.playMenuSelect();
+      if (onboardState.step < 3) {
+        onboardState.step++;
+      } else {
+        // Confirm: save profile
+        const AGE_TIERS = ['tiny','gentle','explorer','standard','standard'];
+        const ageKey  = ['child5','child8','teen12','teen16','adult'][onboardState.ageIdx] || 'adult';
+        const tierKey = AGE_TIERS[onboardState.ageIdx] || 'standard';
+        const nCode   = LANG_LIST[onboardState.nativeIdx] || 'en';
+        const tCode   = path[onboardState.targetIdx] || path[0] || 'no';
+        PLAYER_PROFILE.onboardingDone = true;
+        PLAYER_PROFILE.ageGroup   = ageKey;
+        PLAYER_PROFILE.diffTier   = tierKey;
+        PLAYER_PROFILE.nativeLang = nCode;
+        PLAYER_PROFILE.targetLang = tCode;
+        savePlayerProfile();
+        adaptiveDifficulty.setAgeGroup(ageKey);
+        adaptiveDifficulty.setTier(tierKey);
+        languageSystem.setNativeLang(nCode);
+        languageSystem.setTargetLang(tCode);
+        setPhase('title');
+      }
+    }
+    if (e.key === 'Backspace' && onboardState.step > 0) onboardState.step--;
+    if (e.key === 'Escape') setPhase('title');
+    e.preventDefault(); return;
+  }
+
+  // ── Language options screen ─────────────────────────────────────────
+  if (phase === 'langopts') {
+    const nativeList = LANG_LIST;
+    const targetPath = LANGUAGE_PATHS[LANG_LIST[langOptState.nativeIdx] || 'en'] || LANGUAGE_PATHS.en;
+    const modeList   = ['native', 'bilingual', 'target'];
+    if (e.key === 'ArrowUp')    { langOptState.row = (langOptState.row - 1 + 3) % 3; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key === 'ArrowDown')  { langOptState.row = (langOptState.row + 1) % 3; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key === 'ArrowLeft'||e.key === 'ArrowRight') {
+      const dir = e.key === 'ArrowLeft' ? -1 : 1;
+      if (langOptState.row === 0) langOptState.nativeIdx = (langOptState.nativeIdx + dir + nativeList.length) % nativeList.length;
+      else if (langOptState.row === 1) langOptState.targetIdx = (langOptState.targetIdx + dir + Math.min(8, targetPath.length)) % Math.min(8, targetPath.length);
+      else if (langOptState.row === 2) langOptState.modeIdx   = (langOptState.modeIdx   + dir + modeList.length) % modeList.length;
+      sfxManager.resume(); sfxManager.playMenuNav();
+    }
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      // Save language selections
+      const nCode = nativeList[langOptState.nativeIdx] || 'en';
+      const tCode = targetPath[langOptState.targetIdx] || targetPath[0] || 'no';
+      const mode  = modeList[langOptState.modeIdx] || 'bilingual';
+      PLAYER_PROFILE.nativeLang = nCode; PLAYER_PROFILE.targetLang = tCode;
+      savePlayerProfile();
+      languageSystem.setNativeLang(nCode);
+      languageSystem.setTargetLang(tCode);
+      languageSystem.setDisplayMode(mode);
+      setPhase(game ? 'paused' : 'title');
+    }
+    e.preventDefault(); return;
+  }
+
   if (phase === 'title') {
     if (e.key==='ArrowUp')   { CURSOR.menu=(CURSOR.menu-1+5)%5; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowDown') { CURSOR.menu=(CURSOR.menu+1)%5; sfxManager.resume(); sfxManager.playMenuNav(); }
@@ -539,8 +666,8 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
   if (phase === 'options') {
-    if (e.key==='ArrowUp')   { CURSOR.opt=(CURSOR.opt-1+4)%4; sfxManager.resume(); sfxManager.playMenuNav(); }
-    if (e.key==='ArrowDown') { CURSOR.opt=(CURSOR.opt+1)%4; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowUp')   { CURSOR.opt=(CURSOR.opt-1+5)%5; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowDown') { CURSOR.opt=(CURSOR.opt+1)%5; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowLeft'||e.key==='ArrowRight') {
       const dir=e.key==='ArrowLeft'?-1:1;
       if(CURSOR.opt===0){const i=['small','medium','large'].indexOf(CFG.gridSize);CFG.gridSize=['small','medium','large'][(i+dir+3)%3];}
@@ -548,7 +675,11 @@ window.addEventListener('keydown', e => {
       else if(CURSOR.opt===2) CFG.particles=!CFG.particles;
       sfxManager.resume(); sfxManager.playMenuNav();
     }
-    if (e.key==='Enter'||e.key==='Escape') { if(CURSOR.opt===3||e.key==='Escape') setPhase(game?'paused':'title'); }
+    if (e.key==='Enter') {
+      if(CURSOR.opt===3) { setPhase('langopts'); }  // Language settings
+      else if(CURSOR.opt===4||e.key==='Escape') setPhase(game?'paused':'title');
+    }
+    if (e.key==='Escape') setPhase(game?'paused':'title');
     e.preventDefault(); return;
   }
   if (phase === 'highscores') { if(e.key==='Enter'||e.key==='Escape') setPhase('title'); e.preventDefault(); return; }
@@ -681,4 +812,9 @@ canvas.addEventListener('click', () => { if(phase==='title')startGame(CFG.dreamI
 // ─── Boot ─────────────────────────────────────────────────────────────────
 setHighScores(loadHighScores());
 initStars(CW(), CH());
+// Show onboarding screen on first ever launch (no saved profile)
+if (!PLAYER_PROFILE.onboardingDone) {
+  setPhase('onboarding');
+  onboardState.step = 0; onboardState.ageIdx = 4; onboardState.nativeIdx = 0; onboardState.targetIdx = 0;
+}
 animId = requestAnimationFrame(loop);

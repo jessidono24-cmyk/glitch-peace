@@ -419,19 +419,59 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     g.msgTimer--;
   }
 
-  // ── Phase 6: Vocabulary word flash ───────────────────────────────────
+  // ── Phase 6 + Lang: Vocabulary word flash (multilingual) ─────────────
   const vocabWord = window._vocabWord;
   if (vocabWord) {
     const vAlpha = Math.min(1, (window._vocabTimer || 150) / 30);
     ctx.globalAlpha = Math.min(1, vAlpha);
-    ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(w/2 - 120, sy - 54, 240, 36);
+    // Determine if we have a multilingual entry (from language system)
+    const hasMulti = vocabWord.targetWord && vocabWord.targetLang;
+    const boxH = hasMulti ? 56 : 36;
+    ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.fillRect(w/2 - 140, sy - 62, 280, boxH);
     ctx.strokeStyle = 'rgba(255,221,136,0.3)'; ctx.lineWidth = 1;
-    ctx.strokeRect(w/2 - 120, sy - 54, 240, 36);
-    ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 5;
-    ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
-    ctx.fillText(vocabWord.word + '  [' + vocabWord.pos + ']', w/2, sy - 36); ctx.shadowBlur = 0;
-    ctx.fillStyle = '#886644'; ctx.font = '9px Courier New';
-    ctx.fillText(vocabWord.def, w/2, sy - 20);
+    ctx.strokeRect(w/2 - 140, sy - 62, 280, boxH);
+    if (hasMulti) {
+      // Line 1: target language word + lang tag
+      const tl = vocabWord.targetLang;
+      ctx.fillStyle = '#aaddff'; ctx.shadowColor = '#88bbff'; ctx.shadowBlur = 5;
+      ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText(vocabWord.targetWord + '  [' + vocabWord.targetPos + ']', w/2, sy - 44); ctx.shadowBlur = 0;
+      // Line 2: language name
+      ctx.fillStyle = '#446688'; ctx.font = '8px Courier New';
+      ctx.fillText((tl.emoji || '') + ' ' + tl.name + (tl.nativeName !== tl.name ? ' · ' + tl.nativeName : ''), w/2, sy - 30);
+      // Line 3: definition in native language
+      ctx.fillStyle = '#ffdd88'; ctx.font = '9px Courier New';
+      ctx.fillText(vocabWord.nativeDef || vocabWord.targetDef, w/2, sy - 14);
+    } else {
+      ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 5;
+      ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText(vocabWord.word + '  [' + vocabWord.pos + ']', w/2, sy - 44); ctx.shadowBlur = 0;
+      ctx.fillStyle = '#886644'; ctx.font = '9px Courier New';
+      ctx.fillText(vocabWord.def, w/2, sy - 30);
+    }
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Sigil system: pattern flash ─────────────────────────────────────
+  const sigil = window._activeSigil;
+  if (sigil && (window._sigilAlpha || 0) > 0) {
+    ctx.globalAlpha = Math.min(1, window._sigilAlpha);
+    const sgX = w - 160, sgY = 115;
+    ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(sgX, sgY, 152, 62);
+    ctx.strokeStyle = 'rgba(255,220,100,0.3)'; ctx.lineWidth = 1;
+    ctx.strokeRect(sgX, sgY, 152, 62);
+    ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 6;
+    ctx.font = 'bold 18px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(sigil.symbol, sgX + 20, sgY + 24); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffcc66'; ctx.font = 'bold 9px Courier New';
+    ctx.fillText(sigil.tradition.split('(')[0].trim().slice(0, 22), sgX + 80, sgY + 15);
+    ctx.fillStyle = '#aa9966'; ctx.font = '8px Courier New';
+    const meanParts = sigil.meaning.split('·');
+    ctx.fillText((meanParts[0] || '').trim(), sgX + 80, sgY + 28);
+    ctx.fillStyle = '#664422'; ctx.font = '7px Courier New';
+    ctx.fillText((meanParts[1] || meanParts[0] || '').trim(), sgX + 80, sgY + 40);
+    ctx.fillStyle = '#443322'; ctx.font = '7px Courier New';
+    ctx.fillText('✦ sigil · ' + (sigil.patterns || []).join(' + '), sgX + 76, sgY + 54);
     ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
 

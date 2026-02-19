@@ -41,9 +41,13 @@ export const GAP  = 2;
 export const GRID_SIZES = { small: 10, medium: 13, large: 17 };
 
 export const DIFF_CFG = {
-  easy:   { eSpeedBase: 950, eSpeedMin: 350, dmgMul: 0.55, hazMul: 0.7  },
-  normal: { eSpeedBase: 720, eSpeedMin: 210, dmgMul: 1.0,  hazMul: 1.0  },
-  hard:   { eSpeedBase: 520, eSpeedMin: 150, dmgMul: 1.45, hazMul: 1.35 },
+  // Age-accessible tiers (see adaptive-difficulty.js for full profiles)
+  tiny:   { eSpeedBase: 2000, eSpeedMin: 1200, dmgMul: 0.25, hazMul: 0.0  }, // 5+ 🌱
+  gentle: { eSpeedBase: 1400, eSpeedMin:  700, dmgMul: 0.45, hazMul: 0.45 }, // 8+ 🌿
+  // Standard tiers
+  easy:   { eSpeedBase:  950, eSpeedMin:  350, dmgMul: 0.55, hazMul: 0.7  },
+  normal: { eSpeedBase:  720, eSpeedMin:  210, dmgMul: 1.0,  hazMul: 1.0  },
+  hard:   { eSpeedBase:  520, eSpeedMin:  150, dmgMul: 1.45, hazMul: 1.35 },
 };
 
 // ═══════════════════════════════════════════════════════════

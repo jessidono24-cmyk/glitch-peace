@@ -60,10 +60,12 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
   ctx.globalAlpha = 1; ctx.textAlign = 'left';
 
   // Grid
+  // Build tileFlicker lookup Map for O(1) per-tile query (was O(n) array.find)
+  const flickerMap = new Map(g.tileFlicker.map(f => [f.y * sz + f.x, f]));
   for (let y = 0; y < sz; y++) {
     for (let x = 0; x < sz; x++) {
       const raw = g.grid[y][x];
-      const fl  = g.tileFlicker.find(f => f.y === y && f.x === x);
+      const fl  = flickerMap.get(y * sz + x);
       const val = (fl && fl.reveal && raw === T.HIDDEN) ? T.INSIGHT : raw;
       const td  = TILE_DEF[val] || TILE_DEF[T.VOID];
       const tp  = P[val] || P[T.VOID];
@@ -186,6 +188,61 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     }
   }
   g.tileFlicker = g.tileFlicker.filter(f => { f.t--; return f.t > 0; });
+
+  // ── Constellation overlay: connect adjacent star tiles in Skymap mode ──
+  if (g.playModeId === 'skymap' || g.playModeId === 'ritual_space') {
+    // Collect all INSIGHT (6) and ARCHETYPE (11) positions
+    const starTiles = [];
+    for (let y = 0; y < sz; y++) {
+      for (let x = 0; x < sz; x++) {
+        if (g.grid[y][x] === T.INSIGHT || g.grid[y][x] === T.ARCHETYPE) {
+          starTiles.push({ y, x, t: g.grid[y][x] });
+        }
+      }
+    }
+    // Draw constellation lines between stars within 4 tiles (Manhattan distance)
+    const CONST_MAX_DIST  = 4;    // max tile distance to draw a line
+    const CONST_ALPHA_BASE = 0.18; // base line opacity
+    const CONST_ALPHA_PULSE = 0.10; // oscillation amplitude
+    const CONST_PULSE_SPEED = 0.002; // angular speed of pulse animation
+    ctx.save();
+    for (let i = 0; i < starTiles.length; i++) {
+      for (let j = i + 1; j < starTiles.length; j++) {
+        const a = starTiles[i], b = starTiles[j];
+        const dist = Math.abs(a.y - b.y) + Math.abs(a.x - b.x);
+        if (dist <= CONST_MAX_DIST) {
+          const ax = sx + a.x * (CELL + GAP) + CELL / 2;
+          const ay = sy + a.y * (CELL + GAP) + CELL / 2;
+          const bx = sx + b.x * (CELL + GAP) + CELL / 2;
+          const by = sy + b.y * (CELL + GAP) + CELL / 2;
+          // Closer stars = brighter line; archetype connections = gold
+          const lineAlpha = (CONST_ALPHA_BASE + CONST_ALPHA_PULSE * Math.sin(ts * CONST_PULSE_SPEED + i + j)) * (1 - dist / (CONST_MAX_DIST + 1));
+          const lineColor = (a.t === T.ARCHETYPE || b.t === T.ARCHETYPE) ? '#ffdd88' : '#00eeff';
+          ctx.globalAlpha = lineAlpha;
+          ctx.strokeStyle = lineColor;
+          ctx.shadowColor = lineColor;
+          ctx.shadowBlur  = 6;
+          ctx.lineWidth   = 1;
+          ctx.setLineDash([3, 5]);
+          ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+    }
+    // Gentle star glow pulse on each star tile in skymap
+    for (const s of starTiles) {
+      const px2 = sx + s.x * (CELL + GAP) + CELL / 2;
+      const py2 = sy + s.y * (CELL + GAP) + CELL / 2;
+      const pulse2 = 0.3 + 0.2 * Math.sin(ts * 0.004 + s.x * 1.7 + s.y * 1.3);
+      ctx.globalAlpha = pulse2;
+      ctx.shadowColor = s.t === T.ARCHETYPE ? '#ffdd88' : '#00eeff';
+      ctx.shadowBlur = 20;
+      ctx.strokeStyle = s.t === T.ARCHETYPE ? '#ffdd88' : '#00eeff';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(px2, py2, CELL * 0.44, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0; ctx.restore();
+  }
 
   // Consequence preview ghost path
   if (ghostPath && ghostPath.length > 0) {

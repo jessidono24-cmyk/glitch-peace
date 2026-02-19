@@ -128,13 +128,16 @@ export function drawDashboard(ctx, w, h) {
 
   // ── Row 6: Alchemy ────────────────────────────────────────────────────
   if (data.alchemy.active || data.alchemy.transmutations > 0) {
-    _drawSection(ctx, col1, y, panelW - pad * 2, 58, 'ALCHEMY ⚗️', [
-      { label: 'Phase',         val: data.alchemy.phase, color: '#cc88ff' },
-      { label: 'Seeds',         val: data.alchemy.seedsDisplay || 'none collected' },
+    const stonesLabel = data.alchemy.stones + ' philosopher stone' + (data.alchemy.stones !== 1 ? 's' : '');
+    const classicProgress = data.alchemy.classicElements + '/4 elements this session';
+    _drawSection(ctx, col1, y, panelW - pad * 2, 66, 'ALCHEMY ⚗️', [
+      { label: 'Phase',          val: data.alchemy.phase, color: '#cc88ff' },
+      { label: 'Seeds',          val: data.alchemy.seedsDisplay || 'none collected' },
       { label: 'Transmutations', val: String(data.alchemy.transmutations) },
-      { label: 'Stones',        val: data.alchemy.stones + ' philosopher stone' + (data.alchemy.stones !== 1 ? 's' : '') },
+      { label: 'Great Work',     val: classicProgress, color: data.alchemy.classicElements >= 4 ? '#ffdd00' : '#666677' },
+      { label: 'Stones',         val: stonesLabel },
     ], '#cc88ff');
-    y += 74;
+    y += 82;
   }
 
   // ── Footer ─────────────────────────────────────────────────────────
@@ -233,6 +236,7 @@ function _gatherAlchemyData() {
     seedsDisplay:    al.seedsDisplay || '',
     transmutations:  al.transmutations || 0,
     stones:          al.stones || 0,
+    classicElements: al.classicElements || 0,
   };
 }
 

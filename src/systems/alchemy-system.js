@@ -79,13 +79,16 @@ export class AlchemySystem {
     this._etherCharge = 0;
     // Phase of the Great Work
     this._phase = 'nigredo'; // nigredo → albedo → rubedo → aurora
+    // Track which classical elements have been transmuted this session
+    // (for the proper Philosopher's Stone: one of each fire/water/earth/air)
+    this._classicElementsUsed = new Set();
   }
 
   // ─── Step on a tile that yields an element seed ──────────────────────
-  onElementTile(tileType) {
+  onElementTile(tileType, count = 1) {
     const element = TILE_ELEMENT_MAP[tileType];
     if (!element) return null;
-    this._seeds[element]++;
+    this._seeds[element] = (this._seeds[element] || 0) + count;
     this._updatePhase();
     return { element, seeds: this._seeds[element], elementDef: ELEMENTS[element] };
   }
@@ -122,6 +125,8 @@ export class AlchemySystem {
 
     this._seeds[element] -= SEEDS_PER_TRANSMUTE;
     this._transmutations++;
+    // Record which classical element was used (for Philosopher's Stone tracking)
+    if (PHILOSOPHER_ELEMENTS.includes(element)) this._classicElementsUsed.add(element);
     this._save();
 
     if (changed > 0) {
@@ -145,12 +150,14 @@ export class AlchemySystem {
   // ─── Check if player has completed Great Work cycle ───────────────────
   _checkPhilosopherStone(game, showMsg) {
     if (!game) return false;
-    // Simplified Philosopher's Stone: every 4th successful transmutation triggers the event.
-    // A full Jungian implementation would track that one of each classical element (fire/water/
-    // earth/air) was used in sequence — this is a gameplay-friendly approximation that honours
-    // the spirit: consistent, deliberate practice (4 transmutations) yields the Great Work reward.
-    // TODO (alchemy deepening): track element-specific history and require one of each classic element.
-    if (this._transmutations >= 4 && this._transmutations % 4 === 0) {
+    // Primary trigger: all 4 classical elements (fire/water/earth/air) used in
+    // the same session — the Jungian "coniunctio" of all opposing principles.
+    // Fallback trigger: every 8th transmutation for single-element play styles.
+    const allFourUsed = PHILOSOPHER_ELEMENTS.every(el => this._classicElementsUsed.has(el));
+    const fallbackHit = this._transmutations >= 8 && this._transmutations % 8 === 0;
+    if (allFourUsed || fallbackHit) {
+      // Reset element-used history so the cycle can repeat
+      this._classicElementsUsed.clear();
       game.hp = game.maxHp || 100;
       game.score = (game.score || 0) + 5000;
       this._philosopherStones++;
@@ -191,6 +198,7 @@ export class AlchemySystem {
     this._seeds     = { fire: 0, water: 0, earth: 0, air: 0, ether: 0 };
     this._etherCharge = 0;
     this._phase     = 'nigredo';
+    this._classicElementsUsed = new Set();
   }
 
   // ─── Accessors ────────────────────────────────────────────────────────
@@ -206,6 +214,9 @@ export class AlchemySystem {
       .map(([k, v]) => `${ELEMENTS[k].symbol}×${v}`)
       .join('  ');
   }
+
+  // Classic elements used this session (for dashboard)
+  get classicElementsUsed() { return this._classicElementsUsed.size; }
 
   // ─── Persistence ──────────────────────────────────────────────────────
   _save() {

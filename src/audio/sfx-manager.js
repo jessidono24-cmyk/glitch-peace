@@ -600,6 +600,40 @@ export class SFXManager {
   }
 
   /**
+   * Play dream complete (gentle ascending chord with long decay — distinct from level-up)
+   * Evokes crossing a threshold: peaceful, resolving, spacious.
+   */
+  playDreamComplete() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    // Gentle pentatonic chord: C4 E4 G4 B4 (major 7th — open, unresolved in the best way)
+    const freqs = [261.63, 329.63, 392.00, 493.88];
+    freqs.forEach((freq, i) => {
+      const osc  = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const t = now + i * 0.12;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.10 - i * 0.015, t + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 2.2); // long, spacious decay
+      osc.connect(gain); gain.connect(this.masterGain);
+      osc.start(t); osc.stop(t + 2.2);
+    });
+    // Overtone shimmer on top (soft triangle at 2×)
+    const shimmer = this.audioContext.createOscillator();
+    const shimGain = this.audioContext.createGain();
+    shimmer.type = 'triangle';
+    shimmer.frequency.value = 523.25; // C5
+    shimGain.gain.setValueAtTime(0, now + 0.3);
+    shimGain.gain.linearRampToValueAtTime(0.06, now + 0.4);
+    shimGain.gain.exponentialRampToValueAtTime(0.001, now + 2.8);
+    shimmer.connect(shimGain); shimGain.connect(this.masterGain);
+    shimmer.start(now + 0.3); shimmer.stop(now + 2.8);
+  }
+
+  /**
    * Clean up
    */
   dispose() {

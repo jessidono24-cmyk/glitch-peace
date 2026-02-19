@@ -350,7 +350,7 @@ function nextDreamscape() {
   const nextIdx = (CFG.dreamIdx + 1) % DREAMSCAPES.length;
   CFG.dreamIdx = nextIdx; window._dreamIdx = nextIdx;
   pushDreamHistory(g.ds.id);
-  sfxManager.playLevelComplete();
+  sfxManager.playDreamComplete();
   sessionTracker.onDreamscapeComplete();
   // Phase 8: get a reflection prompt for the completed dreamscape
   const prompt = selfReflection.getPrompt(g.ds.emotion);
@@ -567,11 +567,13 @@ function loop(ts) {
         if (targetTile === T.ENERGY_NODE)  questSystem.onEnergyNodeTile();
         if (targetTile === T.GROUNDING)    questSystem.onGroundingTile();
         // Alchemy: collect element seed when stepping on element tile
+        // Ritual Space mode doubles the seed yield
         if (TILE_ELEMENT_MAP[targetTile]) {
-          const seedResult = alchemySystem.onElementTile(targetTile);
+          const seedCount = game.ritualSeedMultiplier || 1;
+          const seedResult = alchemySystem.onElementTile(targetTile, seedCount);
           if (seedResult) {
             const ed = seedResult.elementDef;
-            _showMsg(ed.symbol + '  ' + ed.name + ' SEED ×' + seedResult.seeds, ed.color, 50);
+            _showMsg(ed.symbol + '  ' + ed.name + ' SEED ×' + seedResult.seeds + (seedCount > 1 ? ' (×2 ritual)' : ''), ed.color, 50);
           }
         }
       }
@@ -801,12 +803,13 @@ function loop(ts) {
   // ── Expose all system data to window globals (grouped) ──────────────
   window._questData     = questSystem.getAllProgress();
   window._alchemy = {
-    seeds:          alchemySystem.seeds,
-    seedsDisplay:   alchemySystem.seedsDisplay,
-    phase:          alchemySystem.phase,
-    transmutations: alchemySystem.transmutations,
-    stones:         alchemySystem.philosopherStones,
-    active:         game.playModeId === 'alchemist',
+    seeds:               alchemySystem.seeds,
+    seedsDisplay:        alchemySystem.seedsDisplay,
+    phase:               alchemySystem.phase,
+    transmutations:      alchemySystem.transmutations,
+    stones:              alchemySystem.philosopherStones,
+    classicElements:     alchemySystem.classicElementsUsed,
+    active:              game.playModeId === 'alchemist' || game.playModeId === 'ritual_space',
   };
   window._playModeLabel = game.playModeLabel || null;
 
@@ -1069,7 +1072,8 @@ window.addEventListener('keydown', e => {
       }
     }
     // Alchemy transmutation — X key: cycle elements and transmute
-    if ((e.key==='x'||e.key==='X') && !e.repeat && game.playModeId === 'alchemist') {
+    // Available in Alchemist mode and Ritual Space mode
+    if ((e.key==='x'||e.key==='X') && !e.repeat && (game.playModeId === 'alchemist' || game.playModeId === 'ritual_space')) {
       const seeds = alchemySystem.seeds;
       const elements = ['fire','water','earth','air','ether'];
       const ready = elements.find(el => seeds[el] >= 3);

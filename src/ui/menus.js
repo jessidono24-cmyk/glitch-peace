@@ -5,7 +5,6 @@ import { LANGUAGES, LANGUAGE_PATHS, LANG_LIST } from '../systems/learning/langua
 import { DIFFICULTY_TIERS } from '../systems/difficulty/adaptive-difficulty.js';
 import { PLAY_MODES, PLAY_MODE_LIST, getPlayModeMeta } from '../systems/play-modes.js';
 import { getCosmologyForDreamscape } from '../systems/cosmology/cosmologies.js';
-
 function stars(ctx, backgroundStars, ts) {
   for (const s of backgroundStars) {
     ctx.globalAlpha = s.a * (0.5 + 0.5 * Math.sin(ts * 0.0008 + s.phase));
@@ -333,12 +332,44 @@ export function drawInterlude(ctx, w, h, interludeState, ts) {
     ctx.globalAlpha = alpha;
   }
 
-  // ── Campaign milestone (4.0 s) ────────────────────────────────────────
+  // ── Cosmology info (4.2 s) ────────────────────────────────────────────
+  const cosmo = getCosmologyForDreamscape(ds.id);
+  if (cosmo) {
+    ctx.globalAlpha = alpha * elemAlpha(4200);
+    ctx.fillStyle = '#4a4a66'; ctx.font = '8px Courier New';
+    ctx.fillText((cosmo.emoji || '') + '  ' + cosmo.name + '  ·  ' + cosmo.tradition, w / 2, h / 2 + 120);
+    ctx.globalAlpha = alpha;
+  }
+
+  // ── RPG level + active quest (4.8 s) ─────────────────────────────────
+  const cs = window._characterStats;
+  const qd = window._questData;
+  if (cs || qd) {
+    ctx.globalAlpha = alpha * elemAlpha(4800);
+    const parts = [];
+    if (cs && cs.level > 1) parts.push('RPG LVL ' + cs.level);
+    if (qd) {
+      const activeQ = qd.find(q => !q.done);
+      if (activeQ) {
+        const obj = activeQ.objectives.find(o => o.current < o.max);
+        if (obj) parts.push(activeQ.emoji + ' ' + activeQ.name + ': ' + obj.current + '/' + obj.max);
+      } else {
+        parts.push('✦ All quests complete');
+      }
+    }
+    if (parts.length) {
+      ctx.fillStyle = '#445555'; ctx.font = '8px Courier New';
+      ctx.fillText(parts.join('  ·  '), w / 2, h / 2 + 136);
+    }
+    ctx.globalAlpha = alpha;
+  }
+
+  // ── Campaign milestone (5.2 s) ────────────────────────────────────────
   if (interludeState.milestone) {
-    ctx.globalAlpha = alpha * elemAlpha(4000);
+    ctx.globalAlpha = alpha * elemAlpha(5200);
     ctx.fillStyle = '#ffdd44'; ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 8;
     ctx.font = 'bold 10px Courier New';
-    ctx.fillText('✦  ' + interludeState.milestone, w / 2, h / 2 + 122); ctx.shadowBlur = 0;
+    ctx.fillText('✦  ' + interludeState.milestone, w / 2, h / 2 + 152); ctx.shadowBlur = 0;
     ctx.globalAlpha = alpha;
   }
 
@@ -369,15 +400,42 @@ export function drawDead(ctx, w, h, game, highScores, dreamHistory, insightToken
   ctx.fillStyle = '#223322'; ctx.font = '9px Courier New';
   ctx.fillText('dreams completed: ' + (dreamHistory.length) + '/' + DREAMSCAPES.length, w / 2, h / 2 + 14);
   ctx.fillText('REP ' + (sessionRep >= 0 ? '+' : '') + sessionRep + '  ·  ◆×' + insightTokens, w / 2, h / 2 + 32);
+
+  // ── RPG stats snapshot ──────────────────────────────────────────────
+  const cs = window._characterStats;
+  if (cs && cs.level > 1) {
+    ctx.fillStyle = '#ffdd88'; ctx.font = '8px Courier New';
+    ctx.fillText('RPG  LVL ' + cs.level + '  STR ' + (cs.str||1) + '  INT ' + (cs.int||1) + '  WIS ' + (cs.wis||1) + '  VIT ' + (cs.vit||1), w / 2, h / 2 + 50);
+  }
+  // ── Quest summary ───────────────────────────────────────────────────
+  const qd = window._questData;
+  if (qd) {
+    const qDone = qd.filter(q => q.done).length;
+    ctx.fillStyle = qDone > 0 ? '#ddcc66' : '#223322'; ctx.font = '8px Courier New';
+    ctx.fillText('QUESTS  ' + qDone + '/5 complete', w / 2, cs && cs.level > 1 ? h / 2 + 64 : h / 2 + 50);
+  }
+  // ── Alchemy phase ───────────────────────────────────────────────────
+  const al = window._alchemy;
+  // Calculate vertical position for alchemy row (below RPG and quest rows)
+  let alY = h / 2 + 50;
+  if (cs && cs.level > 1) alY = h / 2 + 64;
+  if (qd) alY = h / 2 + (cs && cs.level > 1 ? 78 : 64);
+  if (al && al.transmutations > 0) {
+    const phaseLabel = { nigredo: '🜏 Nigredo', albedo: '🜃 Albedo', rubedo: '🜔 Rubedo', aurora: '✦ Aurora' }[al.phase] || al.phase;
+    ctx.fillStyle = '#cc88ff'; ctx.font = '8px Courier New';
+    ctx.fillText('ALCHEMY  ' + phaseLabel + '  ·  ' + al.transmutations + ' transmutation' + (al.transmutations !== 1 ? 's' : ''), w / 2, alY);
+  }
+
+  const rankY = alY + (al && al.transmutations > 0 ? 18 : 0);
   if (highScores.length > 0) {
     const rank = highScores.findIndex(s => s.score === game.score);
-    if (rank >= 0) { ctx.fillStyle = '#ffdd00'; ctx.font = 'bold 11px Courier New'; ctx.fillText('RANK #' + (rank + 1) + ' ALL TIME', w / 2, h / 2 + 54); }
+    if (rank >= 0) { ctx.fillStyle = '#ffdd00'; ctx.font = 'bold 11px Courier New'; ctx.fillText('RANK #' + (rank + 1) + ' ALL TIME', w / 2, rankY); }
   }
   const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.004);
-  ctx.fillStyle = `rgba(255,34,34,${0.07 * pulse})`; ctx.fillRect(w / 2 - 110, h / 2 + 70, 220, 34);
-  ctx.strokeStyle = `rgba(255,34,34,${0.45 * pulse})`; ctx.strokeRect(w / 2 - 110, h / 2 + 70, 220, 34);
-  ctx.fillStyle = '#ff2222'; ctx.font = '12px Courier New'; ctx.fillText('↺  ENTER TO TRY AGAIN', w / 2, h / 2 + 92);
-  ctx.fillStyle = '#221122'; ctx.font = '9px Courier New'; ctx.fillText('ESC → TITLE', w / 2, h / 2 + 120);
+  ctx.fillStyle = `rgba(255,34,34,${0.07 * pulse})`; ctx.fillRect(w / 2 - 110, rankY + 16, 220, 34);
+  ctx.strokeStyle = `rgba(255,34,34,${0.45 * pulse})`; ctx.strokeRect(w / 2 - 110, rankY + 16, 220, 34);
+  ctx.fillStyle = '#ff2222'; ctx.font = '12px Courier New'; ctx.fillText('↺  ENTER TO TRY AGAIN', w / 2, rankY + 38);
+  ctx.fillStyle = '#221122'; ctx.font = '9px Courier New'; ctx.fillText('ESC → TITLE', w / 2, rankY + 56);
   ctx.textAlign = 'left';
 }
 
@@ -585,7 +643,7 @@ export function drawHowToPlay(ctx, w, h) {
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 18;
   ctx.font = 'bold 22px Courier New'; ctx.fillText('HOW TO PLAY', w / 2, 40); ctx.shadowBlur = 0;
   ctx.fillStyle = '#1a3a1a'; ctx.font = '9px Courier New';
-  ctx.fillText('a consciousness engine disguised as a tile game', w / 2, 56);
+  ctx.fillText('a consciousness engine disguised as a tile game  ·  18 dreamscapes · 19 play modes', w / 2, 56);
 
   // ── Objective ─────────────────────────────────────────────────────────
   ctx.fillStyle = '#00cc77'; ctx.font = 'bold 11px Courier New'; ctx.fillText('OBJECTIVE', w / 2, 78);
@@ -645,7 +703,7 @@ export function drawHowToPlay(ctx, w, h) {
     ['SHIFT',        'Switch Matrix A ↔ B',  'H',     'Toggle dashboard'],
     ['J',            'Archetype power',       'R',     'Glitch Pulse (charged)'],
     ['Q',            'Freeze enemies',        'C',     'Containment zone (2◆)'],
-    ['X',            'Transmute (Alchemist)', '  ',    ''],
+    ['X',            'Transmute (Alchemist/Ritual)', '  ',    ''],
   ];
   CONTROLS_HELP.forEach(([k1, v1, k2, v2], i) => {
     const cy2 = ctrlY + 16 + i * 18;

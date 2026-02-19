@@ -150,6 +150,14 @@ export const PLAY_MODES = {
     config: { peaceMul: 1.5, hazardMul: 0.0, insightMul: 2.5, scoreMul: 1.3, enemySpeed: 0.0, timeLimit: null },
     mechanics: { enemyBehavior: 'none', zenMode: true, moveLimit: null, reverseMode: false, autoHeal: 0, slowMul: 0.6, skymap: true },
   },
+
+  // 19. RITUAL SPACE — Somatic + alchemy fusion (Phase M6.5)
+  ritual_space: {
+    id: 'ritual_space', name: 'Ritual Space', emoji: '🕯️',
+    desc: 'Somatic-alchemical practice — element seeds ×2, half hazard damage, transmutation enabled; intentional movement',
+    config: { peaceMul: 1.4, hazardMul: 0.3, insightMul: 2.2, scoreMul: 1.6, enemySpeed: 0.5, timeLimit: null },
+    mechanics: { enemyBehavior: 'wander', zenMode: false, moveLimit: null, reverseMode: false, autoHeal: 0, slowMul: 0.7, ritual_space: true, alchemist: true },
+  },
 };
 
 // Ordered list for options cycling
@@ -304,6 +312,32 @@ export function applyPlayMode(game, modeId) {
       }
     }
     game.playModeLabel = '✦  CONSTELLATION PATH  ·  navigate · connect · skymap';
+  }
+
+  // ── Ritual Space: somatic + alchemy hybrid ─────────────────────────────
+  if (mech.ritual_space && game.grid) {
+    const sz = game.sz;
+    const elTiles = [17, 18, 19, 20]; // T.BODY_SCAN, T.BREATH_SYNC, T.ENERGY_NODE, T.GROUNDING (somatic, each maps to an element)
+    for (let y = 0; y < sz; y++) {
+      for (let x = 0; x < sz; x++) {
+        const v = game.grid[y][x];
+        // Replace the most severe hazards with somatic/element tiles; keep mild hazards
+        if (v === 3 || v === 8) { // SELF_HARM, RAGE → somatic element tile
+          game.grid[y][x] = elTiles[Math.floor(Math.random() * elTiles.length)];
+        }
+      }
+    }
+    // Seed extra somatic element tiles (more than alchemist alone)
+    let el = 0, itr2 = 0;
+    const elCycle = [19, 18, 20, 17, 19, 18]; // ENERGY_NODE, BREATH_SYNC, GROUNDING, BODY_SCAN ×2 (element tiles; 12 total)
+    while (el < 12 && itr2 < 999) {
+      itr2++;
+      const ey = Math.floor(Math.random() * sz), ex = Math.floor(Math.random() * sz);
+      if (game.grid[ey][ex] === 0) { game.grid[ey][ex] = elCycle[el % elCycle.length]; el++; }
+    }
+    game.playModeLabel = '🕯️  RITUAL SPACE  ·  somatic · alchemical · seeds ×2';
+    // Double element seed yield flag (checked in main.js during tile step)
+    game.ritualSeedMultiplier = 2;
   }
 
   return game;

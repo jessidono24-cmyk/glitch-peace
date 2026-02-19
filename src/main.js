@@ -77,17 +77,27 @@ window._keys = keys;
 
 // ─── Stars / visions (shared with modes) ────────────────────────────────
 // Note: GridMode manages its own stars/visions, these are kept for menu screens
-let backgroundStars = [];
-let visions = [];
-let hallucinations = [];
-let glitchFrames = 0, glitchTimer = 500;
-let anomalyActive = false, anomalyData = { row:-1, col:-1, t:0 };
-let interludeState = { text:'', subtext:'', timer:0, ds:null };
+// (Variables already declared above around line 59-64)
 
 function initStars(w, h) {
   backgroundStars = [];
   for (let i = 0; i < 30; i++)
     backgroundStars.push({ x:Math.random()*w, y:Math.random()*h, r:0.5+Math.random()*1.5, a:Math.random()*0.15, phase:Math.random()*Math.PI*2 });
+}
+
+function spawnVisions(w, h) {
+  visions = [];
+  for (let i = 0; i < 5; i++) {
+    visions.push({
+      text: pick(VISION_WORDS),
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      a: 0.15 + Math.random() * 0.2,
+      scale: 0.5 + Math.random() * 0.5
+    });
+  }
 }
 
 // ─── Mode Manager (Phase M1) ─────────────────────────────────────────────
@@ -112,63 +122,6 @@ function saveScore(score, level, ds) {
   const trimmed = scores.slice(0, 8);
   setHighScores(trimmed);
   saveHighScores(trimmed);
-}
-
-// ─── Environment events ─────────────────────────────────────────────────
-function triggerEnvironmentEvent(g) {
-  const event = g.ds.environmentEvent, sz = g.sz;
-  if (!event) return;
-  if (event === 'gravity_shift') {
-    const [dy, dx] = pick([[-1,0],[1,0],[0,-1],[0,1]]);
-    const ny = g.player.y+dy, nx = g.player.x+dx;
-    if (ny>=0&&ny<sz&&nx>=0&&nx<sz&&g.grid[ny][nx]!==5) { g.player.y=ny; g.player.x=nx; _showMsg('GRAVITY SHIFTS…','#8888ff',40); }
-  } else if (event === 'loop_reset') {
-    for (let dy=-2;dy<=2;dy++) for (let dx=-2;dx<=2;dx++) {
-      const ny=g.player.y+dy, nx=g.player.x+dx;
-      if (ny>=0&&ny<sz&&nx>=0&&nx<sz&&g.grid[ny][nx]===0&&Math.random()<0.25) g.grid[ny][nx]=8;
-    }
-    _showMsg('THE LOOP TIGHTENS…','#ff8800',40);
-  } else if (event === 'capture_zones') {
-    const e = pick(g.enemies); if (e) g.captureZones = [{ x:e.x, y:e.y, r:2, timer:300 }];
-    _showMsg('CAPTURE ZONE ACTIVATED','#ff2244',40);
-  } else if (event === 'rapid_spawn') {
-    if (g.enemies.length < 10) {
-      const y=2+rnd(sz-4), x=2+rnd(sz-4);
-      g.enemies.push({ y, x, timer:0, stunTimer:0, behavior:'rush', patrolAngle:0, orbitAngle:0, orbitR:2, prevY:y, prevX:x, momentum:[0,0], type:'rush' });
-      _showMsg('CHAOS ERUPTS!','#ff0044',40);
-    }
-  } else if (event === 'wall_phase') {
-    let n=0;
-    for (let y=0;y<sz&&n<4;y++) for (let x=0;x<sz&&n<4;x++) if (g.grid[y][x]===5&&Math.random()<0.3) { g.grid[y][x]=10; n++; }
-    _showMsg('MEMBRANE DISSOLVES…','#00ccff',40);
-  } else if (event === 'glide_nodes') {
-    let n=0, itr=0; while (n<2&&itr<999) { itr++; const y=rnd(sz),x=rnd(sz); if(g.grid[y][x]===0){g.grid[y][x]=12;n++;} }
-    _showMsg('GLIDE NODES APPEAR','#00aaff',40);
-  } else if (event === 'mashup') {
-    const otherDs = pick(DREAMSCAPES.filter(d => d.id !== g.ds.id));
-    if (otherDs.hazardSet[0]) { let n=0,itr=0; while(n<3&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===0){g.grid[y][x]=otherDs.hazardSet[0];n++;}} }
-    _showMsg('DREAMSCAPES MERGE…','#ffaaff',40);
-  }
-  if (Math.random() < 0.4) {
-    const row = rnd(sz);
-    for (let x=0;x<sz;x++) {
-      if (g.grid[row][x]===1) g.grid[row][x]=4;
-      else if (g.grid[row][x]===4&&Math.random()<0.3) g.grid[row][x]=1;
-    }
-    anomalyData = { row, col:-1, t:50 }; anomalyActive = true;
-  }
-}
-
-// ─── Game lifecycle ──────────────────────────────────────────────────────
-function initGame(dreamIdx, prevScore, prevLevel, prevHp) {
-  const level = (prevLevel || 0) + 1;
-  resizeCanvas();
-  const ds = DREAMSCAPES[dreamIdx % DREAMSCAPES.length];
-  setMatrix(ds.matrixDefault);
-  const g = buildDreamscape(ds, SZ(), level, prevScore, prevHp, UPG.maxHp, dreamHistory);
-  spawnVisions(CW(), CH()); hallucinations = []; glitchTimer = 500 + rnd(500);
-  initStars(CW(), CH());
-  return g;
 }
 
 function startGame(dreamIdx) {
@@ -199,22 +152,6 @@ function startGame(dreamIdx) {
   setPhase('playing'); lastMove = 0; setMatrixHoldTime(0);
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
-}
-
-function nextDreamscape() {
-  const g = game;
-  const nextIdx = (CFG.dreamIdx + 1) % DREAMSCAPES.length;
-  CFG.dreamIdx = nextIdx; window._dreamIdx = nextIdx;
-  pushDreamHistory(g.ds.id);
-  interludeState = { text:g.ds.completionText, subtext:DREAMSCAPES[nextIdx].narrative, timer:220, ds:DREAMSCAPES[nextIdx] };
-  setPhase('interlude');
-  setTimeout(() => {
-    resizeCanvas();
-    game = initGame(nextIdx, g.score + 400 + g.level * 60, g.level, g.hp);
-    window._game = game;
-    game.msg = DREAMSCAPES[nextIdx].name; game.msgColor = '#ffdd00'; game.msgTimer = 90;
-    if (phase === 'interlude') setPhase('playing');
-  }, 3600);
 }
 
 function buyUpgrade(id) {

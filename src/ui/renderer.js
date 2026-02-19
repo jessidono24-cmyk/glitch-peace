@@ -4,7 +4,7 @@ import { CFG, UPG } from '../core/state.js';
 
 export function PAL(matrixActive) { return matrixActive === 'A' ? PAL_A : PAL_B; }
 
-export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, hallucinations, anomalyActive, anomalyData, glitchFrames, DPR) {
+export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, hallucinations, anomalyActive, anomalyData, glitchFrames, DPR, ghostPath) {
   const g = game; if (!g) return;
   const sz = g.sz;
   const gp = sz * CELL + (sz - 1) * GAP;
@@ -138,6 +138,24 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     }
   }
   g.tileFlicker = g.tileFlicker.filter(f => { f.t--; return f.t > 0; });
+
+  // Consequence preview ghost path
+  if (ghostPath && ghostPath.length > 0) {
+    ghostPath.forEach((step, i) => {
+      const gpx = sx + step.x * (CELL + GAP), gpy = sy + step.y * (CELL + GAP);
+      const alpha = 0.22 - i * 0.05;
+      const col = step.hpDelta > 0 ? '#00ffaa' : step.hpDelta < 0 ? '#ff3333' : '#aaaaff';
+      ctx.globalAlpha = Math.max(0.05, alpha);
+      ctx.strokeStyle = col; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect(gpx + 2, gpy + 2, CELL - 4, CELL - 4, 3); ctx.stroke();
+      if (step.hpDelta !== 0) {
+        ctx.fillStyle = col; ctx.font = '9px Courier New'; ctx.textAlign = 'center'; ctx.globalAlpha = Math.max(0.1, alpha + 0.1);
+        ctx.fillText((step.hpDelta > 0 ? '+' : '') + Math.round(step.hpDelta), gpx + CELL / 2, gpy + CELL / 2 + 4);
+        ctx.textAlign = 'left';
+      }
+    });
+    ctx.globalAlpha = 1;
+  }
 
   // Capture zones
   for (const cz of g.captureZones) {
@@ -352,6 +370,13 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = '#005533'; ctx.fillText('◈×' + g.peaceLeft, w - 12, 44);
   ctx.fillStyle = '#223344'; ctx.font = '8px Courier New';
   ctx.fillText((window._dreamIdx + 1 || 1) + '/10 DREAMS', w - 12, 58);
+  // Temporal system info (lunar + planet)
+  const tmods = window._tmods;
+  if (tmods) {
+    ctx.fillStyle = '#223344'; ctx.font = '7px Courier New';
+    ctx.fillText(tmods.lunarName || '', w - 12, 70);
+    ctx.fillText(tmods.planetName || '', w - 12, 80);
+  }
   ctx.textAlign = 'left';
 
   if (g.msg && g.msgTimer > 0) {

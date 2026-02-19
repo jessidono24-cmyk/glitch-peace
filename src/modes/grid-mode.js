@@ -152,9 +152,9 @@ export class GridMode extends GameMode {
     g.temporalEnemyMul = tmods.enemyMul;
     g.insightMul = tmods.insightMul;
     
-    // Realm inference (purgatory depth)
-    const dist = this.emotionalField.getDistortion?.() ?? 0.45;
-    const val = this.emotionalField.getValence?.() ?? 0;
+    // Realm inference (purgatory depth) — use getter properties directly
+    const dist = this.emotionalField.distortion;
+    const val  = this.emotionalField.valence;
     const normV = (1 - val) / 2;
     let pd = dist * 0.7 + normV * 0.3;
     if (matrix === 'A') pd = Math.min(1, pd * 1.2);
@@ -398,6 +398,17 @@ export class GridMode extends GameMode {
         }
       }
       showMsg('DREAMSCAPES MERGE…', '#ffaaff', 40);
+    } else if (event === 'line_of_sight') {
+      // Summit: enemies become alert; spawn terror tiles near player
+      for (const e of g.enemies) if (e.stunTimer > 0) e.stunTimer = 0;
+      let n = 0, itr = 0;
+      while (n < 3 && itr < 999) { itr++; const y = rnd(sz), x = rnd(sz); if (g.grid[y][x] === 0 && Math.random() < 0.5) { g.grid[y][x] = 2; n++; } }
+      showMsg('THE SUMMIT WATCHES…', '#ff4422', 40);
+    } else if (event === 'dead_ends') {
+      // Aztec: seal random corridors with walls
+      let n = 0, itr = 0;
+      while (n < 4 && itr < 999) { itr++; const y = 1 + rnd(sz - 2), x = 1 + rnd(sz - 2); if (g.grid[y][x] === 0) { g.grid[y][x] = 5; n++; } }
+      showMsg('THE LABYRINTH SHIFTS…', '#cc8800', 40);
     }
     
     if (Math.random() < 0.4) {

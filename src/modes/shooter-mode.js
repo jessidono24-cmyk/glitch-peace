@@ -64,10 +64,10 @@ export class ShooterMode extends GameMode {
     this.worldHeight = 600;
     
     // Camera
-    this.camera = {
-      x: 0,
-      y: 0
-    };
+    this.camera = { x: 0, y: 0 };
+
+    // Internal timing
+    this._lastDt = 0.016; // default to 60 FPS delta
   }
 
   /**
@@ -106,6 +106,7 @@ export class ShooterMode extends GameMode {
    */
   update(dt, keys, matrixActive, ts) {
     const dtSec = dt / 1000;  // Convert to seconds
+    this._lastDt = dtSec;
     
     // Update player movement
     this.updatePlayerMovement(dtSec, keys);
@@ -136,9 +137,12 @@ export class ShooterMode extends GameMode {
       return { phase: 'dead', data: { score: this.player.score, mode: 'shooter' } };
     }
     
-    // Update emotional field based on action intensity
-    const intensity = (this.bullets.length + this.enemies.length) / 20;
-    this.emotionalField.decay(intensity);
+    // Update emotional field: fear builds with many enemies, joy when clearing
+    const FEAR_RATE = 0.1;  // per second when enemies > 3
+    const JOY_RATE  = 0.05; // per second when enemies <= 3
+    if (this.enemies.length > 3) this.emotionalField.addEmotion('fear', FEAR_RATE * dtSec);
+    else this.emotionalField.addEmotion('joy', JOY_RATE * dtSec);
+    this.emotionalField.decay(dtSec);
     
     return null;
   }
@@ -319,23 +323,26 @@ export class ShooterMode extends GameMode {
     }
     
     // Player-enemy collisions
+    const CONTACT_DAMAGE_COOLDOWN = 0.5; // seconds between contact hits per enemy
     for (const enemy of this.enemies) {
       const dx = this.player.x - enemy.x;
       const dy = this.player.y - enemy.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       
       if (dist < this.player.radius + enemy.radius) {
-        // Damage player
-        this.player.health -= enemy.damage * 0.016;  // Per frame
+        // Damage player (rate-limited by cooldown)
+        if (!enemy._contactCooldown || enemy._contactCooldown <= 0) {
+          this.player.health -= enemy.damage;
+          enemy._contactCooldown = CONTACT_DAMAGE_COOLDOWN;
+        }
         
         // Push player away
         if (dist > 0) {
-          const pushX = (dx / dist) * 50 * 0.016;
-          const pushY = (dy / dist) * 50 * 0.016;
-          this.player.x += pushX;
-          this.player.y += pushY;
+          this.player.x += (dx / dist) * 3;
+          this.player.y += (dy / dist) * 3;
         }
       }
+      if (enemy._contactCooldown > 0) enemy._contactCooldown -= this._lastDt;
     }
     
     // Player-powerup collisions
@@ -477,18 +484,17 @@ export class ShooterMode extends GameMode {
    * Update camera to follow player
    */
   updateCamera() {
-    // Simple camera that centers on player
-    this.camera.x = this.player.x - 400;  // Half canvas width
-    this.camera.y = this.player.y - 300;  // Half canvas height
+    // Use fixed viewport size matching the grid canvas (CW/CH approximate)
+    this.camera.x = this.player.x - 300;
+    this.camera.y = this.player.y - 250;
   }
 
   /**
    * Render shooter mode
    */
   render(ctx, ts, renderData) {
-    const canvas = ctx.canvas;
-    const w = canvas.width;
-    const h = canvas.height;
+    const w = renderData?.w || ctx.canvas.width;
+    const h = renderData?.h || ctx.canvas.height;
     
     // Clear background
     ctx.fillStyle = '#0a0a0f';

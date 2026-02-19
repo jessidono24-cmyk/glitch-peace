@@ -31,13 +31,13 @@ export class ConsequencePreview {
 
     switch (tileType) {
       case 1: return -8 * dmgMul;   // DESPAIR
-      case 2: return -12 * dmgMul;  // TERROR
-      case 3: return -15 * dmgMul;  // SELF_HARM
-      case 4: return 5 * healMul;   // PEACE
-      case 8: return -10 * dmgMul;  // RAGE
-      case 9: return -6 * dmgMul;   // HOPELESS
-      case 14: return -20 * dmgMul; // TRAP
-      case 16: return -18 * dmgMul; // PAIN
+      case 2: return -20 * dmgMul;  // TERROR
+      case 3: return -14 * dmgMul;  // SELF_HARM
+      case 4: return 20 * healMul;  // PEACE
+      case 8: return -18 * dmgMul;  // RAGE
+      case 9: return -12 * dmgMul;  // HOPELESS
+      case 14: return -16 * dmgMul; // TRAP
+      case 16: return -6 * dmgMul;  // PAIN
       default: return 0;
     }
   }

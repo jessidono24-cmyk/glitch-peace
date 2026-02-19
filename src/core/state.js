@@ -80,6 +80,12 @@ export function checkOwned(id) {
 }
 
 // ═══════════════════════════════════════════════════════════
+//  PURGATORY DEPTH
+// ═══════════════════════════════════════════════════════════
+export let purgDepth = 0;
+export function setPurgDepth(v) { purgDepth = Math.max(0, Math.min(1, v)); }
+
+// ═══════════════════════════════════════════════════════════
 //  PHASE / SCREEN STATE
 // ═══════════════════════════════════════════════════════════
 export let phase = 'title';

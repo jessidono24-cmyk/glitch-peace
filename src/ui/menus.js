@@ -10,7 +10,7 @@ function stars(ctx, backgroundStars, ts) {
   ctx.globalAlpha = 1;
 }
 
-export function drawTitle(ctx, w, h, backgroundStars, ts, menuIdx) {
+export function drawTitle(ctx, w, h, backgroundStars, ts, menuIdx, gameMode) {
   ctx.fillStyle = '#02020a'; ctx.fillRect(0, 0, w, h);
   for (let y = 0; y < h; y += 4) { ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(0, y, w, 1); }
   stars(ctx, backgroundStars, ts);
@@ -19,7 +19,12 @@ export function drawTitle(ctx, w, h, backgroundStars, ts, menuIdx) {
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 32;
   ctx.font = 'bold 36px Courier New'; ctx.fillText('GLITCH·PEACE', w / 2, h / 2 - 100); ctx.shadowBlur = 0;
   ctx.fillStyle = '#0a1a0a'; ctx.font = '9px Courier New'; ctx.fillText('v4  ·  dreamscape consciousness simulation', w / 2, h / 2 - 78);
-  const menuTop = h / 2 - 55;
+  // Mode indicator
+  const modeLabel = (gameMode === 'shooter') ? '[ SHOOTER MODE ]' : '[ GRID MODE ]';
+  const modeColor = (gameMode === 'shooter') ? '#ff6622' : '#00ff88';
+  ctx.fillStyle = modeColor; ctx.shadowColor = modeColor; ctx.shadowBlur = 8;
+  ctx.font = '10px Courier New'; ctx.fillText(modeLabel + '  ·  M to switch', w / 2, h / 2 - 60); ctx.shadowBlur = 0;
+  const menuTop = h / 2 - 42;
   MAIN_MENU.forEach((opt, i) => {
     const sel = i === menuIdx, y = menuTop + i * 36;
     if (sel) {
@@ -29,7 +34,7 @@ export function drawTitle(ctx, w, h, backgroundStars, ts, menuIdx) {
     ctx.fillStyle = sel ? '#00ff88' : '#2a3a2a'; ctx.shadowColor = sel ? '#00ff88' : 'transparent'; ctx.shadowBlur = sel ? 8 : 0;
     ctx.font = sel ? 'bold 14px Courier New' : '12px Courier New'; ctx.fillText(opt, w / 2, y); ctx.shadowBlur = 0;
   });
-  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New'; ctx.fillText('↑↓ navigate  ·  ENTER select', w / 2, h - 20);
+  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New'; ctx.fillText('↑↓ navigate  ·  ENTER select  ·  M toggle mode', w / 2, h - 20);
   ctx.textAlign = 'left';
 }
 

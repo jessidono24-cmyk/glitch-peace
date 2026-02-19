@@ -304,17 +304,17 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     neutral:    '#334455',
   };
 
-  function drawEmotionRow(ctx, w, field) {
+  // Realm label helper (E4-B, ASCII only)
+  function realmLabel(pd) {
+    if (pd === undefined || pd === null) pd = 0.45;
+    if (pd < 0.15) return { name: 'HEAVEN',      color: '#aaffcc' };
+    if (pd < 0.35) return { name: 'IMAGINATION', color: '#aaddff' };
+    if (pd < 0.55) return { name: 'MIND',        color: '#00ff88' };
+    if (pd < 0.75) return { name: 'PURGATORY',   color: '#ff8800' };
+    return               { name: 'HELL',          color: '#ff2200' };
+  }
 
-// Realm label helper (E4-B, ASCII only)
-function realmLabel(pd) {
-  if (pd === undefined || pd === null) pd = 0.45;
-  if (pd < 0.15) return { name: 'HEAVEN',      color: '#aaffcc' };
-  if (pd < 0.35) return { name: 'IMAGINATION', color: '#aaddff' };
-  if (pd < 0.55) return { name: 'MIND',        color: '#00ff88' };
-  if (pd < 0.75) return { name: 'PURGATORY',   color: '#ff8800' };
-  return               { name: 'HELL',          color: '#ff2200' };
-}
+  function drawEmotionRow(ctx, w, field) {
     if (!field) return;
 
     // Try both v4 and v5 API for compatibility

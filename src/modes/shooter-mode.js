@@ -486,11 +486,13 @@ export class ShooterMode extends GameMode {
    * Render shooter mode
    */
   render(ctx, ts, renderData) {
-    const { canvas } = renderData;
+    const canvas = ctx.canvas;
+    const w = canvas.width;
+    const h = canvas.height;
     
     // Clear background
     ctx.fillStyle = '#0a0a0f';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, w, h);
     
     // Save context and apply camera
     ctx.save();
@@ -526,7 +528,7 @@ export class ShooterMode extends GameMode {
     ctx.restore();
     
     // Draw HUD (not affected by camera)
-    this.drawHUD(ctx, canvas);
+    this.drawHUD(ctx, w, h);
   }
 
   /**
@@ -603,7 +605,7 @@ export class ShooterMode extends GameMode {
   /**
    * Draw HUD
    */
-  drawHUD(ctx, canvas) {
+  drawHUD(ctx, w, h) {
     ctx.fillStyle = '#ffffff';
     ctx.font = '16px monospace';
     

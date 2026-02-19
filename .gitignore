@@ -1,6 +1,39 @@
 # Dependencies
 node_modules/
 
+# npm binary wrappers and package files accidentally placed in root
+*.cmd
+*.ps1
+esbuild
+esbuild.exe
+nanoid
+rollup
+vite
+_metadata.json
+async/
+bin/
+estree/
+lib/
+non-secure/
+rollup-win32-x64-gnu/
+rollup-win32-x64-msvc/
+url-alphabet/
+# Stray npm package source files in root
+index.browser.cjs
+index.browser.js
+index.cjs
+index.d.cts
+install.js
+nanoid.js
+picocolors.browser.js
+picocolors.d.ts
+picocolors.js
+posix.js
+# Root-level index files from accidentally extracted npm packages
+index.js
+index.d.ts
+types.d.ts
+
 # Build output
 # Note: dist/ is included for easy distribution
 # dist/

@@ -45,7 +45,7 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     oy = (Math.random() - 0.5) * 9 * (g.shakeFrames / 10);
     g.shakeFrames--;
   }
-  const sx = (w - gp) / 2 + ox, sy = 100 + oy;
+  const sx = (w - gp) / 2 + ox, sy = 110 + oy;
 
   // Vision words
   for (const v of visions) {
@@ -301,7 +301,7 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
 
 function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   const UPG_ref = UPG;
-  const hudH = 92;
+  const hudH = 106;
   ctx.fillStyle = '#070714'; ctx.fillRect(0, 0, w, hudH);
   ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, hudH); ctx.lineTo(w, hudH); ctx.stroke();
@@ -328,32 +328,63 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = eC; ctx.shadowColor = eC; ctx.shadowBlur = 4; ctx.fillRect(32, 41, eBarW * (UPG_ref.energy / UPG_ref.energyMax), 9);
   ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.strokeRect(32, 41, eBarW, 9);
 
+  // PurgDepth bar (dark red depth indicator)
+  {
+    const pd = window._purgDepth || 0;
+    ctx.fillStyle = '#1a0000'; ctx.fillRect(32, 52, eBarW, 5);
+    const pdC = pd > 0.7 ? '#ff2222' : pd > 0.4 ? '#aa2200' : '#440000';
+    ctx.fillStyle = pdC; ctx.fillRect(32, 52, eBarW * pd, 5);
+    ctx.strokeStyle = 'rgba(200,0,0,0.2)'; ctx.strokeRect(32, 52, eBarW, 5);
+    if (pd > 0.05) {
+      ctx.fillStyle = pd > 0.7 ? '#ff2222' : '#660000'; ctx.font = '6px Courier New';
+      ctx.fillText('PURG ' + (pd * 100).toFixed(0) + '%', 32 + eBarW + 4, 58);
+    }
+  }
+
   if (UPG_ref.glitchPulse) {
-    ctx.fillStyle = '#220a22'; ctx.fillRect(32, 53, eBarW, 6);
+    ctx.fillStyle = '#220a22'; ctx.fillRect(32, 59, eBarW, 5);
     const pChr = UPG_ref.glitchPulseCharge / 100;
-    ctx.fillStyle = pChr >= 1 ? '#ff00ff' : '#660088'; ctx.fillRect(32, 53, eBarW * pChr, 6);
-    ctx.strokeStyle = 'rgba(150,0,200,0.2)'; ctx.strokeRect(32, 53, eBarW, 6);
-    ctx.fillStyle = pChr >= 1 ? '#ff00ff' : '#553355'; ctx.font = '7px Courier New'; ctx.fillText('PULSE' + (pChr >= 1 ? ' READY' : ''), 32 + eBarW + 4, 59);
+    ctx.fillStyle = pChr >= 1 ? '#ff00ff' : '#660088'; ctx.fillRect(32, 59, eBarW * pChr, 5);
+    ctx.strokeStyle = 'rgba(150,0,200,0.2)'; ctx.strokeRect(32, 59, eBarW, 5);
+    ctx.fillStyle = pChr >= 1 ? '#ff00ff' : '#553355'; ctx.font = '7px Courier New'; ctx.fillText('PULSE' + (pChr >= 1 ? ' READY' : ''), 32 + eBarW + 4, 65);
+  }
+
+  // ImpulseBuffer hold progress (shown when holding into hazard)
+  {
+    const prog = window._impulseProgress || 0;
+    if (prog > 0 && prog < 1) {
+      ctx.fillStyle = '#332200'; ctx.fillRect(32, 66, eBarW, 4);
+      ctx.fillStyle = '#ffaa00'; ctx.fillRect(32, 66, eBarW * prog, 4);
+      ctx.strokeStyle = 'rgba(255,170,0,0.25)'; ctx.strokeRect(32, 66, eBarW, 4);
+      ctx.fillStyle = '#ffaa00'; ctx.font = '6px Courier New'; ctx.fillText('HOLD…', 32 + eBarW + 4, 70);
+    }
   }
 
   if (g.archetypeActive && g.archetypeType) {
     const arch = ARCHETYPES[g.archetypeType];
     ctx.fillStyle = arch ? arch.color : '#ffdd00'; ctx.shadowColor = arch ? arch.glow : '#ffdd00'; ctx.shadowBlur = 4;
-    ctx.font = '8px Courier New'; ctx.fillText(arch ? arch.name + ' ACTIVE' : '[ARCH ACTIVE]', 14, 68); ctx.shadowBlur = 0;
+    ctx.font = '8px Courier New'; ctx.fillText(arch ? arch.name + ' ACTIVE' : '[ARCH ACTIVE]', 14, 76); ctx.shadowBlur = 0;
   } else if (UPG_ref.shield && UPG_ref.shieldTimer > 0) {
-    ctx.fillStyle = '#00ffff'; ctx.font = '8px Courier New'; ctx.fillText('SHIELD×' + UPG_ref.shieldTimer, 14, 68);
+    ctx.fillStyle = '#00ffff'; ctx.font = '8px Courier New'; ctx.fillText('SHIELD×' + UPG_ref.shieldTimer, 14, 76);
   } else if (UPG_ref.shieldCount > 0) {
-    ctx.fillStyle = '#334455'; ctx.font = '8px Courier New'; ctx.fillText('streak ' + UPG_ref.shieldCount + '/3', 14, 68);
+    ctx.fillStyle = '#334455'; ctx.font = '8px Courier New'; ctx.fillText('streak ' + UPG_ref.shieldCount + '/3', 14, 76);
+  }
+
+  // Emotional synergy label
+  const synergy = window._emotionSynergy;
+  if (synergy) {
+    ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 5;
+    ctx.font = '7px Courier New'; ctx.fillText('⚡ ' + synergy.label.toUpperCase(), 14, 84); ctx.shadowBlur = 0;
   }
 
   if (UPG_ref.comboCount > 1) {
     ctx.fillStyle = '#ffcc00'; ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 6;
-    ctx.font = '8px Courier New'; ctx.fillText('COMBO ×' + UPG_ref.resonanceMultiplier.toFixed(1), 14, 80);
+    ctx.font = '8px Courier New'; ctx.fillText('COMBO ×' + UPG_ref.resonanceMultiplier.toFixed(1), 14, 91);
     ctx.shadowBlur = 0;
   }
 
   ctx.fillStyle = '#00eeff'; ctx.shadowColor = '#00eeff'; ctx.shadowBlur = 5;
-  ctx.font = '9px Courier New'; ctx.fillText('◆×' + (window._insightTokens || 0), 14, 90); ctx.shadowBlur = 0;
+  ctx.font = '9px Courier New'; ctx.fillText('◆×' + (window._insightTokens || 0), 14, 99); ctx.shadowBlur = 0;
 
   // Score
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 10;

@@ -25,6 +25,7 @@ import { sfxManager } from './audio/sfx-manager.js';
 import { temporalSystem } from './systems/temporal-system.js';
 import { EmotionalField } from './systems/emotional-engine.js';
 import { ConsequencePreview } from './recovery/consequence-preview.js';
+import { ImpulseBuffer } from './recovery/impulse-buffer.js';
 import { ShooterMode } from './modes/shooter-mode.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ resizeCanvas();
 // ─── Shared systems ─────────────────────────────────────────────────────
 const emotionalField = new EmotionalField();
 const consequencePreview = new ConsequencePreview();
+const impulseBuffer = new ImpulseBuffer();
 window.sfxManager = sfxManager; // allow player.js to access for future hooks
 
 // Shooter mode instance (shared systems)
@@ -260,9 +262,11 @@ function loop(ts) {
   const coherenceMul = (matrixActive === 'B' ? 1.2 : 0.7) * (tmods.coherenceMul || 1);
   emotionalField.weekdayCoherenceMul = coherenceMul;
   emotionalField.decay(dt / 1000);
-  // Propagate dominant emotion to UPG for HUD/slowMoves
+  // Propagate dominant emotion and synergy to UPG/window for HUD
   const domEmotion = emotionalField.getDominantEmotion();
   if (domEmotion.value > EMOTION_THRESHOLD) UPG.emotion = domEmotion.id;
+  window._emotionSynergy = emotionalField.synergy;
+  window._purgDepth = emotionalField.purgDepth;
 
   const MOVE_DELAY = game.slowMoves ? UPG.moveDelay * 1.5 : UPG.moveDelay;
   const DIRS = {
@@ -278,14 +282,26 @@ function loop(ts) {
   if (activeDir) consequencePreview.update(activeDir, game, 3);
   else consequencePreview.deactivate();
 
-  if (ts - lastMove > MOVE_DELAY) {
-    for (const [k,[dy,dx]] of Object.entries(DIRS)) {
-      if (keys.has(k)) {
-        tryMove(game, dy, dx, matrixActive, nextDreamscape, _showMsg, insightTokens,
-          (n) => { while (insightTokens < n) addInsightToken(); window._insightTokens = insightTokens; });
-        lastMove = ts; break;
-      }
+  // ImpulseBuffer: hold 1 second before entering hazard tiles
+  if (activeDir && ts - lastMove > MOVE_DELAY) {
+    const [dy, dx] = activeDir;
+    const ny = game.player.y + dy, nx = game.player.x + dx;
+    const targetTile = (ny >= 0 && ny < game.sz && nx >= 0 && nx < game.sz) ? game.grid[ny][nx] : 0;
+    const ibStatus = impulseBuffer.activeDirection
+      ? impulseBuffer.update(ts)
+      : impulseBuffer.startMove(activeDir, targetTile, ts);
+
+    window._impulseProgress = ibStatus.progress; // expose for HUD
+
+    if (ibStatus.ready) {
+      tryMove(game, dy, dx, matrixActive, nextDreamscape, _showMsg, insightTokens,
+        (n) => { while (insightTokens < n) addInsightToken(); window._insightTokens = insightTokens; });
+      lastMove = ts;
+      impulseBuffer.reset();
     }
+  } else if (!activeDir) {
+    impulseBuffer.cancel();
+    window._impulseProgress = 0;
   }
 
   if (game.emotionTimer > 0) { game.emotionTimer--; if (game.emotionTimer <= 0) { game.slowMoves = false; UPG.emotion = 'neutral'; } }

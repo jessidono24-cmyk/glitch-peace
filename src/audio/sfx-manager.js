@@ -519,6 +519,62 @@ export class SFXManager {
   }
 
   /**
+   * Play alchemical transmutation (mystic shimmer: rising sines + soft bell)
+   */
+  playTransmutation() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    // Shimmer: three sine sweeps
+    const shimmers = [220, 330, 440, 550, 660];
+    shimmers.forEach((freq, i) => {
+      const osc  = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      osc.type = 'sine';
+      const t = now + i * 0.07;
+      osc.frequency.setValueAtTime(freq, t);
+      osc.frequency.linearRampToValueAtTime(freq * 1.5, t + 0.3);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.09, t + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      osc.connect(gain); gain.connect(this.masterGain);
+      osc.start(t); osc.stop(t + 0.35);
+    });
+    // Bell tone
+    const bell = this.audioContext.createOscillator();
+    const bellGain = this.audioContext.createGain();
+    bell.type = 'sine';
+    bell.frequency.value = 880;
+    bellGain.gain.setValueAtTime(0, now + 0.2);
+    bellGain.gain.linearRampToValueAtTime(0.15, now + 0.22);
+    bellGain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+    bell.connect(bellGain); bellGain.connect(this.masterGain);
+    bell.start(now + 0.2); bell.stop(now + 1.0);
+  }
+
+  /**
+   * Play Philosopher's Stone (grand chord: overtone series)
+   */
+  playPhilosopherStone() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    const freqs = [110, 165, 220, 330, 440, 660, 880]; // harmonic series on A2
+    freqs.forEach((freq, i) => {
+      const osc  = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+      osc.frequency.value = freq;
+      const t = now + i * 0.06;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.12 / (i + 1), t + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
+      osc.connect(gain); gain.connect(this.masterGain);
+      osc.start(t); osc.stop(t + 2.0);
+    });
+  }
+
+  /**
    * Play player hurt (low thud + static)
    */
   playPlayerHurt() {

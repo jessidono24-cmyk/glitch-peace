@@ -6,7 +6,7 @@
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
 [![Lines of Code](https://img.shields.io/badge/LOC-11%2C100%2B-orange.svg)](src/)
-[![Progress](https://img.shields.io/badge/completion-60%25-yellow.svg)](#-development-roadmap)
+[![Progress](https://img.shields.io/badge/completion-67%25-yellow.svg)](#-development-roadmap)
 
 *Begin in stillness. Emerge through pattern recognition. Transform through play.*
 
@@ -86,30 +86,34 @@ Visible in the dreamscape selection screen for each level:
 
 ---
 
-## 📦 Current Version: v1.7.0-alpha (February 2026)
+## 📦 Current Version: v1.8.0-alpha (February 2026)
 
 ### Build Statistics
 | Metric | Value |
 |--------|-------|
-| Source files | 45 JS modules |
-| Lines of code | ~11,100 |
-| Bundle size | 277 KB (91 KB gzipped) |
-| Build time | ~620ms |
-| Completion | ~60% of full vision |
+| Source files | 46 JS modules |
+| Lines of code | ~12,200 |
+| Bundle size | 291 KB (95 KB gzipped) |
+| Build time | ~665ms |
+| Completion | ~67% of full vision |
 
 ### What's In This Build
-- ✅ **Complete base game** (Phases 1-5): 17 tile types + **4 embodiment tiles**, **13 dreamscapes**, 5 archetypes, 9 enemy AI behaviors
+- ✅ **Complete base game** (Phases 1-5): 21 tile types, **18 dreamscapes**, 5 archetypes, 9+ enemy AI behaviors
+- ✅ **Alchemy System** (Phase M6 extension) — 5 elements; element seed collection from somatic tiles; X to transmute hazards→peace; Philosopher's Stone event; Great Work phase progression (nigredo→albedo→rubedo→aurora); 2 new SFX
+- ✅ **18 Dreamscapes** — Solar Temple 🌞, Deep Ocean 🌊, Crystal Cave 💎, Cloud City ☁️, Void Nexus ✦ added (18 total)
+- ✅ **18 Play Modes** — NEW: Alchemist ⚗️ (transmutation gameplay), Constellation Path ✦ (Phase M6 skymap)
 - ✅ **4 Somatic Tiles** (Phase 2.6) — BODY_SCAN ◯, BREATH_SYNC ≋, ENERGY_NODE ✦, GROUNDING ⊕ — full animated visuals + somatic SFX
-- ✅ **RPG Character System** (Phase M5) — STR/INT/WIS/VIT stats; XP + level progression; archetype dialogue; **5 main quests** with objective tracking
-- ✅ **Multi-phase Boss System** (Phase M3.5) — 3 boss types (Fear Guardian, Void Keeper, Integration Master), each with 3 phases; special attacks; phase banner; defeat rewards
-- ✅ **3 New Dreamscapes** — Forest Sanctuary 🌲 (ornithology/nature), Mycelium Depths 🍄 (mycology), Ancient Structure 🏛️ (sacred geometry)
-- ✅ **16 Play Modes** (was 13) — **NEW: Bird Watching 🐦, Mycelium Network 🍄, Sacred Architecture 🏛️** with unique grid transforms
-- ✅ **Full Tutorial** (all 13 dreamscapes) — 3 contextual hints per dreamscape
+- ✅ **RPG Character System** (Phase M5) — STR/INT/WIS/VIT stats; XP + level; archetype dialogue; **5 main quests**; quest progress panel in dashboard
+- ✅ **Multi-phase Boss System** (Phase M3.5) — 3 boss types × 3 phases; Void Nexus & Ancient Structure get bosses
+- ✅ **5 new environment events** — solar_pulse, ocean_surge, crystal_resonance, wind_drift, void_expansion
+- ✅ **Quest panel** in H-key dashboard — real-time quest progress, active objective, completion count
+- ✅ **Alchemy panel** in H-key dashboard — phase, seeds, transmutations, philosopher stones
+- ✅ **Full Tutorial** (all 18 dreamscapes) — 3 contextual hints per dreamscape
 - ✅ **Grid Mode** (tactical tile-based) + **Shooter Mode** (twin-stick action)
-- ✅ **12 Cosmological Frameworks** — mapped to dreamscapes, visible in selection screen
+- ✅ **12 Cosmological Frameworks** — mapped to dreamscapes
 - ✅ **Dream Yoga System** (Phase 2.5) — lucidity meter, reality check prompts, dream sign tracking
 - ✅ **Emotional engine** — 10-emotion field with valence, arousal, coherence, 7 synergy patterns
-- ✅ **Temporal system** — 8 lunar phases × 7 weekday harmonics affecting gameplay
+- ✅ **Temporal system** — 8 lunar phases × 7 weekday harmonics
 - ✅ **Recovery tools** — impulse buffer + consequence preview
 - ✅ **Adaptive difficulty** — 5 age-calibrated tiers (ages 5+)
 - ✅ **19-language vocabulary** with Fibonacci-spaced repetition
@@ -118,13 +122,13 @@ Visible in the dreamscape selection screen for each level:
 - ✅ **Awareness features** — self-reflection, emergence indicators (12 event types)
 - ✅ **Intelligence enhancement** — IQ/EQ proxy metrics, strategic coaching
 - ✅ **Chakra system** + Tarot archetypes (Phase 10)
-- ✅ **Integration dashboard** (H key) — SESSION, LEARNING, EMERGENCE, CHAKRA, CHARACTER (RPG), IQ/EQ, JOURNEY
-- ✅ **Campaign manager** (Phase M3) — narrative arc for all 13 dreamscapes
-- ✅ **Procedural audio** — 14 distinct SFX (PEACE, INSIGHT, somatic, hazard, death, level-up, boss phase, boss enter, quest complete)
+- ✅ **Integration dashboard** (H key) — SESSION, LEARNING, EMERGENCE, CHAKRA, CHARACTER, IQ/EQ, JOURNEY, QUESTS, ALCHEMY
+- ✅ **Campaign manager** — narrative arc for all 18 dreamscapes
+- ✅ **Procedural audio** — 16 distinct SFX (+ transmutation shimmer + philosopher's stone chord)
 - ✅ **Onboarding flow** — age group, language, difficulty selection
-- ✅ **HOW TO PLAY screen** — built-in tile guide, controls, matrix system, first-steps walkthrough
+- ✅ **HOW TO PLAY screen** — tile guide, controls (incl. X=transmute), matrix system, first-steps
 - ✅ **Smooth level transitions** — 10-second readable interlude; player-skippable; frame-rate independent
-- ✅ **Boss phase banner** — visible mid-game phase transition announcements with boss quotes
+- ✅ **Boss phase banner** + **Quest flash** + **Alchemy HUD strip** — all animated overlays
 
 ---
 
@@ -280,54 +284,50 @@ glitch-peace/
 Phase 1-5   ████████████████████ 100% ✅  Foundation, base game
 Phase M1-2  ████████████████████ 100% ✅  Mode system, Shooter
 Phase M3    ████████████████████ 100% ✅  Campaign structure
-Phase M4+   ████████████████████ 100% ✅  16 Play Modes (Bird Watching 🐦, Mycelium 🍄, Architecture 🏛️ added)
+Phase M4+   ████████████████████ 100% ✅  18 Play Modes (Alchemist ⚗️, Skymap ✦ added)
 Phase 2.5   ████████████████████ 100% ✅  Dream Yoga
 Phase 6-11  ████████████████████ 100% ✅  Learning/Awareness/IQ/Chakra
 Cosmologies ████████████████████ 100% ✅  12 frameworks mapped
 Phase 2.6   ████████████████████ 100% ✅  Embodiment Tiles — animated visuals + somatic SFX
 UX Polish   ████████████████████ 100% ✅  HOW TO PLAY; transitions; somatic visuals; tile SFX; level-up
-Boss System █████████████░░░░░░░  65% 🔨  3 bosses × 3 phases; special attacks; phase banner; rewards
-Quest System████████████░░░░░░░░  60% 🔨  5 main quests wired; progress tracking; quest flash
-Phase M5    ████████████░░░░░░░░  60% 🔨  RPG: stats + XP + level + archetype dialogue + quests
-13 Dreamsc. ██████████████░░░░░░  72% 🔨  13 of 18 target (Forest Sanctuary, Mycelium Depths, Ancient Structure added)
+Boss System ████████████████████ 100% ✅  3 bosses × 3 phases; special attacks; rewards; 3 dreamscapes get bosses
+Quest System████████████████████ 100% ✅  5 main quests; dashboard panel; quest flash
+18 Dreamsc. ████████████████████ 100% ✅  All 18 dreamscapes complete (target reached)
+Phase M5    █████████████████░░░  85% 🔨  RPG: stats + XP + level + quests + archetype dialogue
+Alchemy     ████████████░░░░░░░░  60% 🔨  Element system, transmutation, Great Work, 2 SFX
+Phase M6    ████░░░░░░░░░░░░░░░░  20% 🔨  Constellation Path mode + skymap grid + 5 events
 
-Phase M6    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Constellation Mode
 Phase M7    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Platformer / Rhythm
 Phase M8    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Multiplayer / Co-op
 Steam pack  ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Electron + Steamworks
 
-Overall: ~11,100 / 18,500 estimated lines (~60%)
+Overall: ~12,200 / 18,500 estimated lines (~67%)
 ```
 
 ### 🚧 Next Steps
 
-**Dreamscapes** — *72% complete (13/18)*
-- ✅ Original 10 dreamscapes complete (Void, Dragon, Courtyard, Field, Summit, Neighborhood, Bedroom, Aztec, Orb, Integration)
-- ✅ Forest Sanctuary 🌲 — ornithology/nature; bird migration events; somatic habitat tiles
-- ✅ Mycelium Depths 🍄 — mycology; underground network; mycelium growth events
-- ✅ Ancient Structure 🏛️ — sacred geometry; structure reveal events; Void Keeper boss
-- ⏳ 5 more dreamscapes needed (Solar Temple, Deep Ocean, Crystal Cave, Cloud City, Void Nexus)
+**Dreamscapes** — *100% complete (18/18 target reached)* 🎉
+- ✅ Original 10: Void, Dragon, Courtyard, Field, Summit, Neighborhood, Bedroom, Aztec, Orb, Integration
+- ✅ Wave 2 (nature/architecture): Forest Sanctuary 🌲, Mycelium Depths 🍄, Ancient Structure 🏛️
+- ✅ Wave 3 (elemental/cosmic): Solar Temple 🌞, Deep Ocean 🌊, Crystal Cave 💎, Cloud City ☁️, Void Nexus ✦
 
-**Phase M5: RPG Mode** — *60% complete*
-- ✅ Character stats (STR/INT/WIS/VIT + XP + level)
-- ✅ Archetype dialogue — 5 lines per archetype
-- ✅ Quest system — 5 main quests (First Light, Witness, Body, Dreamer, Sovereign)
-- ⏳ Quest rewards inventory display
+**Alchemy System** — *60% complete*
+- ✅ Element seed collection from somatic tiles (Fire/Water/Earth/Air/Ether)
+- ✅ Transmutation: 3 seeds → hazard tiles → peace/insight in radius
+- ✅ Philosopher's Stone: full HP restore + 5000 score on 4th transmutation
+- ✅ Great Work phase: nigredo→albedo→rubedo→aurora
+- ✅ Alchemist play mode + X key + HUD strip + alchemy dashboard panel
+- ✅ 2 new SFX: transmutation shimmer + philosopher's stone chord
+- ⏳ Alchemy quest integration (element-specific quests)
+- ⏳ Visual element particle effects on transmutation
 
-**Embodiment Deepening** (~1,800 lines)
-- New tiles: `BODY_SCAN`, `BREATH_SYNC`, `ENERGY_NODE`, `GROUNDING`
-- Breathing rhythm syncs with game pace (step interval follows breath)
-- Body scan scoring (somatic awareness metric)
-- Chakra visualization overlay during play
+**Phase M6: Constellation Mode** — *20% complete*
+- ✅ Skymap play mode: clears hazards, seeds INSIGHT + ARCHETYPE star nodes
+- ⏳ Star constellation visual overlay (connect nearby stars)
+- ⏳ Constellation completion rewards and narrative
 
-**Boss System** (~1,500 lines)
-- Fear Guardian · Chaos Bringer · Pattern Master · Void Keeper · Integration Boss
-- Multi-phase AI with visual phase transitions
-- Special rewards (abilities, cosmetics, lore unlocks)
-
-**8 New Dreamscapes** (~2,000 lines)
-- Expand from 10 to 18 unique dreamscapes
-- Each with unique tile configurations, mechanics, narrative
+**Phase M7: Platformer/Rhythm** — *0% complete*
+**Phase M8: Multiplayer** — *0% complete*
 
 ---
 
@@ -378,16 +378,17 @@ GLITCH·PEACE has a clear path to **free Steam release**:
 | **Grid gameplay** | Movement, consequence preview, impulse buffer, spread | ✅ Complete |
 | **Enemy AI** | 9 behaviors (chase, patrol, orbit, adaptive, labyrinth…) | ✅ Complete |
 | **Shooter mode** | Twin-stick, 4 weapons, wave system | ✅ Complete |
-| **13 Dreamscapes** | 10 original + 3 new: Forest Sanctuary, Mycelium Depths, Ancient Structure | ✅ Complete |
-| **16 Play Modes** | Zen, Speedrun, Puzzle, Horror, Roguelike, Training, Bird Watching 🐦, Mycelium 🍄, Architecture 🏛️… | ✅ Complete |
-| **Boss system** | 3 bosses × 3 phases; special attacks; phase banner; defeat rewards | ✅ Complete |
-| **Quest system** | 5 main quests (First Light, Witness, Body, Dreamer, Sovereign) tracking player milestones | ✅ Complete |
+| **18 Dreamscapes** 🎉 | All 18 complete: original 10 + nature trio + elemental/cosmic quintet | ✅ Complete |
+| **18 Play Modes** | All modes incl. Alchemist ⚗️ + Constellation ✦ | ✅ Complete |
+| **Boss system** | 3 bosses × 3 phases; 3 dreamscapes get bosses; special attacks; rewards | ✅ Complete |
+| **Quest system** | 5 main quests + dashboard panel + quest flash | ✅ Complete |
+| **Alchemy system** | 5 elements; transmutation; Philosopher's Stone; Great Work; 2 SFX | 🔨 60% |
 | **Onboarding** | Age group, language, difficulty; saved profile | ✅ Complete |
-| **HOW TO PLAY screen** | Tile guide, controls, matrix system, first-steps | ✅ Complete |
+| **HOW TO PLAY screen** | Tile guide, controls (incl. X=transmute), matrix system | ✅ Complete |
 | **Level transitions** | 10 s readable interlude; player-skippable; race-condition free | ✅ Complete |
-| **Tile SFX** | 14 distinct sounds: PEACE, INSIGHT, somatic, hazard, death, level-up, boss, quest | ✅ Complete |
+| **Tile SFX** | 16 distinct sounds: all tiles, boss, quest, transmutation, philosopher stone | ✅ Complete |
 | **Somatic tile visuals** | Breathing rings, sine wave, rotating sparkles, cross+ring — animated | ✅ Complete |
-| **Integration dashboard** | H-key overlay; SESSION, LEARNING, EMERGENCE, CHAKRA, CHARACTER (RPG), IQ/EQ, JOURNEY | ✅ Complete |
+| **Integration dashboard** | H-key overlay; 9 panels incl. QUESTS + ALCHEMY | ✅ Complete |
 | **Learning systems** | 19-language vocabulary, sigils, pattern recognition | ✅ Complete |
 | **Dream Yoga** | Lucidity meter, reality checks, dream sign tracking | ✅ Complete |
 | **Emotional engine** | 10-emotion field, 7 synergy patterns, coherence | ✅ Complete |
@@ -396,14 +397,14 @@ GLITCH·PEACE has a clear path to **free Steam release**:
 | **Awareness systems** | Self-reflection, emergence indicators, chakra, tarot | ✅ Complete |
 | **Intelligence layer** | IQ/EQ proxy metrics, strategic coaching, logic puzzles | ✅ Complete |
 | **Cosmologies** | 12 frameworks mapped to dreamscapes | ✅ Complete |
-| **RPG basics (M5)** | STR/INT/WIS/VIT stats, XP, level, archetype dialogue, quest system | 🔨 60% |
-| **5 more dreamscapes** | Expand to 18 total | 🔨 0% (3 of 8 complete) |
-| **Constellation mode (M6)** | Skymap navigation layer | ⬜ 0% |
+| **RPG basics (M5)** | STR/INT/WIS/VIT stats, XP, level, archetype dialogue, quest system | 🔨 85% |
+| **Alchemy (M6 extension)** | Element system, transmutation, Great Work phase | 🔨 60% |
+| **Constellation mode (M6)** | Skymap play mode seeded; visual constellation layer | 🔨 20% |
 | **Platformer/Rhythm (M7)** | New movement mode | ⬜ 0% |
 | **Multiplayer (M8)** | Shared emotional field, co-op | ⬜ 0% |
 | **Steam packaging** | Electron wrapper, Steamworks SDK | ⬜ 0% |
 
-**Overall: ~60% complete.** The game is fully playable end-to-end with boss encounters, quests, 3 nature-themed modes, and 13 dreamscapes. Remaining work is content expansion (5 more dreamscapes, constellation layer) and Steam packaging.
+**Overall: ~67% complete.** All 18 dreamscapes complete! Boss system, quest system, alchemy system, and 18 play modes are wired end-to-end. Remaining work: alchemy visual polish, constellation visual layer, platformer mode, multiplayer, Steam packaging.
 
 ---
 
@@ -487,7 +488,7 @@ Built on:
 
 ---
 
-**v1.7.0-alpha · February 2026 · 60% Complete**
+**v1.8.0-alpha · February 2026 · 67% Complete**
 [glitch-peace](https://github.com/jessidono24-cmyk/glitch-peace) · [glitch-peace-vite](https://github.com/jessidono24-cmyk/glitch-peace-vite)
 
 *Built with intention. Shared with love. Free always.*

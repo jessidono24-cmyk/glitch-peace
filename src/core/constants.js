@@ -193,6 +193,47 @@ export const DREAMSCAPES = [
     specialTiles:[T.COVER,T.MEMORY,T.ARCHETYPE,T.GROUNDING], enemyBehavior:'patrol', enemyCount:3, environmentEvent:'structure_reveal',
     narrative:'the stones remember…', completionText:'the structure stands complete… you built it',
   },
+  // ── 5 new dreamscapes (targets 14–18) ─────────────────────────────────
+  {
+    id:'solar_temple', name:'SOLAR TEMPLE', subtitle:'alchemy · fire · solar initiation',
+    matrixDefault:'B', bgColor:'#080400', bgAccent:'#1a0800', emotion:'awe',
+    archetype:'dragon',
+    hazardSet:[T.RAGE,T.TERROR,T.GLITCH], hazardCounts:[5,4,3],
+    specialTiles:[T.ENERGY_NODE,T.ARCHETYPE,T.INSIGHT], enemyBehavior:'orbit', enemyCount:3, environmentEvent:'solar_pulse',
+    narrative:'the temple blazes with ancient fire…', completionText:'you endured the solar initiation… transformed',
+  },
+  {
+    id:'deep_ocean', name:'DEEP OCEAN', subtitle:'emotion · depth · the unconscious',
+    matrixDefault:'B', bgColor:'#000a18', bgAccent:'#001028', emotion:'vulnerability',
+    archetype:'orb',
+    hazardSet:[T.HOPELESS,T.DESPAIR,T.PAIN], hazardCounts:[5,4,4],
+    specialTiles:[T.BREATH_SYNC,T.TELEPORT,T.MEMORY,T.ARCHETYPE], enemyBehavior:'wander', enemyCount:3, environmentEvent:'ocean_surge',
+    narrative:'the depths receive you… breathe', completionText:'you surfaced from the deep… clarity follows',
+  },
+  {
+    id:'crystal_cave', name:'CRYSTAL CAVE', subtitle:'reflection · clarity · hidden structure',
+    matrixDefault:'B', bgColor:'#020508', bgAccent:'#050820', emotion:'wonder',
+    archetype:'child',
+    hazardSet:[T.GLITCH,T.HIDDEN,T.SELF_HARM], hazardCounts:[4,6,3],
+    specialTiles:[T.INSIGHT,T.MEMORY,T.BODY_SCAN,T.ARCHETYPE], enemyBehavior:'scatter', enemyCount:2, environmentEvent:'crystal_resonance',
+    narrative:'the crystals resonate with your frequency…', completionText:'you saw your own reflection… truth found',
+  },
+  {
+    id:'cloud_city', name:'CLOUD CITY', subtitle:'elevation · air · the higher mind',
+    matrixDefault:'B', bgColor:'#04060a', bgAccent:'#0a1020', emotion:'anticipation',
+    archetype:'child',
+    hazardSet:[T.TERROR,T.DESPAIR,T.GLITCH], hazardCounts:[4,4,3],
+    specialTiles:[T.BODY_SCAN,T.TELEPORT,T.INSIGHT,T.ARCHETYPE], enemyBehavior:'orbit', enemyCount:3, environmentEvent:'wind_drift',
+    narrative:'above the clouds, perspective shifts…', completionText:'you rose above the storm… the view is clear',
+  },
+  {
+    id:'void_nexus', name:'VOID NEXUS', subtitle:'dissolution · ether · pure consciousness',
+    matrixDefault:'A', bgColor:'#02020a', bgAccent:'#050518', emotion:'integration',
+    archetype:'all',
+    hazardSet:[T.DESPAIR,T.TERROR,T.RAGE,T.HOPELESS,T.SELF_HARM], hazardCounts:[4,4,3,3,3],
+    specialTiles:[T.INSIGHT,T.ENERGY_NODE,T.ARCHETYPE,T.TELEPORT], enemyBehavior:'predictive', enemyCount:5, environmentEvent:'void_expansion',
+    narrative:'the nexus converges all timelines… be still', completionText:'you held the void without fear… integration complete',
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════

@@ -645,6 +645,7 @@ export function drawHowToPlay(ctx, w, h) {
     ['SHIFT',        'Switch Matrix A ↔ B',  'H',     'Toggle dashboard'],
     ['J',            'Archetype power',       'R',     'Glitch Pulse (charged)'],
     ['Q',            'Freeze enemies',        'C',     'Containment zone (2◆)'],
+    ['X',            'Transmute (Alchemist)', '  ',    ''],
   ];
   CONTROLS_HELP.forEach(([k1, v1, k2, v2], i) => {
     const cy2 = ctrlY + 16 + i * 18;

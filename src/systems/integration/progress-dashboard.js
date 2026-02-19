@@ -11,7 +11,7 @@ export function drawDashboard(ctx, w, h) {
   const data = gatherData();
   const pad = 16;
   const panelW = Math.min(w - 32, 440);
-  const panelH = Math.min(h - 32, 720);  // taller to fit RPG row
+  const panelH = Math.min(h - 32, 840);  // taller to fit quest + alchemy rows
   const px = (w - panelW) / 2;
   const py = (h - panelH) / 2;
 
@@ -111,12 +111,31 @@ export function drawDashboard(ctx, w, h) {
 
   y += 92;
 
-  // ── Row 5: Journey ────────────────────────────────────────────────
-  _drawSection(ctx, col1, y, panelW - pad * 2, 58, 'JOURNEY', [
-    { label: 'Dreamscapes completed', val: data.journey.dreamscapes + '/10 this session' },
-    { label: 'Campaign total',        val: data.journey.campaignTotal + ' completions' },
-    { label: 'Total sessions',        val: String(data.journey.totalSessions) },
+  // ── Row 5: Journey + Quests ───────────────────────────────────────────
+  _drawSection(ctx, col1, y, panelW/2 - pad, 72, 'JOURNEY', [
+    { label: 'Dreamscapes', val: data.journey.dreamscapes + '/18 this session' },
+    { label: 'Campaign',    val: data.journey.campaignTotal + ' completions' },
+    { label: 'Sessions',    val: String(data.journey.totalSessions) },
   ], '#ffaacc');
+
+  _drawSection(ctx, col2, y, panelW/2 - pad, 72, 'QUESTS', [
+    { label: 'Completed',  val: data.quests.completed + '/5 quests done', color: '#ffdd88' },
+    { label: 'Active',     val: data.quests.activeName || 'all complete', color: '#ddcc66' },
+    { label: 'Progress',   val: data.quests.activeProgress },
+  ], '#ffdd88');
+
+  y += 88;
+
+  // ── Row 6: Alchemy ────────────────────────────────────────────────────
+  if (data.alchemy.active || data.alchemy.transmutations > 0) {
+    _drawSection(ctx, col1, y, panelW - pad * 2, 58, 'ALCHEMY ⚗️', [
+      { label: 'Phase',         val: data.alchemy.phase, color: '#cc88ff' },
+      { label: 'Seeds',         val: data.alchemy.seedsDisplay || 'none collected' },
+      { label: 'Transmutations', val: String(data.alchemy.transmutations) },
+      { label: 'Stones',        val: data.alchemy.stones + ' philosopher stone' + (data.alchemy.stones !== 1 ? 's' : '') },
+    ], '#cc88ff');
+    y += 74;
+  }
 
   // ── Footer ─────────────────────────────────────────────────────────
   ctx.textAlign = 'center';
@@ -189,6 +208,31 @@ function gatherData() {
       campaignTotal:  window._campaignTotal          || 0,
       totalSessions:  tracker.totalSessions          || 0,
     },
+    quests: _gatherQuestData(),
+    alchemy: _gatherAlchemyData(),
+  };
+}
+
+function _gatherQuestData() {
+  const qd = window._questData;
+  if (!qd || !qd.length) return { completed: 0, activeName: '—', activeProgress: 'begin your journey' };
+  const completed = qd.filter(q => q.done).length;
+  const active    = qd.find(q => !q.done);
+  if (!active) return { completed, activeName: 'all complete!', activeProgress: '' };
+  // Find first incomplete objective
+  const obj = active.objectives.find(o => o.current < o.max);
+  const prog = obj ? obj.label + ' (' + obj.current + '/' + obj.max + ')' : '—';
+  return { completed, activeName: active.emoji + ' ' + active.name, activeProgress: prog };
+}
+
+function _gatherAlchemyData() {
+  const al = window._alchemy || {};
+  return {
+    active:          al.active || false,
+    phase:           al.phase  || 'nigredo',
+    seedsDisplay:    al.seedsDisplay || '',
+    transmutations:  al.transmutations || 0,
+    stones:          al.stones || 0,
   };
 }
 

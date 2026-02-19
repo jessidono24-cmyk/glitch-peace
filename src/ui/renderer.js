@@ -475,7 +475,7 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = '#445566'; ctx.font = '10px Courier New'; ctx.fillText('LVL ' + g.level, w - 12, 30);
   ctx.fillStyle = '#005533'; ctx.fillText('◈×' + g.peaceLeft, w - 12, 44);
   ctx.fillStyle = '#223344'; ctx.font = '8px Courier New';
-  ctx.fillText((window._dreamIdx + 1 || 1) + '/13 DREAMS', w - 12, 58);
+  ctx.fillText((window._dreamIdx + 1 || 1) + '/18 DREAMS', w - 12, 58);
   // Temporal system info (lunar + planet)
   const tmods = window._tmods;
   if (tmods) {
@@ -640,7 +640,37 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
 
-  // ── Play mode label (ornithology / mycology / architecture) ──────────
+  // ── Alchemy transmutation flash ───────────────────────────────────────
+  const af = window._alchemyFlash;
+  if (af && af.alpha > 0.02) {
+    ctx.globalAlpha = Math.min(1, af.alpha);
+    const afColor = af.color || '#cc88ff';
+    ctx.fillStyle = 'rgba(0,0,0,0.90)'; ctx.fillRect(w/2 - 175, h * 0.55, 350, 52);
+    ctx.strokeStyle = afColor + '88'; ctx.lineWidth = af.stone ? 2 : 1;
+    ctx.strokeRect(w/2 - 175, h * 0.55, 350, 52);
+    ctx.fillStyle = afColor; ctx.shadowColor = afColor; ctx.shadowBlur = af.stone ? 20 : 10;
+    ctx.font = 'bold ' + (af.stone ? '12' : '10') + 'px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(af.text, w/2, h * 0.55 + 18); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#998877'; ctx.font = '7px Courier New';
+    ctx.fillText('⚗️  ' + af.name + '  ·  the Great Work continues', w/2, h * 0.55 + 34);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Alchemy HUD strip (alchemist mode only) ───────────────────────────
+  const alch = window._alchemy;
+  if (alch && alch.active && (alch.seedsDisplay || alch.phase)) {
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#0a0008'; ctx.fillRect(w/2 - 170, h - 34, 340, 20);
+    ctx.strokeStyle = 'rgba(200,100,255,0.2)'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 170, h - 34, 340, 20);
+    ctx.fillStyle = '#cc88ff'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
+    const phaseLabel = { nigredo: '🜏 Nigredo', albedo: '🜃 Albedo', rubedo: '🜔 Rubedo', aurora: '✦ Aurora' }[alch.phase] || alch.phase;
+    const seedStr = alch.seedsDisplay ? '  ·  ' + alch.seedsDisplay : '';
+    ctx.fillText('⚗️  ' + phaseLabel + seedStr + '  ·  X to transmute', w/2, h - 21);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Play mode label (ornithology / mycology / architecture etc.) ──────
   const pml = window._playModeLabel;
   if (pml) {
     ctx.globalAlpha = 0.65;

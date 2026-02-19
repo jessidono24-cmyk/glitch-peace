@@ -69,6 +69,8 @@ import { archetypeDialogue } from './systems/rpg/archetype-dialogue.js';
 import { bossSystem, BOSS_TYPES } from './systems/boss-system.js';
 // ─── Phase M5: Quest System ───────────────────────────────────────────────
 import { questSystem } from './systems/rpg/quest-system.js';
+// ─── Phase M6: Alchemy System ─────────────────────────────────────────────
+import { alchemySystem, TILE_ELEMENT_MAP } from './systems/alchemy-system.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -232,6 +234,46 @@ function triggerEnvironmentEvent(g) {
     }
     let m=0,itr=0; while(m<3&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===T.VOID){g.grid[y][x]=Math.random()<0.5?T.COVER:T.MEMORY;m++;}}
     _showMsg('ANCIENT STRUCTURE REVEALS…','#aa88cc',50);
+  } else if (event === 'solar_pulse') {
+    // Solar Temple: ENERGY_NODE tiles pulse outward, RAGE→PEACE in ring around player
+    for (let dy=-3;dy<=3;dy++) for (let dx=-3;dx<=3;dx++) {
+      const ny=g.player.y+dy, nx=g.player.x+dx;
+      if (ny>=0&&ny<sz&&nx>=0&&nx<sz&&g.grid[ny][nx]===T.RAGE) g.grid[ny][nx]=T.PEACE;
+    }
+    let n=0,itr=0; while(n<3&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===T.VOID){g.grid[y][x]=T.ENERGY_NODE;n++;}}
+    _showMsg('SOLAR PULSE — fire transforms rage','#ff8800',55);
+  } else if (event === 'ocean_surge') {
+    // Deep Ocean: BREATH_SYNC tiles surge; DESPAIR→HOPELESS→BREATH_SYNC wave
+    for (let y=0;y<sz;y++) {
+      if (Math.random()<0.25) {
+        for (let x=0;x<sz;x++) {
+          if (g.grid[y][x]===T.DESPAIR) g.grid[y][x]=T.BREATH_SYNC;
+        }
+      }
+    }
+    _showMsg('OCEAN SURGE — breathe through the wave','#0088ff',55);
+  } else if (event === 'crystal_resonance') {
+    // Crystal Cave: HIDDEN→INSIGHT; INSIGHT tiles pulse; MEMORY nodes appear
+    let n=0;
+    for (let y=0;y<sz&&n<5;y++) for (let x=0;x<sz&&n<5;x++) {
+      if (g.grid[y][x]===T.HIDDEN){g.grid[y][x]=T.INSIGHT;n++;}
+    }
+    let m=0,itr=0; while(m<2&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===T.VOID){g.grid[y][x]=T.MEMORY;m++;}}
+    _showMsg('CRYSTAL RESONANCE — truth surfaces','#88ccff',50);
+  } else if (event === 'wind_drift') {
+    // Cloud City: random gentle nudge + BODY_SCAN tiles appear
+    const dir=[[-1,0],[1,0],[0,-1],[0,1]][rnd(4)];
+    const ny=g.player.y+dir[0], nx=g.player.x+dir[1];
+    if (ny>=0&&ny<sz&&nx>=0&&nx<sz&&g.grid[ny][nx]!==T.WALL){g.player.y=ny;g.player.x=nx;}
+    let n=0,itr=0; while(n<3&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===T.VOID){g.grid[y][x]=T.BODY_SCAN;n++;}}
+    _showMsg('WIND DRIFT — rise above','#aaddff',45);
+  } else if (event === 'void_expansion') {
+    // Void Nexus: VOID tiles expand; some hazards vanish; INSIGHT appears
+    let ni=0,itr=0; while(ni<3&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===T.VOID){g.grid[y][x]=T.INSIGHT;ni++;}}
+    for (let y=0;y<sz;y++) for (let x=0;x<sz;x++) {
+      if ([T.PAIN,T.HOPELESS].includes(g.grid[y][x])&&Math.random()<0.3) g.grid[y][x]=T.VOID;
+    }
+    _showMsg('VOID EXPANSION — dissolution is not death','#cc88ff',55);
   }
   if (Math.random() < 0.4) {
     const row = rnd(sz);
@@ -298,6 +340,7 @@ function startGame(dreamIdx) {
   characterStats.resetSession();
   archetypeDialogue.reset();
   bossSystem.reset();
+  alchemySystem.resetSession();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -337,12 +380,15 @@ function nextDreamscape() {
   const nextGame = initGame(nextIdx, g.score + 400 + g.level * 60, g.level, g.hp);
   nextGame.msg = DREAMSCAPES[nextIdx].name; nextGame.msgColor = '#ffdd00'; nextGame.msgTimer = 90;
 
-  // Boss spawn: integration dreamscape always spawns a boss; boss rush already handled in applyPlayMode
+  // Boss spawn: integration/ancient_structure/void_nexus get bosses
   if (DREAMSCAPES[nextIdx].id === 'integration' && !nextGame.boss) {
     bossSystem.spawnBossForGame(nextGame, 'integration_master');
     sfxManager.playBossEnter();
   } else if (DREAMSCAPES[nextIdx].id === 'ancient_structure' && !nextGame.boss) {
     bossSystem.spawnBossForGame(nextGame, 'void_keeper');
+    sfxManager.playBossEnter();
+  } else if (DREAMSCAPES[nextIdx].id === 'void_nexus' && !nextGame.boss) {
+    bossSystem.spawnBossForGame(nextGame, 'fear_guardian');
     sfxManager.playBossEnter();
   }
 
@@ -516,10 +562,18 @@ function loop(ts) {
         // Dream yoga: record dream sign for every special tile
         dreamYoga.onTileStep(targetTile);
         // Quest: somatic tile hooks
-        if (targetTile === 17) questSystem.onBodyScanTile();     // T.BODY_SCAN
-        if (targetTile === 18) questSystem.onBreathSyncTile();   // T.BREATH_SYNC
-        if (targetTile === 19) questSystem.onEnergyNodeTile();   // T.ENERGY_NODE
-        if (targetTile === 20) questSystem.onGroundingTile();    // T.GROUNDING
+        if (targetTile === T.BODY_SCAN)    questSystem.onBodyScanTile();
+        if (targetTile === T.BREATH_SYNC)  questSystem.onBreathSyncTile();
+        if (targetTile === T.ENERGY_NODE)  questSystem.onEnergyNodeTile();
+        if (targetTile === T.GROUNDING)    questSystem.onGroundingTile();
+        // Alchemy: collect element seed when stepping on element tile
+        if (TILE_ELEMENT_MAP[targetTile]) {
+          const seedResult = alchemySystem.onElementTile(targetTile);
+          if (seedResult) {
+            const ed = seedResult.elementDef;
+            _showMsg(ed.symbol + '  ' + ed.name + ' SEED ×' + seedResult.seeds, ed.color, 50);
+          }
+        }
       }
       // Phase 9: track move mindfulness
       const wasPreviewActive = consequencePreview.active && consequencePreview.ghostPath.length > 0;
@@ -527,6 +581,7 @@ function loop(ts) {
       if (wasPreviewActive || wasImpulseActive) {
         strategicThinking.onMindfulMove(); characterStats.onMindfulMove();
         questSystem.onPreviewMove();
+        alchemySystem.onMindfulMove(); // ether charge
       } else strategicThinking.onImpulsiveMove();
       logicPuzzles.onMove(wasPreviewActive, wasImpulseActive);
       // Phase M5: RPG stat events on each move
@@ -740,7 +795,19 @@ function loop(ts) {
   }
   // ── Quest system tick ────────────────────────────────────────────────
   questSystem.tick();
-  // Expose play mode label for renderer
+  // ── Alchemy system tick ──────────────────────────────────────────────
+  alchemySystem.tick();
+
+  // ── Expose all system data to window globals (grouped) ──────────────
+  window._questData     = questSystem.getAllProgress();
+  window._alchemy = {
+    seeds:          alchemySystem.seeds,
+    seedsDisplay:   alchemySystem.seedsDisplay,
+    phase:          alchemySystem.phase,
+    transmutations: alchemySystem.transmutations,
+    stones:         alchemySystem.philosopherStones,
+    active:         game.playModeId === 'alchemist',
+  };
   window._playModeLabel = game.playModeLabel || null;
 
   if (game.hp <= 0) {
@@ -999,6 +1066,22 @@ window.addEventListener('keydown', e => {
           const randEnemy = game.enemies[Math.floor(Math.random() * game.enemies.length)];
           empathyTraining.onEnemyStunned(randEnemy.behavior || randEnemy.type || 'rush');
         }
+      }
+    }
+    // Alchemy transmutation — X key: cycle elements and transmute
+    if ((e.key==='x'||e.key==='X') && !e.repeat && game.playModeId === 'alchemist') {
+      const seeds = alchemySystem.seeds;
+      const elements = ['fire','water','earth','air','ether'];
+      const ready = elements.find(el => seeds[el] >= 3);
+      if (ready) {
+        alchemySystem.tryTransmute(ready, game, burst, _showMsg);
+        sfxManager.resume();
+        // Philosopher's stone uses special grand chord; normal transmutation uses shimmer
+        if (window._alchemyFlash?.stone) sfxManager.playPhilosopherStone();
+        else sfxManager.playTransmutation();
+      } else {
+        const display = alchemySystem.seedsDisplay || 'none';
+        _showMsg('⚗️  NEED 3 OF ONE ELEMENT  ·  seeds: ' + display, '#cc88ff', 50);
       }
     }
     if ((e.key==='c'||e.key==='C') && !e.repeat) {

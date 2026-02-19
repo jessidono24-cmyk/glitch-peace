@@ -134,6 +134,22 @@ export const PLAY_MODES = {
     config: { peaceMul: 1.0, hazardMul: 0.0, insightMul: 2.0, scoreMul: 1.5, enemySpeed: 0.0, timeLimit: null },
     mechanics: { enemyBehavior: 'none', zenMode: true, moveLimit: 80, reverseMode: false, autoHeal: 0, slowMul: 0.7, architecture: true },
   },
+
+  // 17. ALCHEMIST — Elemental transmutation mode
+  alchemist: {
+    id: 'alchemist', name: 'Alchemist', emoji: '⚗️',
+    desc: 'Collect elemental seeds from somatic tiles and transmute hazards into peace — the Great Work in action',
+    config: { peaceMul: 1.2, hazardMul: 0.4, insightMul: 2.0, scoreMul: 1.8, enemySpeed: 0.75, timeLimit: null },
+    mechanics: { enemyBehavior: 'passive', zenMode: false, moveLimit: null, reverseMode: false, autoHeal: 0, slowMul: 0.85, alchemist: true },
+  },
+
+  // 18. SKYMAP — Constellation navigation (Phase M6)
+  skymap: {
+    id: 'skymap', name: 'Constellation Path', emoji: '✦',
+    desc: 'Navigate by star constellations — connect STAR tiles to reveal sacred patterns; meditative star-gazing pace',
+    config: { peaceMul: 1.5, hazardMul: 0.0, insightMul: 2.5, scoreMul: 1.3, enemySpeed: 0.0, timeLimit: null },
+    mechanics: { enemyBehavior: 'none', zenMode: true, moveLimit: null, reverseMode: false, autoHeal: 0, slowMul: 0.6, skymap: true },
+  },
 };
 
 // Ordered list for options cycling
@@ -242,6 +258,52 @@ export function applyPlayMode(game, modeId) {
       }
     }
     game.playModeLabel = '🏛️  ARCHITECTURE  ·  build · ground · endure';
+  }
+
+  // ── Alchemist: seed element tiles from somatic pool; keep some hazards ─
+  if (mech.alchemist && game.grid) {
+    const sz = game.sz;
+    // Replace SELF_HARM/RAGE with somatic element tiles (gentler hazard set)
+    for (let y = 0; y < sz; y++) {
+      for (let x = 0; x < sz; x++) {
+        const v = game.grid[y][x];
+        if (v === 3 || v === 8) { // SELF_HARM or RAGE → element seed tiles
+          const pick = [17, 18, 19, 20][Math.floor(Math.random() * 4)];
+          game.grid[y][x] = pick;
+        }
+      }
+    }
+    // Seed extra somatic tiles as element sources
+    let el = 0, itr = 0;
+    const elTiles = [19, 18, 20, 17]; // ENERGY_NODE, BREATH_SYNC, GROUNDING, BODY_SCAN
+    while (el < 8 && itr < 999) {
+      itr++;
+      const ey = Math.floor(Math.random() * sz), ex = Math.floor(Math.random() * sz);
+      if (game.grid[ey][ex] === 0) { game.grid[ey][ex] = elTiles[el % elTiles.length]; el++; }
+    }
+    game.playModeLabel = '⚗️  ALCHEMIST  ·  collect · transmute · the Great Work';
+  }
+
+  // ── Skymap: clear all hazards; seed INSIGHT + ARCHETYPE as star nodes ─
+  if (mech.skymap && game.grid) {
+    const sz = game.sz;
+    for (let y = 0; y < sz; y++) {
+      for (let x = 0; x < sz; x++) {
+        const v = game.grid[y][x];
+        if ([1,2,3,8,9,10,14,16].includes(v)) game.grid[y][x] = 0; // clear all hazards
+      }
+    }
+    // Seed constellation star nodes (INSIGHT) and archetype nodes (ARCHETYPE)
+    let stars = 0, itr = 0;
+    while (stars < 10 && itr < 999) {
+      itr++;
+      const starY = Math.floor(Math.random() * sz), sx = Math.floor(Math.random() * sz);
+      if (game.grid[starY][sx] === 0) {
+        game.grid[starY][sx] = stars % 3 === 0 ? 11 : 6; // ARCHETYPE or INSIGHT
+        stars++;
+      }
+    }
+    game.playModeLabel = '✦  CONSTELLATION PATH  ·  navigate · connect · skymap';
   }
 
   return game;

@@ -15,6 +15,18 @@ GLITCH·PEACE is more than a game—it's a consciousness engine designed to:
 
 ## Quick Start
 
+### Just Want to Play?
+
+**Easiest Method:**
+1. Download this repository (Code → Download ZIP)
+2. Extract the ZIP file
+3. Open `dist/index.html` in your browser
+4. Play immediately!
+
+**No installation needed!** See [INSTALLATION.md](INSTALLATION.md) for detailed instructions.
+
+### For Developers
+
 ```bash
 # Install dependencies
 npm install
@@ -26,10 +38,11 @@ npm run dev
 npm run build
 ```
 
-Opens at `http://localhost:3000`
+Opens at `http://localhost:5173`
 
 ## Controls
 
+### Grid Mode (Tactical)
 | Key | Action |
 |-----|--------|
 | WASD / Arrows | Move |
@@ -39,6 +52,16 @@ Opens at `http://localhost:3000`
 | Q | Freeze enemies |
 | C | Containment zone |
 | ESC | Pause |
+
+### Shooter Mode (Action)
+| Control | Action |
+|---------|--------|
+| WASD | Continuous movement |
+| Mouse | Aim |
+| Left Click | Shoot |
+| ESC | Pause |
+
+**Switch Modes:** Press **M** on the title screen to toggle between Grid and Shooter modes.
 
 ## Current Status
 

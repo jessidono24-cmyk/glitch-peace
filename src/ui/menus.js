@@ -144,8 +144,23 @@ export function drawPause(ctx, w, h, game, pauseIdx) {
     ctx.fillStyle = '#223322'; ctx.font = '9px Courier New'; ctx.fillText(game.ds.name + '  ·  LEVEL ' + game.level, w / 2, h / 2 - 58);
     ctx.fillStyle = '#334455'; ctx.fillText(game.ds.narrative, w / 2, h / 2 - 44);
   }
+
+  // Phase 7: Session wellness display
+  const wellness = window._sessionWellness;
+  const duration = window._sessionDuration || '00:00';
+  const learnStats = window._learnStats || { words: 0, patterns: 0 };
+  if (wellness) {
+    ctx.fillStyle = wellness.color; ctx.shadowColor = wellness.color; ctx.shadowBlur = 4;
+    ctx.font = '9px Courier New';
+    ctx.fillText('SESSION · ' + duration + ' · ' + wellness.label, w / 2, h / 2 - 28);
+    ctx.shadowBlur = 0;
+  }
+  // Phase 6: Learning stats
+  ctx.fillStyle = '#335533'; ctx.font = '8px Courier New';
+  ctx.fillText('WORDS LEARNED: ' + learnStats.words + '  ·  PATTERNS FOUND: ' + learnStats.patterns, w / 2, h / 2 - 16);
+
   PAUSE_MENU.forEach((txt, i) => {
-    const sel = i === pauseIdx, y = h / 2 - 14 + i * 36;
+    const sel = i === pauseIdx, y = h / 2 + 8 + i * 36;
     if (sel) {
       ctx.fillStyle = 'rgba(0,255,136,0.07)'; ctx.fillRect(w / 2 - 110, y - 18, 220, 26);
       ctx.strokeStyle = 'rgba(0,255,136,0.26)'; ctx.strokeRect(w / 2 - 110, y - 18, 220, 26);
@@ -158,8 +173,9 @@ export function drawPause(ctx, w, h, game, pauseIdx) {
 }
 
 export function drawInterlude(ctx, w, h, interludeState, ts) {
-  const prog = 1 - (interludeState.timer / 220);
-  const alpha = prog < 0.1 ? prog / 0.1 : prog > 0.9 ? (1 - prog) / 0.1 : 1;
+  const totalTimer = 280;
+  const prog = 1 - (interludeState.timer / totalTimer);
+  const alpha = prog < 0.08 ? prog / 0.08 : prog > 0.92 ? (1 - prog) / 0.08 : 1;
   const ds = interludeState.ds || DREAMSCAPES[0];
   ctx.fillStyle = ds.bgColor || '#02020a'; ctx.fillRect(0, 0, w, h);
   for (let i = 0; i < 7; i++) {
@@ -168,14 +184,53 @@ export function drawInterlude(ctx, w, h, interludeState, ts) {
     ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx - 100, h); ctx.stroke();
   }
   ctx.globalAlpha = alpha; ctx.textAlign = 'center';
+
+  // ── Completion text ───────────────────────────────────────────────────
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 20;
-  ctx.font = 'bold 14px Courier New'; ctx.fillText(interludeState.text, w / 2, h / 2 - 28); ctx.shadowBlur = 0;
-  ctx.fillStyle = '#223322'; ctx.font = '11px Courier New'; ctx.fillText('ENTERING: ' + ds.name, w / 2, h / 2 + 4);
-  ctx.fillStyle = '#334455'; ctx.font = '10px Courier New'; ctx.fillText(ds.narrative, w / 2, h / 2 + 24);
+  ctx.font = 'bold 14px Courier New'; ctx.fillText(interludeState.text, w / 2, h / 2 - 68); ctx.shadowBlur = 0;
+
+  // ── Phase 8: Reflection prompt ────────────────────────────────────────
+  if (interludeState.reflectionPrompt) {
+    const rp = interludeState.reflectionPrompt;
+    // Fade the prompt in after 1s (prog > 0.3)
+    const rpAlpha = Math.min(1, Math.max(0, (prog - 0.25) / 0.1));
+    ctx.globalAlpha = alpha * rpAlpha;
+    ctx.fillStyle = '#aaffcc'; ctx.shadowColor = '#00cc88'; ctx.shadowBlur = 8;
+    ctx.font = 'italic 13px Courier New';
+    ctx.fillText('\u201c' + rp.prompt + '\u201d', w / 2, h / 2 - 32); ctx.shadowBlur = 0;
+    ctx.globalAlpha = alpha;
+  }
+
+  // ── Affirmation ───────────────────────────────────────────────────────
+  if (interludeState.affirmation) {
+    const affAlpha = Math.min(1, Math.max(0, (prog - 0.4) / 0.1));
+    ctx.globalAlpha = alpha * affAlpha;
+    ctx.fillStyle = '#446644'; ctx.font = '9px Courier New';
+    ctx.fillText(interludeState.affirmation, w / 2, h / 2 - 10);
+    ctx.globalAlpha = alpha;
+  }
+
+  // ── Next dreamscape info ──────────────────────────────────────────────
+  ctx.fillStyle = '#223322'; ctx.font = '11px Courier New'; ctx.fillText('ENTERING: ' + ds.name, w / 2, h / 2 + 12);
+  ctx.fillStyle = '#334455'; ctx.font = '10px Courier New'; ctx.fillText(ds.narrative, w / 2, h / 2 + 30);
+
+  // ── Phase 6: Vocabulary word ──────────────────────────────────────────
+  if (interludeState.vocabWord) {
+    const vw = interludeState.vocabWord;
+    const vwAlpha = Math.min(1, Math.max(0, (prog - 0.5) / 0.12));
+    ctx.globalAlpha = alpha * vwAlpha;
+    ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 6;
+    ctx.font = 'bold 12px Courier New';
+    ctx.fillText(vw.word + '  [' + vw.pos + ']', w / 2, h / 2 + 56); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#554422'; ctx.font = '9px Courier New';
+    ctx.fillText(vw.def, w / 2, h / 2 + 72);
+    ctx.globalAlpha = alpha;
+  }
+
   if (ds.archetype && ARCHETYPES[ds.archetype]) {
     const arch = ARCHETYPES[ds.archetype];
     ctx.fillStyle = arch.glow; ctx.shadowColor = arch.glow; ctx.shadowBlur = 10;
-    ctx.font = '10px Courier New'; ctx.fillText('archetype: ' + arch.name, w / 2, h / 2 + 46); ctx.shadowBlur = 0;
+    ctx.font = '10px Courier New'; ctx.fillText('archetype: ' + arch.name, w / 2, h / 2 + 92); ctx.shadowBlur = 0;
   }
   ctx.globalAlpha = 1; ctx.textAlign = 'left';
 }

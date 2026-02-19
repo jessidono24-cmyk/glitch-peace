@@ -27,6 +27,13 @@ import { EmotionalField } from './systems/emotional-engine.js';
 import { ConsequencePreview } from './recovery/consequence-preview.js';
 import { ImpulseBuffer } from './recovery/impulse-buffer.js';
 import { ShooterMode } from './modes/shooter-mode.js';
+// ─── Phase 6: Learning Systems ───────────────────────────────────────────
+import { vocabularyEngine } from './systems/learning/vocabulary-engine.js';
+import { patternRecognition } from './systems/learning/pattern-recognition.js';
+// ─── Phase 7: Cessation Tools ────────────────────────────────────────────
+import { sessionTracker } from './systems/cessation/session-tracker.js';
+// ─── Phase 8: Awareness Features ─────────────────────────────────────────
+import { selfReflection } from './systems/awareness/self-reflection.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -190,6 +197,11 @@ function startGame(dreamIdx) {
   window._insightTokens = 0; window._dreamIdx = CFG.dreamIdx;
   game = initGame(CFG.dreamIdx, 0, 0, undefined);
   setPhase('playing'); lastMove = 0; setMatrixHoldTime(0);
+  // Phase 6-8: start learning & session tracking
+  vocabularyEngine.resetSession();
+  selfReflection.resetSession();
+  sessionTracker.startSession();
+  patternRecognition.onScoreChange(0);
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -200,14 +212,28 @@ function nextDreamscape() {
   CFG.dreamIdx = nextIdx; window._dreamIdx = nextIdx;
   pushDreamHistory(g.ds.id);
   sfxManager.playLevelComplete();
-  interludeState = { text:g.ds.completionText, subtext:DREAMSCAPES[nextIdx].narrative, timer:220, ds:DREAMSCAPES[nextIdx] };
+  sessionTracker.onDreamscapeComplete();
+  // Phase 8: get a reflection prompt for the completed dreamscape
+  const prompt = selfReflection.getPrompt(g.ds.emotion);
+  const affirmation = selfReflection.getAffirmation();
+  // Phase 6: show a vocabulary word on the interlude screen
+  const vocabWord = vocabularyEngine.getInterludeWord(g.ds.emotion);
+  interludeState = {
+    text: g.ds.completionText,
+    subtext: DREAMSCAPES[nextIdx].narrative,
+    timer: 280, // slightly longer to accommodate reflection
+    ds: DREAMSCAPES[nextIdx],
+    reflectionPrompt: prompt,
+    affirmation,
+    vocabWord,
+  };
   setPhase('interlude');
   setTimeout(() => {
     resizeCanvas();
     game = initGame(nextIdx, g.score + 400 + g.level * 60, g.level, g.hp);
     game.msg = DREAMSCAPES[nextIdx].name; game.msgColor = '#ffdd00'; game.msgTimer = 90;
     if (phase === 'interlude') setPhase('playing');
-  }, 3600);
+  }, 4600); // increased to match longer timer
 }
 
 function buyUpgrade(id) {
@@ -294,6 +320,15 @@ function loop(ts) {
     window._impulseProgress = ibStatus.progress; // expose for HUD
 
     if (ibStatus.ready) {
+      // Phase 6: teach vocabulary on tile step (before move consumes the tile)
+      if (targetTile > 0) {
+        const vword = vocabularyEngine.onTileStep(targetTile, game.ds.emotion);
+        if (vword) window._vocabWord = vword; // immediately expose (tick will handle fade)
+        // Phase 6: pattern recognition on peace collect
+        if (targetTile === 4) { // T.PEACE
+          patternRecognition.onPeaceCollected(game.peaceLeft);
+        }
+      }
       tryMove(game, dy, dx, matrixActive, nextDreamscape, _showMsg, insightTokens,
         (n) => { while (insightTokens < n) addInsightToken(); window._insightTokens = insightTokens; });
       lastMove = ts;
@@ -319,6 +354,24 @@ function loop(ts) {
 
   stepTileSpread(game, dt);
   stepEnemies(game, dt, keys, matrixActive, hallucinations, _showMsg, setEmotion);
+
+  // ── Phase 6: Learning Systems tick ─────────────────────────────────
+  vocabularyEngine.tick();
+  patternRecognition.tick();
+  patternRecognition.onScoreChange(game.score);
+  // Expose to renderer
+  window._vocabWord      = vocabularyEngine.activeWord;
+  window._patternBanner  = patternRecognition.activeBanner;
+  window._learnStats     = { words: vocabularyEngine.sessionCount, patterns: patternRecognition.sessionCount };
+
+  // ── Phase 7: Session tracker tick ──────────────────────────────────
+  sessionTracker.tick();
+  window._sessionWellness = sessionTracker.wellness;
+  window._sessionDuration = sessionTracker.durationFormatted;
+  if (sessionTracker.hasPendingSuggestion && phase === 'playing') {
+    const sug = sessionTracker.consumeSuggestion();
+    if (sug) _showMsg(sug.msg, '#aaffcc', 160);
+  }
 
   if (game.hp <= 0) {
     deadGame = game; // snapshot for death screen
@@ -387,12 +440,12 @@ window.addEventListener('keydown', e => {
     if (e.key==='ArrowUp')   { CURSOR.pause=(CURSOR.pause-1+4)%4; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowDown') { CURSOR.pause=(CURSOR.pause+1)%4; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='Enter') {
-      if(CURSOR.pause===0) setPhase('playing');
+      if(CURSOR.pause===0) { sessionTracker.resumeSession(); setPhase('playing'); }
       else if(CURSOR.pause===1){CURSOR.opt=0;setPhase('options');}
       else if(CURSOR.pause===2){CURSOR.shop=0;CURSOR.upgradeFrom='paused';setPhase('upgrade');}
       else { setPhase('title'); CURSOR.menu=0; game=null; }
     }
-    if (e.key==='Escape') setPhase('playing');
+    if (e.key==='Escape') { sessionTracker.resumeSession(); setPhase('playing'); }
     e.preventDefault(); return;
   }
   if (phase === 'playing') {
@@ -401,7 +454,7 @@ window.addEventListener('keydown', e => {
       if (e.key==='Escape') { setPhase('title'); CURSOR.menu=0; }
       e.preventDefault(); return;
     }
-    if (e.key==='Escape') { CURSOR.pause=0; setPhase('paused'); }
+    if (e.key==='Escape') { CURSOR.pause=0; sessionTracker.pauseSession(); setPhase('paused'); }
     if (e.key==='Shift' && !e.repeat) {
       const next = matrixActive === 'A' ? 'B' : 'A';
       setMatrix(next); setMatrixHoldTime(0);

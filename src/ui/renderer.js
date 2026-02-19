@@ -419,6 +419,41 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     g.msgTimer--;
   }
 
+  // ── Phase 6: Vocabulary word flash ───────────────────────────────────
+  const vocabWord = window._vocabWord;
+  if (vocabWord) {
+    const vAlpha = Math.min(1, (window._vocabTimer || 150) / 30);
+    ctx.globalAlpha = Math.min(1, vAlpha);
+    ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(w/2 - 120, sy - 54, 240, 36);
+    ctx.strokeStyle = 'rgba(255,221,136,0.3)'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 120, sy - 54, 240, 36);
+    ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 5;
+    ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(vocabWord.word + '  [' + vocabWord.pos + ']', w/2, sy - 36); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#886644'; ctx.font = '9px Courier New';
+    ctx.fillText(vocabWord.def, w/2, sy - 20);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Phase 6: Pattern discovery banner ────────────────────────────────
+  const banner = window._patternBanner;
+  if (banner) {
+    const bProg = banner.timer / banner.maxTimer;
+    const bAlpha = bProg > 0.85 ? (1 - bProg) / 0.15 : bProg < 0.1 ? bProg / 0.1 : 1;
+    ctx.globalAlpha = Math.min(1, bAlpha);
+    ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(w/2 - 148, h/2 - 38, 296, 72);
+    ctx.strokeStyle = banner.color + '66'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 148, h/2 - 38, 296, 72);
+    ctx.fillStyle = banner.color; ctx.shadowColor = banner.color; ctx.shadowBlur = 12;
+    ctx.font = 'bold 16px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(banner.symbol + ' ' + banner.name.toUpperCase() + ' DISCOVERED', w/2, h/2 - 14); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ccbbaa'; ctx.font = '9px Courier New';
+    ctx.fillText(banner.description, w/2, h/2 + 4);
+    ctx.fillStyle = '#665544'; ctx.font = '8px Courier New';
+    ctx.fillText(banner.fact, w/2, h/2 + 20);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
   ctx.fillStyle = '#070714'; ctx.fillRect(0, h - 28, w, 28);
   ctx.strokeStyle = 'rgba(255,255,255,0.03)';
   ctx.beginPath(); ctx.moveTo(0, h - 28); ctx.lineTo(w, h - 28); ctx.stroke();

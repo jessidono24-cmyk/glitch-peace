@@ -266,3 +266,13 @@ export const MAIN_MENU  = ['▶  START JOURNEY', 'SELECT DREAMSCAPE', 'HOW TO PL
 export const PAUSE_MENU = ['RESUME', 'OPTIONS', 'UPGRADES', 'QUIT TO TITLE'];
 export const OPT_GRID   = ['small', 'medium', 'large'];
 export const OPT_DIFF   = ['easy', 'normal', 'hard'];
+
+// ═══════════════════════════════════════════════════════════
+//  CONSTELLATION NAMES  (skymap mode star-pattern rewards)
+// ═══════════════════════════════════════════════════════════
+export const CONSTELLATION_NAMES = [
+  'ORION·THE·HUNTER', 'PLEIADES·SEVEN', 'CASSIOPEIA·THRONE', 'URSA·MAJOR',
+  'SCORPIUS·HEART', 'AQUILA·EAGLE', 'LYRA·VEGA', 'ANDROMEDA·CHAIN',
+  'CYGNUS·SWAN', 'DRAGON·SPINE', 'VOID·SERPENT', 'INTEGRATION·STAR',
+  'PHOENIX·RISING', 'CENTAURUS·PATH', 'CORONA·BOREALIS', 'SAGITTARIUS·ARROW',
+];

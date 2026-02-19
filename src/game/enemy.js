@@ -79,7 +79,14 @@ export function stepEnemies(game, dt, keys, matrixActive, hallucinations, showMs
     const dist = Math.abs(tdx) + Math.abs(tdy);
     let moved  = false;
 
-    if (beh === 'wander' || dist > sz * 0.7) {
+    if (beh === 'random' || dist > sz * 0.7) {  // 'random' = roguelike/daily default wander; fallback when far from player
+      const dirs = [[1,0],[-1,0],[0,1],[0,-1]].sort(() => Math.random() - 0.5);
+      for (const [dy, dx] of dirs) {
+        const ny = e.y + dy, nx = e.x + dx;
+        if (ny >= 0 && ny < sz && nx >= 0 && nx < sz && g.grid[ny][nx] !== T.WALL) { e.y = ny; e.x = nx; moved = true; break; }
+      }
+    } else if (beh === 'wander' || beh === 'passive' || beh === 'none') {
+      // passive/none: gentle random wander only (training mode, alchemist, zen fallback)
       const dirs = [[1,0],[-1,0],[0,1],[0,-1]].sort(() => Math.random() - 0.5);
       for (const [dy, dx] of dirs) {
         const ny = e.y + dy, nx = e.x + dx;
@@ -102,9 +109,9 @@ export function stepEnemies(game, dt, keys, matrixActive, hallucinations, showMs
       const dy = ty - e.y > 0 ? 1 : ty - e.y < 0 ? -1 : 0;
       const dx = tx - e.x > 0 ? 1 : tx - e.x < 0 ? -1 : 0;
       if (e.y + dy >= 0 && e.y + dy < sz && e.x + dx >= 0 && e.x + dx < sz && g.grid[e.y + dy][e.x + dx] !== T.WALL) { e.y += dy; e.x += dx; }
-    } else if (beh === 'chase_fast' || beh === 'adaptive' || beh === 'predictive') {
+    } else if (beh === 'chase_fast' || beh === 'adaptive' || beh === 'predictive' || beh === 'hunt' || beh === 'aggressive') {
       let tx = g.player.x, ty = g.player.y;
-      if (beh === 'predictive' && g.level >= 7) {
+      if ((beh === 'predictive' && g.level >= 7) || beh === 'hunt') {
         tx += keys.has('ArrowRight') || keys.has('d') ? 1 : keys.has('ArrowLeft') || keys.has('a') ? -1 : 0;
         ty += keys.has('ArrowDown')  || keys.has('s') ? 1 : keys.has('ArrowUp')   || keys.has('w') ? -1 : 0;
       }

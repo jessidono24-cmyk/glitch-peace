@@ -210,6 +210,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
       }
       g.hp = Math.max(0, g.hp - dmg);
       g.shakeFrames = 5;
+      if (window.sfxManager) window.sfxManager.playPlayerHurt();
       const dmgColors = { [T.DESPAIR]:'#2244ff',[T.TERROR]:'#ff0000',[T.SELF_HARM]:'#660000',[T.RAGE]:'#ff0044',[T.HOPELESS]:'#004488',[T.GLITCH]:'#aa00ff',[T.TRAP]:'#ff8800',[T.PAIN]:'#440000' };
       const pColors   = { [T.DESPAIR]:'#3355ff',[T.TERROR]:'#ff2222',[T.SELF_HARM]:'#880000',[T.RAGE]:'#ff0044',[T.HOPELESS]:'#004488',[T.GLITCH]:'#aa00ff',[T.TRAP]:'#ff8800',[T.PAIN]:'#440000' };
       const msgs      = { [T.DESPAIR]:'-DESPAIR',[T.TERROR]:'-TERROR!',[T.SELF_HARM]:'-SELF·HARM',[T.RAGE]:'-RAGE',[T.HOPELESS]:'-HOPELESS',[T.GLITCH]:'-GLITCH',[T.TRAP]:'-TRAP',[T.PAIN]:'-PAIN' };
@@ -219,6 +220,33 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
       UPG.shieldCount = 0; UPG.comboCount = 0; UPG.resonanceMultiplier = 1;
     }
   }
+
+  // ── Magnet upgrade: auto-collect peace/insight tiles within radius 2 ──
+  if (UPG.magnet) {
+    const MAGNET_R = 2;
+    outer: for (let mdy = -MAGNET_R; mdy <= MAGNET_R; mdy++) {
+      for (let mdx = -MAGNET_R; mdx <= MAGNET_R; mdx++) {
+        if (mdy === 0 && mdx === 0) continue;
+        if (g.peaceLeft <= 0) break outer;
+        const my = g.player.y + mdy, mx = g.player.x + mdx;
+        if (my < 0 || my >= sz || mx < 0 || mx >= sz) continue;
+        const mt = g.grid[my][mx];
+        if (mt === T.PEACE && !g.reverseMode) {
+          g.score += Math.round((80 + g.level * 10) * UPG.resonanceMultiplier);
+          g.hp = Math.min(UPG.maxHp, g.hp + 8);
+          g.grid[my][mx] = T.VOID; g.peaceLeft--;
+          burst(g, mx, my, UPG.particleColor || '#00ffaa', 8, 2);
+          if (g.peaceLeft === 0) { onNextDreamscape(); return true; }
+        } else if (mt === T.INSIGHT) {
+          g.score += Math.round((150 + g.level * 20) * UPG.resonanceMultiplier);
+          setInsightTokens(insightTokens + 1);
+          g.grid[my][mx] = T.VOID; g.insightLeft--;
+          burst(g, mx, my, '#00eeff', 10, 2.5);
+        }
+      }
+    }
+  }
+
   return true;
 }
 

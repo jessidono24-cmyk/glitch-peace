@@ -734,7 +734,22 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
 
-  // ── Alchemy transmutation flash ───────────────────────────────────────
+  // ── Skymap/Ritual: Named constellation reward flash ──────────────────
+  const cfl = window._constellationFlash;
+  if (cfl && cfl.alpha > 0.02) {
+    ctx.globalAlpha = Math.min(1, cfl.alpha);
+    ctx.fillStyle = 'rgba(0,0,12,0.92)'; ctx.fillRect(w/2 - 190, h * 0.35, 380, 54);
+    ctx.strokeStyle = 'rgba(0,238,255,0.55)'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 190, h * 0.35, 380, 54);
+    ctx.fillStyle = '#00eeff'; ctx.shadowColor = '#00ccff'; ctx.shadowBlur = 14;
+    ctx.font = 'bold 14px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('✦ ' + cfl.name + ' ✦', w/2, h * 0.35 + 22); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#446688'; ctx.font = '8px Courier New';
+    ctx.fillText('CONSTELLATION DISCOVERED  ·  +score', w/2, h * 0.35 + 40);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Alchemy flash ─────────────────────────────────────────────────────
   const af = window._alchemyFlash;
   if (af && af.alpha > 0.02) {
     ctx.globalAlpha = Math.min(1, af.alpha);

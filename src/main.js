@@ -4,7 +4,7 @@
 //  Entry point: state machine + game loop.
 //  All game logic lives in src/game/, src/ui/, src/core/.
 // ═══════════════════════════════════════════════════════════════════════
-import { T, DREAMSCAPES, UPGRADE_SHOP, VISION_WORDS, CELL, GAP, PAL_A, PAL_B } from './core/constants.js';
+import { T, DREAMSCAPES, UPGRADE_SHOP, VISION_WORDS, CELL, GAP, PAL_A, PAL_B, CONSTELLATION_NAMES } from './core/constants.js';
 import { CFG, UPG, CURSOR, phase, setPhase, resetUpgrades, resetSession,
          checkOwned, matrixActive, setMatrix, matrixHoldTime, setMatrixHoldTime, addMatrixHoldTime,
          insightTokens, addInsightToken, spendInsightTokens,
@@ -138,6 +138,7 @@ let hallucinations = [];
 let backgroundStars = [];
 let visions = [];
 let interludeState = { text:'', subtext:'', elapsed:0, duration: INTERLUDE_DURATION_MS, minAdvanceMs: INTERLUDE_MIN_ADVANCE_MS, ds:null, nextGame:null };
+let _prevAlchemyPhase = 'nigredo'; // track to call onAuroraPhase only once on transition
 
 const keys = new Set();
 
@@ -572,6 +573,15 @@ function loop(ts) {
         // Phase 8: Record emergence events on tile step
         if (targetTile === 6) { emergenceIndicators.record('insight_accumulation'); dreamYoga.onInsightCollect(); questSystem.onInsightCollect(); }
         if (targetTile === 4 && UPG.comboCount >= 4) emergenceIndicators.record('peace_chain'); // T.PEACE
+        // Skymap/Ritual Space: track star-tile collections and reward named constellation
+        if ((game.playModeId === 'skymap' || game.playModeId === 'ritual_space') && (targetTile === 6 || targetTile === 11)) {
+          game._starsCollected = (game._starsCollected || 0) + 1;
+          if (game._starsCollected % 3 === 0) {
+            const nameIdx = Math.floor(game._starsCollected / 3 - 1) % CONSTELLATION_NAMES.length;
+            window._constellationFlash = { name: CONSTELLATION_NAMES[nameIdx], alpha: 0, timer: 210 };
+            game.score += 400 + game._starsCollected * 50;
+          }
+        }
         // Sigil system: show sigil on INSIGHT(6), ARCHETYPE(11), PEACE(4), MEMORY(15), GLITCH(10)
         if ([4, 6, 10, 11, 15].includes(targetTile)) {
           const sigil = sigilSystem.onSpecialTile(targetTile, adaptiveDifficulty.tier.vocabTier || 'advanced');
@@ -833,8 +843,19 @@ function loop(ts) {
   }
   // ── Quest system tick ────────────────────────────────────────────────
   questSystem.tick();
+  // ── Constellation flash tick ─────────────────────────────────────────
+  const cf = window._constellationFlash;
+  if (cf && cf.timer > 0) {
+    cf.timer--;
+    cf.alpha = cf.timer > 180 ? (210 - cf.timer) / 30 : cf.timer > 30 ? 1 : cf.timer / 30;
+    if (cf.timer === 0) window._constellationFlash = null;
+  }
   // ── Alchemy system tick ──────────────────────────────────────────────
   alchemySystem.tick();
+  // Aurora phase quest trigger: only fire once on phase transition to 'aurora'
+  const _curAlchPhase = alchemySystem.phase;
+  if (_curAlchPhase === 'aurora' && _prevAlchemyPhase !== 'aurora') questSystem.onAuroraPhase();
+  _prevAlchemyPhase = _curAlchPhase;
 
   // ── Expose all system data to window globals (grouped) ──────────────
   window._questData     = questSystem.getAllProgress();
@@ -1116,9 +1137,13 @@ window.addEventListener('keydown', e => {
       if (ready) {
         alchemySystem.tryTransmute(ready, game, burst, _showMsg);
         sfxManager.resume();
-        // Philosopher's stone uses special grand chord; normal transmutation uses shimmer
-        if (window._alchemyFlash?.stone) sfxManager.playPhilosopherStone();
-        else sfxManager.playTransmutation();
+        // Quest hooks: transmutation count + distinct elements used
+        questSystem.onTransmutation();
+        // Philosopher's stone quest hook + SFX
+        if (window._alchemyFlash?.stone) {
+          sfxManager.playPhilosopherStone();
+          questSystem.onPhilosopherStone();
+        } else sfxManager.playTransmutation();
       } else {
         const display = alchemySystem.seedsDisplay || 'none';
         _showMsg('⚗️  NEED 3 OF ONE ELEMENT  ·  seeds: ' + display, '#cc88ff', 50);

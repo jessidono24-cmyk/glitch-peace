@@ -78,6 +78,28 @@ export const QUEST_DEFS = [
     ],
     reward: { score: 3000, xp: 200, msg: 'THE SOVEREIGN QUEST COMPLETE — SA · MCA · sovereignty is yours' },
   },
+  {
+    id: 'the_alchemist',
+    name: 'THE ALCHEMIST',
+    emoji: '⚗️',
+    desc: 'Master the art of transmutation — complete 5 alchemical transmutations.',
+    objectives: [
+      { id: 'transmute_5',       label: 'Perform 5 transmutations',  max: 5  },
+      { id: 'alchemy_elements_3', label: 'Use 3 different elements',  max: 3  },
+    ],
+    reward: { score: 1500, xp: 120, msg: 'THE ALCHEMIST COMPLETE — matter yields to intention' },
+  },
+  {
+    id: 'the_great_work',
+    name: 'THE GREAT WORK',
+    emoji: '🔮',
+    desc: 'Complete the Magnum Opus — achieve the Philosopher\'s Stone through all four classical elements.',
+    objectives: [
+      { id: 'philosopher_stone',  label: 'Forge the Philosopher\'s Stone', max: 1  },
+      { id: 'aurora_phase',       label: 'Reach aurora alchemical phase',  max: 1  },
+    ],
+    reward: { score: 5000, xp: 350, msg: 'THE GREAT WORK COMPLETE — prima materia · the eternal gold' },
+  },
 ];
 
 export class QuestSystem {
@@ -109,6 +131,15 @@ export class QuestSystem {
   onLucidityReached()   { this._inc('the_dreamer',  'lucidity_50',      1); }
   onBossSurvived()      { this._inc('the_sovereign','boss_survived',    1); }
   onComboX4()           { this._inc('the_sovereign','combo_x4',         1); }
+  onTransmutation() {
+    this._inc('the_alchemist',    'transmute_5',         1);
+    this._inc('the_alchemist',    'alchemy_elements_3',  1);
+  }
+  onPhilosopherStone()  {
+    this._inc('the_great_work',   'philosopher_stone',  1);
+    this._inc('the_great_work',   'aurora_phase',       1);
+  }
+  onAuroraPhase()       { this._inc('the_great_work',   'aurora_phase',       1); }
 
   // ─── Core counter ────────────────────────────────────────────────
   _inc(questId, objId, amount) {

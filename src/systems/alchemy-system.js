@@ -119,6 +119,7 @@ export class AlchemySystem {
         if (spec.converts.includes(game.grid[ny][nx])) {
           game.grid[ny][nx] = spec.to;
           changed++;
+          if (burstFn && changed <= 8) burstFn(game, nx, ny, spec.color, 5, 1.5); // per-tile sparkle
         }
       }
     }

@@ -109,3 +109,5 @@ Peace nodes per level: `fibonacci(level + 2)` → 3, 5, 8, 13, 21, 34…
 3. **Player identity is stable** — cyan/white never changes regardless of matrix
 4. **Accessibility first** — reduced motion, high contrast, particle toggle always available
 5. **Hearth is always reachable** — pause anytime, save on pause, no data loss
+6. **Embodiment maximized** — learning through body, action, and experience (see EMBODIMENT.md)
+7. **Effortless by design** — align with natural cognition, not against it (see EFFORTLESS_LEARNING.md)

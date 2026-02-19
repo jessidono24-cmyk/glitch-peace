@@ -70,6 +70,13 @@ Opens at `http://localhost:3000`
 - **[QUICKSTART.md](docs/QUICKSTART.md)** - Getting started guide
 - **[AGENT_TASKS.md](docs/AGENT_TASKS.md)** - Task queue
 
+### Scientific Foundations
+- **[EMBODIMENT.md](docs/EMBODIMENT.md)** - Embodied cognition principles
+- **[COGNITIVE_ARCHITECTURE.md](docs/COGNITIVE_ARCHITECTURE.md)** - Information processing model
+- **[EFFORTLESS_LEARNING.md](docs/EFFORTLESS_LEARNING.md)** - Natural learning design
+- **[PSYCHOLOGY_FOUNDATIONS.md](docs/PSYCHOLOGY_FOUNDATIONS.md)** - Psychological & neuroscience research
+- **[RESEARCH_INTEGRATION.md](docs/RESEARCH_INTEGRATION.md)** - Research file management
+
 ### Development Guides
 - **[BABY_STEPS_GUIDE.md](docs/BABY_STEPS_GUIDE.md)** - Incremental development process
 - **[REPOSITORY_MAP.md](REPOSITORY_MAP.md)** - Visual directory guide
@@ -91,6 +98,8 @@ Each system has its own README:
 4. **Accessibility first** - Everyone can play and learn
 5. **Hearth always reachable** - Safe space always available
 6. **Privacy paramount** - Data stays with player
+7. **Embodiment maximized** - Learning through body, action, experience
+8. **Effortless by design** - Align with natural cognition
 
 ## Development
 

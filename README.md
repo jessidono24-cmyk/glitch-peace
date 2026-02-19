@@ -2,11 +2,11 @@
 
 > **A multidimensional consciousness awakening platform** for healing, learning, and transformation — playable today as an HTML5 game, building toward a free Steam release.
 
-[![Version](https://img.shields.io/badge/version-1.6.2--alpha-blue.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
+[![Version](https://img.shields.io/badge/version-1.7.0--alpha-blue.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
-[![Lines of Code](https://img.shields.io/badge/LOC-10%2C000%2B-orange.svg)](src/)
-[![Progress](https://img.shields.io/badge/completion-56%25-yellow.svg)](#-development-roadmap)
+[![Lines of Code](https://img.shields.io/badge/LOC-11%2C100%2B-orange.svg)](src/)
+[![Progress](https://img.shields.io/badge/completion-60%25-yellow.svg)](#-development-roadmap)
 
 *Begin in stillness. Emerge through pattern recognition. Transform through play.*
 
@@ -86,24 +86,26 @@ Visible in the dreamscape selection screen for each level:
 
 ---
 
-## 📦 Current Version: v1.6.0-alpha (February 2026)
+## 📦 Current Version: v1.7.0-alpha (February 2026)
 
 ### Build Statistics
 | Metric | Value |
 |--------|-------|
-| Source files | 43 JS modules |
-| Lines of code | ~10,200 |
-| Bundle size | 259 KB (86 KB gzipped) |
-| Build time | ~530ms |
-| Completion | ~56% of full vision |
+| Source files | 45 JS modules |
+| Lines of code | ~11,100 |
+| Bundle size | 277 KB (91 KB gzipped) |
+| Build time | ~620ms |
+| Completion | ~60% of full vision |
 
 ### What's In This Build
-- ✅ **Complete base game** (Phases 1-5): 17 tile types + **4 embodiment tiles**, 10 dreamscapes, 5 archetypes, 9 enemy AI behaviors
-- ✅ **4 Somatic Tiles** (Phase 2.6) — BODY_SCAN ◯, BREATH_SYNC ≋, ENERGY_NODE ✦, GROUNDING ⊕ — spawn per dreamscape emotional context
-- ✅ **RPG Character System** (Phase M5 basics) — STR/INT/WIS/VIT stats driven by gameplay; XP + level progression; archetype dialogue panel
-- ✅ **Full Tutorial** (all 10 dreamscapes) — 3 contextual hints per dreamscape, one-at-a-time display with alpha fade
-- ✅ **Grid Mode** (tactical tile-based) + **Shooter Mode** (twin-stick action) with proper pause/resume flow
-- ✅ **13 Play Styles** — Zen, Speedrun, Puzzle, Horror, Roguelike, Training, Boss Rush, Pacifist, Reverse, Ritual, Daily (all wired)
+- ✅ **Complete base game** (Phases 1-5): 17 tile types + **4 embodiment tiles**, **13 dreamscapes**, 5 archetypes, 9 enemy AI behaviors
+- ✅ **4 Somatic Tiles** (Phase 2.6) — BODY_SCAN ◯, BREATH_SYNC ≋, ENERGY_NODE ✦, GROUNDING ⊕ — full animated visuals + somatic SFX
+- ✅ **RPG Character System** (Phase M5) — STR/INT/WIS/VIT stats; XP + level progression; archetype dialogue; **5 main quests** with objective tracking
+- ✅ **Multi-phase Boss System** (Phase M3.5) — 3 boss types (Fear Guardian, Void Keeper, Integration Master), each with 3 phases; special attacks; phase banner; defeat rewards
+- ✅ **3 New Dreamscapes** — Forest Sanctuary 🌲 (ornithology/nature), Mycelium Depths 🍄 (mycology), Ancient Structure 🏛️ (sacred geometry)
+- ✅ **16 Play Modes** (was 13) — **NEW: Bird Watching 🐦, Mycelium Network 🍄, Sacred Architecture 🏛️** with unique grid transforms
+- ✅ **Full Tutorial** (all 13 dreamscapes) — 3 contextual hints per dreamscape
+- ✅ **Grid Mode** (tactical tile-based) + **Shooter Mode** (twin-stick action)
 - ✅ **12 Cosmological Frameworks** — mapped to dreamscapes, visible in selection screen
 - ✅ **Dream Yoga System** (Phase 2.5) — lucidity meter, reality check prompts, dream sign tracking
 - ✅ **Emotional engine** — 10-emotion field with valence, arousal, coherence, 7 synergy patterns
@@ -116,16 +118,13 @@ Visible in the dreamscape selection screen for each level:
 - ✅ **Awareness features** — self-reflection, emergence indicators (12 event types)
 - ✅ **Intelligence enhancement** — IQ/EQ proxy metrics, strategic coaching
 - ✅ **Chakra system** + Tarot archetypes (Phase 10)
-- ✅ **Integration dashboard** (Phase 11) — H key to toggle
-- ✅ **Campaign manager** (Phase M3) — tutorial hints for all 10 dreamscapes, narrative arc
-- ✅ **Procedural audio** — 8 distinct SFX via Web Audio API
-- ✅ **Onboarding flow** — age group, language, difficulty selection; ESC saves preference
+- ✅ **Integration dashboard** (H key) — SESSION, LEARNING, EMERGENCE, CHAKRA, CHARACTER (RPG), IQ/EQ, JOURNEY
+- ✅ **Campaign manager** (Phase M3) — narrative arc for all 13 dreamscapes
+- ✅ **Procedural audio** — 14 distinct SFX (PEACE, INSIGHT, somatic, hazard, death, level-up, boss phase, boss enter, quest complete)
+- ✅ **Onboarding flow** — age group, language, difficulty selection
 - ✅ **HOW TO PLAY screen** — built-in tile guide, controls, matrix system, first-steps walkthrough
-- ✅ **Smooth level transitions** — 10-second readable interlude; player can advance with ENTER/SPACE after 3.5 s; frame-rate independent; race-condition free
-- ✅ **Tile SFX wired** — every tile type has a distinct procedural sound: PEACE chime, INSIGHT crystalline sparkle, somatic warm chord, hazard buzz, death sound, RPG level-up fanfare
-- ✅ **Somatic tile visuals** — BODY_SCAN (breathing rings), BREATH_SYNC (sine wave), ENERGY_NODE (rotating sparkles), GROUNDING (cross+ring) — full animated renders
-- ✅ **RPG level-up detection** — level-up triggers fanfare SFX + HUD message; character stats save on every level-up
-- ✅ **Integration dashboard** — CHARACTER (RPG) panel: Level, XP%, STR/INT/WIS/VIT stats
+- ✅ **Smooth level transitions** — 10-second readable interlude; player-skippable; frame-rate independent
+- ✅ **Boss phase banner** — visible mid-game phase transition announcements with boss quotes
 
 ---
 
@@ -281,33 +280,39 @@ glitch-peace/
 Phase 1-5   ████████████████████ 100% ✅  Foundation, base game
 Phase M1-2  ████████████████████ 100% ✅  Mode system, Shooter
 Phase M3    ████████████████████ 100% ✅  Campaign structure
-Phase M4    ████████████████████ 100% ✅  13 Play Styles
+Phase M4+   ████████████████████ 100% ✅  16 Play Modes (Bird Watching 🐦, Mycelium 🍄, Architecture 🏛️ added)
 Phase 2.5   ████████████████████ 100% ✅  Dream Yoga
 Phase 6-11  ████████████████████ 100% ✅  Learning/Awareness/IQ/Chakra
 Cosmologies ████████████████████ 100% ✅  12 frameworks mapped
-Phase 2.6   ████████████████████ 100% ✅  Embodiment Tiles (BODY_SCAN, BREATH_SYNC, ENERGY_NODE, GROUNDING)
-UX Polish   ████████████████████ 100% ✅  HOW TO PLAY screen; smooth transitions; somatic tile visuals; tile SFX; level-up
+Phase 2.6   ████████████████████ 100% ✅  Embodiment Tiles — animated visuals + somatic SFX
+UX Polish   ████████████████████ 100% ✅  HOW TO PLAY; transitions; somatic visuals; tile SFX; level-up
+Boss System █████████████░░░░░░░  65% 🔨  3 bosses × 3 phases; special attacks; phase banner; rewards
+Quest System████████████░░░░░░░░  60% 🔨  5 main quests wired; progress tracking; quest flash
+Phase M5    ████████████░░░░░░░░  60% 🔨  RPG: stats + XP + level + archetype dialogue + quests
+13 Dreamsc. ██████████████░░░░░░  72% 🔨  13 of 18 target (Forest Sanctuary, Mycelium Depths, Ancient Structure added)
 
-Phase M5    ██░░░░░░░░░░░░░░░░░░  10% 🔨  RPG Mode (character stats + archetype dialogue started)
 Phase M6    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Constellation Mode
-Boss System ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Multi-phase bosses
-8 new dreams░░░░░░░░░░░░░░░░░░░░   0% ⬜  Expanded dreamscapes
 Phase M7    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Platformer / Rhythm
 Phase M8    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Multiplayer / Co-op
 Steam pack  ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Electron + Steamworks
 
-Overall: ~10,200 / 20,000+ lines (~56%)
+Overall: ~11,100 / 18,500 estimated lines (~60%)
 ```
 
 ### 🚧 Next Steps
 
-**Phase M5: RPG Mode** (~2,500 lines) — *10% complete*
-- ✅ Character stats (STR/INT/WIS/VIT + XP + level) driven by gameplay
-- ✅ Archetype dialogue — 5 lines per archetype shown on tile collection
-- ⏳ Dialogue tree expansion — branching responses based on stat levels
-- ⏳ Quest system (main narrative + 5 side quests)
-- ⏳ Inventory system
-- ⏳ Full NPC encounter scenes
+**Dreamscapes** — *72% complete (13/18)*
+- ✅ Original 10 dreamscapes complete (Void, Dragon, Courtyard, Field, Summit, Neighborhood, Bedroom, Aztec, Orb, Integration)
+- ✅ Forest Sanctuary 🌲 — ornithology/nature; bird migration events; somatic habitat tiles
+- ✅ Mycelium Depths 🍄 — mycology; underground network; mycelium growth events
+- ✅ Ancient Structure 🏛️ — sacred geometry; structure reveal events; Void Keeper boss
+- ⏳ 5 more dreamscapes needed (Solar Temple, Deep Ocean, Crystal Cave, Cloud City, Void Nexus)
+
+**Phase M5: RPG Mode** — *60% complete*
+- ✅ Character stats (STR/INT/WIS/VIT + XP + level)
+- ✅ Archetype dialogue — 5 lines per archetype
+- ✅ Quest system — 5 main quests (First Light, Witness, Body, Dreamer, Sovereign)
+- ⏳ Quest rewards inventory display
 
 **Embodiment Deepening** (~1,800 lines)
 - New tiles: `BODY_SCAN`, `BREATH_SYNC`, `ENERGY_NODE`, `GROUNDING`
@@ -373,12 +378,14 @@ GLITCH·PEACE has a clear path to **free Steam release**:
 | **Grid gameplay** | Movement, consequence preview, impulse buffer, spread | ✅ Complete |
 | **Enemy AI** | 9 behaviors (chase, patrol, orbit, adaptive, labyrinth…) | ✅ Complete |
 | **Shooter mode** | Twin-stick, 4 weapons, wave system | ✅ Complete |
-| **10 Dreamscapes** | Unique layouts, narratives, environment events | ✅ Complete |
-| **13 Play Styles** | Zen, Speedrun, Puzzle, Horror, Roguelike, Training… | ✅ Complete |
+| **13 Dreamscapes** | 10 original + 3 new: Forest Sanctuary, Mycelium Depths, Ancient Structure | ✅ Complete |
+| **16 Play Modes** | Zen, Speedrun, Puzzle, Horror, Roguelike, Training, Bird Watching 🐦, Mycelium 🍄, Architecture 🏛️… | ✅ Complete |
+| **Boss system** | 3 bosses × 3 phases; special attacks; phase banner; defeat rewards | ✅ Complete |
+| **Quest system** | 5 main quests (First Light, Witness, Body, Dreamer, Sovereign) tracking player milestones | ✅ Complete |
 | **Onboarding** | Age group, language, difficulty; saved profile | ✅ Complete |
 | **HOW TO PLAY screen** | Tile guide, controls, matrix system, first-steps | ✅ Complete |
 | **Level transitions** | 10 s readable interlude; player-skippable; race-condition free | ✅ Complete |
-| **Tile SFX** | PEACE, INSIGHT, somatic, hazard, death, level-up — all procedural sounds | ✅ Complete |
+| **Tile SFX** | 14 distinct sounds: PEACE, INSIGHT, somatic, hazard, death, level-up, boss, quest | ✅ Complete |
 | **Somatic tile visuals** | Breathing rings, sine wave, rotating sparkles, cross+ring — animated | ✅ Complete |
 | **Integration dashboard** | H-key overlay; SESSION, LEARNING, EMERGENCE, CHAKRA, CHARACTER (RPG), IQ/EQ, JOURNEY | ✅ Complete |
 | **Learning systems** | 19-language vocabulary, sigils, pattern recognition | ✅ Complete |
@@ -389,16 +396,14 @@ GLITCH·PEACE has a clear path to **free Steam release**:
 | **Awareness systems** | Self-reflection, emergence indicators, chakra, tarot | ✅ Complete |
 | **Intelligence layer** | IQ/EQ proxy metrics, strategic coaching, logic puzzles | ✅ Complete |
 | **Cosmologies** | 12 frameworks mapped to dreamscapes | ✅ Complete |
-| **Integration dashboard** | H-key overlay with cross-session progress | ✅ Complete (row removed — see above) |
-| **RPG basics (M5)** | STR/INT/WIS/VIT stats, XP, level, archetype dialogue | 🔨 10% |
-| **Boss system** | Multi-phase bosses, special rewards | ⬜ 0% |
-| **8 new dreamscapes** | Expand to 18 total | ⬜ 0% |
+| **RPG basics (M5)** | STR/INT/WIS/VIT stats, XP, level, archetype dialogue, quest system | 🔨 60% |
+| **5 more dreamscapes** | Expand to 18 total | 🔨 0% (3 of 8 complete) |
 | **Constellation mode (M6)** | Skymap navigation layer | ⬜ 0% |
 | **Platformer/Rhythm (M7)** | New movement mode | ⬜ 0% |
 | **Multiplayer (M8)** | Shared emotional field, co-op | ⬜ 0% |
 | **Steam packaging** | Electron wrapper, Steamworks SDK | ⬜ 0% |
 
-**Overall: ~54% complete.** The game is fully playable end-to-end today. All core healing/learning systems are wired. The remaining 46% is content expansion, deeper RPG systems, and Steam packaging.
+**Overall: ~60% complete.** The game is fully playable end-to-end with boss encounters, quests, 3 nature-themed modes, and 13 dreamscapes. Remaining work is content expansion (5 more dreamscapes, constellation layer) and Steam packaging.
 
 ---
 
@@ -482,7 +487,7 @@ Built on:
 
 ---
 
-**v1.6.2-alpha · February 2026 · 56% Complete**
+**v1.7.0-alpha · February 2026 · 60% Complete**
 [glitch-peace](https://github.com/jessidono24-cmyk/glitch-peace) · [glitch-peace-vite](https://github.com/jessidono24-cmyk/glitch-peace-vite)
 
 *Built with intention. Shared with love. Free always.*

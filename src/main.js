@@ -4,7 +4,7 @@
 //  Entry point: state machine + game loop.
 //  All game logic lives in src/game/, src/ui/, src/core/.
 // ═══════════════════════════════════════════════════════════════════════
-import { DREAMSCAPES, UPGRADE_SHOP, VISION_WORDS, CELL, GAP, PAL_A, PAL_B } from './core/constants.js';
+import { T, DREAMSCAPES, UPGRADE_SHOP, VISION_WORDS, CELL, GAP, PAL_A, PAL_B } from './core/constants.js';
 import { CFG, UPG, CURSOR, phase, setPhase, resetUpgrades, resetSession,
          checkOwned, matrixActive, setMatrix, matrixHoldTime, setMatrixHoldTime, addMatrixHoldTime,
          insightTokens, addInsightToken, spendInsightTokens,
@@ -65,6 +65,10 @@ import { dreamYoga } from './systems/awareness/dream-yoga.js';
 // ─── Phase M5: RPG Basics ─────────────────────────────────────────────────
 import { characterStats } from './systems/rpg/character-stats.js';
 import { archetypeDialogue } from './systems/rpg/archetype-dialogue.js';
+// ─── Phase M3.5: Boss System ──────────────────────────────────────────────
+import { bossSystem, BOSS_TYPES } from './systems/boss-system.js';
+// ─── Phase M5: Quest System ───────────────────────────────────────────────
+import { questSystem } from './systems/rpg/quest-system.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -205,6 +209,29 @@ function triggerEnvironmentEvent(g) {
     // Aztec: seal off random corridors with walls, penalising predictable routes
     let n=0, itr=0; while (n<4&&itr<999) { itr++; const y=1+rnd(sz-2),x=1+rnd(sz-2); if(g.grid[y][x]===0){g.grid[y][x]=5;n++;} }
     _showMsg('THE LABYRINTH SHIFTS…','#cc8800',40);
+  } else if (event === 'bird_migration') {
+    // Forest Sanctuary: spawn clusters of somatic + peace tiles
+    const habTiles = [T.BODY_SCAN, T.BREATH_SYNC, T.ENERGY_NODE, T.GROUNDING, T.PEACE]; // somatic + peace
+    let n=0, itr=0;
+    while (n < 5 && itr < 999) { itr++; const y=rnd(sz),x=rnd(sz); if(g.grid[y][x]===0){g.grid[y][x]=pick(habTiles);n++;} }
+    _showMsg('MIGRATION WAVE — BIRDS ARRIVE','#88ffaa',55);
+  } else if (event === 'mycelium_growth') {
+    // Mycelium Depths: spread ENERGY_NODE / GROUNDING tiles around player
+    for (let dy=-2;dy<=2;dy++) for (let dx=-2;dx<=2;dx++) {
+      const ny=g.player.y+dy, nx=g.player.x+dx;
+      if (ny>=0&&ny<sz&&nx>=0&&nx<sz&&g.grid[ny][nx]===T.VOID&&Math.random()<0.3) {
+        g.grid[ny][nx] = Math.random()<0.5 ? T.ENERGY_NODE : T.GROUNDING;
+      }
+    }
+    _showMsg('MYCELIUM GROWS…','#88ddaa',50);
+  } else if (event === 'structure_reveal') {
+    // Ancient Structure: reveal HIDDEN→INSIGHT; spawn COVER + MEMORY tiles
+    let n=0;
+    for (let y=0;y<sz&&n<4;y++) for (let x=0;x<sz&&n<4;x++) {
+      if (g.grid[y][x]===T.HIDDEN) { g.grid[y][x]=T.INSIGHT; n++; }
+    }
+    let m=0,itr=0; while(m<3&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===T.VOID){g.grid[y][x]=Math.random()<0.5?T.COVER:T.MEMORY;m++;}}
+    _showMsg('ANCIENT STRUCTURE REVEALS…','#aa88cc',50);
   }
   if (Math.random() < 0.4) {
     const row = rnd(sz);
@@ -270,6 +297,7 @@ function startGame(dreamIdx) {
   // Phase M5: reset RPG session
   characterStats.resetSession();
   archetypeDialogue.reset();
+  bossSystem.reset();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -298,12 +326,25 @@ function nextDreamscape() {
   const milestone = campaignManager.onDreamscapeComplete(g.ds.id % DREAMSCAPES.length, g.score);
   // Phase M5: RPG — reward XP on dreamscape completion
   characterStats.onDreamComplete();
+  // Quest: dream completion
+  questSystem.onDreamComplete(g.ds.id);
+  // Boss system: reset on dreamscape change
+  bossSystem.reset();
 
   // Pre-build next game immediately so it is ready when the player dismisses the interlude.
   // Storing it in interludeState avoids any setTimeout race conditions.
   resizeCanvas();
   const nextGame = initGame(nextIdx, g.score + 400 + g.level * 60, g.level, g.hp);
   nextGame.msg = DREAMSCAPES[nextIdx].name; nextGame.msgColor = '#ffdd00'; nextGame.msgTimer = 90;
+
+  // Boss spawn: integration dreamscape always spawns a boss; boss rush already handled in applyPlayMode
+  if (DREAMSCAPES[nextIdx].id === 'integration' && !nextGame.boss) {
+    bossSystem.spawnBossForGame(nextGame, 'integration_master');
+    sfxManager.playBossEnter();
+  } else if (DREAMSCAPES[nextIdx].id === 'ancient_structure' && !nextGame.boss) {
+    bossSystem.spawnBossForGame(nextGame, 'void_keeper');
+    sfxManager.playBossEnter();
+  }
 
   interludeState = {
     text: g.ds.completionText,
@@ -426,6 +467,7 @@ function loop(ts) {
     topSign:   dreamYoga.topDreamSign,
     checks:    dreamYoga.totalChecks,
   };
+  if (dreamYoga.lucidity >= 50) questSystem.onLucidityReached();
 
   const MOVE_DELAY = UPG.moveDelay * (game.slowMoves ? 1.5 : 1) * (game.ritualSlowMul || 1);
   const DIRS = {
@@ -461,9 +503,10 @@ function loop(ts) {
         if (targetTile === 4) { // T.PEACE
           patternRecognition.onPeaceCollected(game.peaceLeft);
           dreamYoga.onPeaceCollect();
+          questSystem.onPeaceCollect();
         }
         // Phase 8: Record emergence events on tile step
-        if (targetTile === 6) { emergenceIndicators.record('insight_accumulation'); dreamYoga.onInsightCollect(); }
+        if (targetTile === 6) { emergenceIndicators.record('insight_accumulation'); dreamYoga.onInsightCollect(); questSystem.onInsightCollect(); }
         if (targetTile === 4 && UPG.comboCount >= 4) emergenceIndicators.record('peace_chain'); // T.PEACE
         // Sigil system: show sigil on INSIGHT(6), ARCHETYPE(11), PEACE(4), MEMORY(15), GLITCH(10)
         if ([4, 6, 10, 11, 15].includes(targetTile)) {
@@ -472,12 +515,19 @@ function loop(ts) {
         }
         // Dream yoga: record dream sign for every special tile
         dreamYoga.onTileStep(targetTile);
+        // Quest: somatic tile hooks
+        if (targetTile === 17) questSystem.onBodyScanTile();     // T.BODY_SCAN
+        if (targetTile === 18) questSystem.onBreathSyncTile();   // T.BREATH_SYNC
+        if (targetTile === 19) questSystem.onEnergyNodeTile();   // T.ENERGY_NODE
+        if (targetTile === 20) questSystem.onGroundingTile();    // T.GROUNDING
       }
       // Phase 9: track move mindfulness
       const wasPreviewActive = consequencePreview.active && consequencePreview.ghostPath.length > 0;
       const wasImpulseActive = !!impulseBuffer.activeDirection;
-      if (wasPreviewActive || wasImpulseActive) { strategicThinking.onMindfulMove(); characterStats.onMindfulMove(); }
-      else strategicThinking.onImpulsiveMove();
+      if (wasPreviewActive || wasImpulseActive) {
+        strategicThinking.onMindfulMove(); characterStats.onMindfulMove();
+        questSystem.onPreviewMove();
+      } else strategicThinking.onImpulsiveMove();
       logicPuzzles.onMove(wasPreviewActive, wasImpulseActive);
       // Phase M5: RPG stat events on each move
       const _prevLevel = characterStats.level;
@@ -493,11 +543,18 @@ function loop(ts) {
         sfxManager.playLevelUp();
         _showMsg('LEVEL UP!  RPG·' + characterStats.level, '#ffdd88', 90);
       }
+      // Quest: ×4 combo check
+      if (UPG.resonanceMultiplier >= 4) questSystem.onComboX4();
       sfxManager.resume();
       if (targetTile === 4)              sfxManager.playPeaceCollect();   // T.PEACE
       else if (targetTile === 6)         sfxManager.playInsightCollect(); // T.INSIGHT
       else if (SOMATIC_TILES.has(targetTile)) sfxManager.playSomaticTile();   // somatic
       else if (HAZARD_TILES.has(targetTile))  sfxManager.playDamage();        // hazards
+      // Quest flash → play quest SFX exactly once on new quest completion
+      if (window._questFlash?.playSound) {
+        sfxManager.playQuestComplete();
+        window._questFlash.playSound = false;
+      }
       // Play Mode: count moves for puzzle mode
       if (game.moveLimit) {
         game.movesRemaining = Math.max(0, (game.movesRemaining || game.moveLimit) - 1);
@@ -666,10 +723,25 @@ function loop(ts) {
   // Trigger archetype dialogue if archetype tile was just activated
   if (game.lastArchetypeActivated) {
     archetypeDialogue.onArchetypeCollect(game.lastArchetypeActivated);
+    questSystem.onArchetypeActivated();
     game.lastArchetypeActivated = null;
   }
   window._archetypeDialogue = archetypeDialogue.active;
   window._characterStats    = characterStats.statObj;
+
+  // ── Phase M3.5: Boss System tick ────────────────────────────────────
+  if (game.boss) {
+    const _wasBossAlive = game.boss.hp > 0;
+    bossSystem.update(game, dt, sfxManager, _showMsg, burst);
+    if (_wasBossAlive && game.boss.hp <= 0) {
+      questSystem.onBossSurvived();
+      emergenceIndicators.record('dream_completion'); // boss defeat = emergence event
+    }
+  }
+  // ── Quest system tick ────────────────────────────────────────────────
+  questSystem.tick();
+  // Expose play mode label for renderer
+  window._playModeLabel = game.playModeLabel || null;
 
   if (game.hp <= 0) {
     sfxManager.playDeath();
@@ -887,12 +959,13 @@ window.addEventListener('keydown', e => {
       if (e.key==='Escape') { shooterMode.paused = true; CURSOR.pause=0; setPhase('paused'); }
       e.preventDefault(); return;
     }
-    if (e.key==='Escape') { CURSOR.pause=0; sessionTracker.pauseSession(); emergenceIndicators.record('pause_frequency'); characterStats.onPauseUsed(); dashboard.hide(); setPhase('paused'); }
+    if (e.key==='Escape') { CURSOR.pause=0; sessionTracker.pauseSession(); emergenceIndicators.record('pause_frequency'); characterStats.onPauseUsed(); questSystem.onPause(); dashboard.hide(); setPhase('paused'); }
     if ((e.key==='h'||e.key==='H') && !e.repeat) dashboard.toggle();
     if (e.key==='Shift' && !e.repeat) {
       const next = matrixActive === 'A' ? 'B' : 'A';
       setMatrix(next); setMatrixHoldTime(0);
       sfxManager.resume(); sfxManager.playMatrixSwitch(next === 'A');
+      questSystem.onMatrixSwitch();
       emergenceIndicators.record('matrix_mastery');
       logicPuzzles.onMatrixSwitch();  // Phase 9
       dreamYoga.onMatrixSwitch();     // Phase 2.5

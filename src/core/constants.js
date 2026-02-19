@@ -168,6 +168,31 @@ export const DREAMSCAPES = [
     specialTiles:[T.ARCHETYPE,T.TELEPORT,T.INSIGHT,T.HIDDEN], enemyBehavior:'predictive', enemyCount:7, environmentEvent:'mashup',
     narrative:'all dreamscapes converge… integrate', completionText:'SA · MCA · MNF · SC — the sovereignty is yours',
   },
+  // ── New dreamscapes ─────────────────────────────────────────────────────
+  {
+    id:'forest_sanctuary', name:'FOREST SANCTUARY', subtitle:'ornithology · nature · somatic restoration',
+    matrixDefault:'B', bgColor:'#010a04', bgAccent:'#003316', emotion:'wonder',
+    archetype:null,
+    hazardSet:[], hazardCounts:[],
+    specialTiles:[T.BODY_SCAN,T.BREATH_SYNC,T.GROUNDING,T.ENERGY_NODE], enemyBehavior:'wander', enemyCount:0, environmentEvent:'bird_migration',
+    narrative:'the forest holds still… observe', completionText:'you returned from the forest renewed…',
+  },
+  {
+    id:'mycelium_depths', name:'MYCELIUM DEPTHS', subtitle:'mycology · underground network · deep wisdom',
+    matrixDefault:'B', bgColor:'#020502', bgAccent:'#001800', emotion:'wonder',
+    archetype:'child',
+    hazardSet:[T.DESPAIR,T.HOPELESS], hazardCounts:[3,3],
+    specialTiles:[T.ENERGY_NODE,T.BREATH_SYNC,T.INSIGHT], enemyBehavior:'wander', enemyCount:2, environmentEvent:'mycelium_growth',
+    narrative:'the network breathes beneath you…', completionText:'you mapped the mycelium… the network sings',
+  },
+  {
+    id:'ancient_structure', name:'ANCIENT STRUCTURE', subtitle:'architecture · sacred geometry · enduring forms',
+    matrixDefault:'B', bgColor:'#050408', bgAccent:'#100820', emotion:'awe',
+    archetype:'protector',
+    hazardSet:[T.GLITCH,T.HIDDEN,T.TRAP], hazardCounts:[4,6,3],
+    specialTiles:[T.COVER,T.MEMORY,T.ARCHETYPE,T.GROUNDING], enemyBehavior:'patrol', enemyCount:3, environmentEvent:'structure_reveal',
+    narrative:'the stones remember…', completionText:'the structure stands complete… you built it',
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════

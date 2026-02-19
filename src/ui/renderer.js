@@ -258,16 +258,43 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     ctx.beginPath(); ctx.arc(px + CELL / 2, py + CELL / 2 + 2, 4, 0, Math.PI * 2); ctx.fill();
   }
 
-  // Boss
+  // Boss — multi-phase render
   if (g.boss && g.boss.hp > 0) {
     const b = g.boss;
-    const px = sx + b.x * (CELL + GAP), py = sy + b.y * (CELL + GAP);
+    const bx = sx + b.x * (CELL + GAP), by = sy + b.y * (CELL + GAP);
     const pulse = 0.5 + 0.5 * Math.sin(ts * 0.005);
-    ctx.shadowColor = '#ff00aa'; ctx.shadowBlur = 28 * pulse;
-    ctx.fillStyle = '#330022'; ctx.beginPath(); ctx.roundRect(px + 1, py + 1, CELL - 2, CELL - 2, 8); ctx.fill();
-    ctx.fillStyle = '#ff00aa'; ctx.beginPath(); ctx.arc(px + CELL / 2, py + CELL / 2, CELL * 0.3 + 4 * pulse, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ffccee'; ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'center';
-    ctx.fillText('HP:' + b.hp, px + CELL / 2, py + CELL / 2 + 4);
+    const bColor = b.color || '#ff00aa', bGlow = b.glow || '#ff00aa';
+    const bPhase = b.phaseIdx || 0;
+    ctx.shadowColor = bGlow; ctx.shadowBlur = 36 * pulse;
+    // Background cell — phase-tinted
+    const bgColors = ['#330022', '#220033', '#0d0d0d'];
+    ctx.fillStyle = bgColors[bPhase] || '#330022';
+    ctx.beginPath(); ctx.roundRect(bx + 1, by + 1, CELL - 2, CELL - 2, 8); ctx.fill();
+    // Core orb
+    ctx.fillStyle = bColor;
+    ctx.beginPath();
+    ctx.arc(bx + CELL / 2, by + CELL / 2, (CELL * 0.28 + 4 * pulse) * (1 + bPhase * 0.1), 0, Math.PI * 2);
+    ctx.fill();
+    // Phase 2+: orbital ring
+    if (bPhase >= 1) {
+      ctx.strokeStyle = bColor + 'aa'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(bx + CELL / 2, by + CELL / 2, CELL * 0.44 + 2 * pulse, 0, Math.PI * 2); ctx.stroke();
+    }
+    // Phase 3: orbiting sparkles
+    if (bPhase >= 2) {
+      const ang = ts * 0.015;
+      for (let i = 0; i < 3; i++) {
+        const a = ang + i * Math.PI * 2 / 3, r = CELL * 0.44;
+        ctx.fillStyle = bColor;
+        ctx.beginPath(); ctx.arc(bx + CELL / 2 + Math.cos(a) * r, by + CELL / 2 + Math.sin(a) * r, 3, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    // HP + phase label text
+    const hpPct = b.hp / (b.maxHp || b.hp);
+    ctx.fillStyle = '#ffccee'; ctx.shadowBlur = 0;
+    ctx.font = 'bold 7px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText((b.phaseLabel || 'BOSS'), bx + CELL / 2, by + CELL / 2 - 3);
+    ctx.fillText(Math.round(hpPct * 100) + '%', bx + CELL / 2, by + CELL / 2 + 8);
     ctx.textAlign = 'left'; ctx.shadowBlur = 0;
   }
 
@@ -448,7 +475,7 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = '#445566'; ctx.font = '10px Courier New'; ctx.fillText('LVL ' + g.level, w - 12, 30);
   ctx.fillStyle = '#005533'; ctx.fillText('◈×' + g.peaceLeft, w - 12, 44);
   ctx.fillStyle = '#223344'; ctx.font = '8px Courier New';
-  ctx.fillText((window._dreamIdx + 1 || 1) + '/10 DREAMS', w - 12, 58);
+  ctx.fillText((window._dreamIdx + 1 || 1) + '/13 DREAMS', w - 12, 58);
   // Temporal system info (lunar + planet)
   const tmods = window._tmods;
   if (tmods) {
@@ -576,6 +603,52 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     ctx.fillText(banner.description, w/2, h/2 + 4);
     ctx.fillStyle = '#665544'; ctx.font = '8px Courier New';
     ctx.fillText(banner.fact, w/2, h/2 + 20);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Boss phase banner ─────────────────────────────────────────────────
+  const bpb = window._bossPhaseBanner;
+  if (bpb && bpb.alpha > 0.02) {
+    ctx.globalAlpha = Math.min(1, bpb.alpha);
+    ctx.fillStyle = 'rgba(0,0,0,0.88)'; ctx.fillRect(w/2 - 170, h * 0.14, 340, 60);
+    ctx.strokeStyle = bpb.color + '88'; ctx.lineWidth = 2;
+    ctx.strokeRect(w/2 - 170, h * 0.14, 340, 60);
+    ctx.fillStyle = bpb.color; ctx.shadowColor = bpb.color; ctx.shadowBlur = 14;
+    ctx.font = 'bold 13px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(bpb.text, w/2, h * 0.14 + 20); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#aa8888'; ctx.font = 'italic 9px Courier New';
+    ctx.fillText('"' + (bpb.quote || '') + '"', w/2, h * 0.14 + 38);
+    ctx.fillStyle = '#553333'; ctx.font = '7px Courier New';
+    ctx.fillText('hold your ground', w/2, h * 0.14 + 52);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Quest completion flash ────────────────────────────────────────────
+  const qf = window._questFlash;
+  if (qf && qf.alpha > 0.02) {
+    ctx.globalAlpha = Math.min(1, qf.alpha);
+    ctx.fillStyle = 'rgba(0,0,0,0.88)'; ctx.fillRect(w/2 - 170, h * 0.82, 340, 54);
+    ctx.strokeStyle = '#ffdd88aa'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 170, h * 0.82, 340, 54);
+    ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 10;
+    ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(qf.emoji + '  QUEST COMPLETE  ' + qf.emoji, w/2, h * 0.82 + 16); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ddeedd'; ctx.font = '9px Courier New';
+    ctx.fillText(qf.text, w/2, h * 0.82 + 32);
+    ctx.fillStyle = '#556644'; ctx.font = '7px Courier New';
+    ctx.fillText(qf.name, w/2, h * 0.82 + 46);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Play mode label (ornithology / mycology / architecture) ──────────
+  const pml = window._playModeLabel;
+  if (pml) {
+    ctx.globalAlpha = 0.65;
+    ctx.fillStyle = '#001408'; ctx.fillRect(w/2 - 140, sy + gp + 8, 280, 18);
+    ctx.strokeStyle = 'rgba(0,255,136,0.15)'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 140, sy + gp + 8, 280, 18);
+    ctx.fillStyle = '#00aa55'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(pml, w/2, sy + gp + 21);
     ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
 

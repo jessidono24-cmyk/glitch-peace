@@ -454,6 +454,71 @@ export class SFXManager {
 
 
   /**
+   * Play boss phase transition (tension: descending sawtooth cascade)
+   */
+  playBossPhase() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    for (let i = 0; i < 4; i++) {
+      const osc = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      osc.type = 'sawtooth';
+      const t = now + i * 0.1;
+      osc.frequency.setValueAtTime(440 - i * 40, t);
+      osc.frequency.exponentialRampToValueAtTime(220 - i * 20, t + 0.18);
+      gain.gain.setValueAtTime(0.1, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      osc.connect(gain); gain.connect(this.masterGain);
+      osc.start(t); osc.stop(t + 0.18);
+    }
+  }
+
+  /**
+   * Play boss enter / spawn (ominous deep power chord)
+   */
+  playBossEnter() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    const freqs = [55, 82.5, 110]; // A1, E2, A2 — deep power chord
+    freqs.forEach((freq, i) => {
+      const osc = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.value = freq;
+      const t = now + i * 0.12;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.15, t + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
+      osc.connect(gain); gain.connect(this.masterGain);
+      osc.start(t); osc.stop(t + 1.1);
+    });
+  }
+
+  /**
+   * Play quest complete (bright ascending 5-note fanfare)
+   */
+  playQuestComplete() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    const notes = [392, 523.25, 659.25, 784, 1047]; // G4, C5, E5, G5, C6
+    notes.forEach((freq, i) => {
+      const osc = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const t = now + i * 0.09;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.13, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      osc.connect(gain); gain.connect(this.masterGain);
+      osc.start(t); osc.stop(t + 0.5);
+    });
+  }
+
+  /**
    * Play player hurt (low thud + static)
    */
   playPlayerHurt() {

@@ -4,7 +4,6 @@ import { CFG, UPG } from '../core/state.js';
 import { rnd, pick, clamp } from '../core/utils.js';
 import { DIFF_CFG } from '../core/constants.js';
 import { burst } from './particles.js';
-import { sfxManager } from '../audio/sfx-manager.js';
 
 export function stepEnemies(game, dt, keys, matrixActive, hallucinations, showMsg, setEmotion) {
   const g = game;
@@ -16,7 +15,7 @@ export function stepEnemies(game, dt, keys, matrixActive, hallucinations, showMs
 
   const slowMul   = g.slowMoves ? 1.5 : 1.0;
   const baseSpeed = d.eSpeedBase - g.level * 30;
-  const mSpeed    = Math.max(d.eSpeedMin, baseSpeed) * (matrixActive === 'A' ? 0.65 : 1.0) * slowMul * (g.temporalEnemyMul ?? 1.0);
+  const mSpeed    = Math.max(d.eSpeedMin, baseSpeed) * (matrixActive === 'A' ? 0.65 : 1.0) * slowMul;
 
   // Hallucinations (level 3+)
   if (g.level >= 3) {
@@ -165,13 +164,11 @@ export function stepEnemies(game, dt, keys, matrixActive, hallucinations, showMs
     if (e.y === g.player.y && e.x === g.player.x) {
       if (UPG.shield && UPG.shieldTimer > 0) {
         e.stunTimer = 1300;
-        sfxManager.playEnemyHit();
         showMsg('SHIELD HELD!', '#00ffcc', 38);
         burst(g, g.player.x, g.player.y, '#00ffcc', 14, 3);
       } else {
         const dmg = Math.round(22 * d.dmgMul * (matrixActive === 'A' ? 1.3 : 1));
         g.hp = Math.max(0, g.hp - dmg);
-        sfxManager.playDamage();
         g.shakeFrames = 8; g.flashColor = '#ff2200'; g.flashAlpha = 0.35;
         burst(g, g.player.x, g.player.y, '#ff4400', 16, 4);
         e.stunTimer = 900; UPG.shieldCount = 0; UPG.comboCount = 0;

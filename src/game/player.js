@@ -3,16 +3,10 @@ import { T, TILE_DEF, ARCHETYPES, CELL, GAP } from '../core/constants.js';
 import { CFG, UPG } from '../core/state.js';
 import { rnd, pick } from '../core/utils.js';
 import { burst, resonanceWave, addEcho } from './particles.js';
-import { sfxManager } from '../audio/sfx-manager.js';
 
 export function setEmotion(g, em) {
-  // Push the emotion event into the EmotionalField if available
-  if (window._emotionalField) {
-    window._emotionalField.addEmotion(em, 0.6);   // 0.6 = moderate intensity
-  }
-  // Keep legacy fields for any renderer code still reading them
-  UPG.emotion = em;
-  g.slowMoves = (em === 'hopeless' || em === 'despair');
+  UPG.emotion = em; UPG.emotionTimer = 120;
+  g.emotionTimer = 120; g.slowMoves = (em === 'hopeless' || em === 'despair');
 }
 
 export function showMsg(g, text, color, timer) {
@@ -106,9 +100,8 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
   const d = { dmgMul: CFG.difficulty === 'hard' ? 1.45 : CFG.difficulty === 'easy' ? 0.55 : 1.0 };
 
   if (tileType === T.PEACE) {
-    sfxManager.playPeaceCollect();
     const pts = Math.round((150 + g.level * 20) * UPG.resonanceMultiplier);
-    g.score += pts; g.hp = Math.min(UPG.maxHp, g.hp + Math.round(20 * (g.healMul ?? 1)));
+    g.score += pts; g.hp = Math.min(UPG.maxHp, g.hp + 20);
     g.grid[ny][nx] = T.VOID; g.peaceLeft--;
     burst(g, nx, ny, UPG.particleColor, 18, 3.5);
     UPG.shieldCount++; UPG.comboCount++;
@@ -123,10 +116,10 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
       onMsg('+PEACE +' + pts + (UPG.comboCount > 1 ? ' ×' + UPG.resonanceMultiplier.toFixed(1) : ''), '#00ffcc', 38);
     }
     setEmotion(g, 'peace');
-    if (g.peaceLeft === 0) { sfxManager.playLevelComplete(); onNextDreamscape(); }
+    if (g.peaceLeft === 0) onNextDreamscape();
 
   } else if (tileType === T.INSIGHT) {
-    const pts = Math.round((300 + g.level * 50) * UPG.resonanceMultiplier * (g.insightMul ?? 1.0));
+    const pts = Math.round((300 + g.level * 50) * UPG.resonanceMultiplier);
     g.score += pts; setInsightTokens(insightTokens + 1);
     g.grid[ny][nx] = T.VOID; g.insightLeft--;
     burst(g, nx, ny, '#00eeff', 24, 4);
@@ -159,7 +152,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
       onMsg('SHIELDED', '#00ffcc', 20);
     } else {
       const def = TILE_DEF[tileType];
-      let dmg = Math.round(def.dmg * d.dmgMul * (matrixActive === 'A' ? 1.25 : 1) * (g.dmgMul ?? 1));
+      let dmg = Math.round(def.dmg * d.dmgMul * (matrixActive === 'A' ? 1.25 : 1));
       if (tileType === T.RAGE && def.push > 0) {
         const pby = ny + dy * def.push, pbx = nx + dx * def.push;
         if (pby >= 0 && pby < sz && pbx >= 0 && pbx < sz && g.grid[pby][pbx] !== T.WALL) {
@@ -175,7 +168,6 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
         if (sy >= 0 && sy < sz && sx >= 0 && sx < sz && g.grid[sy][sx] === T.VOID) g.grid[sy][sx] = T.DESPAIR;
       }
       g.hp = Math.max(0, g.hp - dmg);
-      sfxManager.playDamage();
       g.shakeFrames = 5;
       const dmgColors = { [T.DESPAIR]:'#2244ff',[T.TERROR]:'#ff0000',[T.SELF_HARM]:'#660000',[T.RAGE]:'#ff0044',[T.HOPELESS]:'#004488',[T.GLITCH]:'#aa00ff',[T.TRAP]:'#ff8800',[T.PAIN]:'#440000' };
       const pColors   = { [T.DESPAIR]:'#3355ff',[T.TERROR]:'#ff2222',[T.SELF_HARM]:'#880000',[T.RAGE]:'#ff0044',[T.HOPELESS]:'#004488',[T.GLITCH]:'#aa00ff',[T.TRAP]:'#ff8800',[T.PAIN]:'#440000' };

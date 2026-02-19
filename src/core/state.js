@@ -82,13 +82,8 @@ export function checkOwned(id) {
 // ═══════════════════════════════════════════════════════════
 //  PHASE / SCREEN STATE
 // ═══════════════════════════════════════════════════════════
-
 export let phase = 'title';
-if (typeof window !== 'undefined') window.phase = phase;
-export function setPhase(p) {
-  phase = p;
-  if (typeof window !== 'undefined') window.phase = phase;
-}
+export function setPhase(p) { phase = p; }
 
 // Menu cursor positions
 export const CURSOR = {
@@ -98,9 +93,4 @@ export const CURSOR = {
   shop:    0,
   dream:   0,
   upgradeFrom: 'title',
-  selectedMode: 'grid',  // Default to grid mode
 };
-
-// ─── Realm state (E4) ────────────────────────────────────────────────────
-export let purgDepth = 0.45;
-export function setPurgDepth(v) { purgDepth = Math.max(0, Math.min(1, v)); }

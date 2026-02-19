@@ -9,7 +9,7 @@ import { CFG, UPG, CURSOR, phase, setPhase, resetUpgrades, resetSession,
          checkOwned, matrixActive, setMatrix, matrixHoldTime, setMatrixHoldTime, addMatrixHoldTime,
          insightTokens, addInsightToken, spendInsightTokens,
          sessionRep, addSessionRep, dreamHistory, pushDreamHistory,
-         highScores, setHighScores, purgDepth, setPurgDepth } from './core/state.js';
+         highScores, setHighScores } from './core/state.js';
 import { rnd, pick } from './core/utils.js';
 import { saveHighScores, loadHighScores } from './core/storage.js';
 import { SZ, DIFF, GP, CW, CH, buildDreamscape } from './game/grid.js';
@@ -20,14 +20,6 @@ import { burst, resonanceWave } from './game/particles.js';
 import { drawGame } from './ui/renderer.js';
 import { drawTitle, drawDreamSelect, drawOptions, drawHighScores,
          drawUpgradeShop, drawPause, drawInterlude, drawDead } from './ui/menus.js';
-import { EmotionalField } from './systems/emotional-engine.js';
-import { temporalSystem } from './systems/temporal-system.js';
-import { ImpulseBuffer } from './recovery/impulse-buffer.js';
-import { ConsequencePreview } from './recovery/consequence-preview.js';
-import { sfxManager } from './audio/sfx-manager.js';
-import { ModeManager } from './modes/mode-manager.js';
-import { GridMode } from './modes/grid-mode.js';
-import { ShooterMode } from './modes/shooter-mode.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -46,7 +38,6 @@ resizeCanvas();
 
 // ─── Runtime globals ────────────────────────────────────────────────────
 let game       = null;
-window._game = game;
 let animId     = null;
 let prevTs     = 0;
 let lastMove   = 0;
@@ -55,31 +46,16 @@ let lastMove   = 0;
 window._insightTokens = insightTokens;
 window._dreamIdx      = CFG.dreamIdx;
 
-window._temporalSystem = temporalSystem;
-
 let glitchFrames = 0, glitchTimer = 500;
 let anomalyActive = false, anomalyData = { row:-1, col:-1, t:0 };
 let hallucinations = [];
 let backgroundStars = [];
 let visions = [];
 let interludeState = { text:'', subtext:'', timer:0, ds:null };
-// ─── Emotional field (E1) ────────────────────────────────────────────────
-let emotionalField = new EmotionalField();
-window._emotionalField = emotionalField;   // lets renderer read it without circular import
-
-// ─── Pattern Recognition (Phase 4) ───────────────────────────────────────
-let impulseBuffer = new ImpulseBuffer();
-let consequencePreview = new ConsequencePreview();
-window._impulseBuffer = impulseBuffer;
-window._consequencePreview = consequencePreview;
 
 const keys = new Set();
-window._keys = keys;
 
-// ─── Stars / visions (shared with modes) ────────────────────────────────
-// Note: GridMode manages its own stars/visions, these are kept for menu screens
-// (Variables already declared above around line 59-64)
-
+// ─── Stars / visions ────────────────────────────────────────────────────
 function initStars(w, h) {
   backgroundStars = [];
   for (let i = 0; i < 30; i++)
@@ -88,31 +64,11 @@ function initStars(w, h) {
 
 function spawnVisions(w, h) {
   visions = [];
-  for (let i = 0; i < 5; i++) {
-    visions.push({
-      text: pick(VISION_WORDS),
-      x: Math.random() * w,
-      y: Math.random() * h,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3,
-      a: 0.15 + Math.random() * 0.2,
-      scale: 0.5 + Math.random() * 0.5
-    });
-  }
+  for (let i = 0; i < 5; i++)
+    visions.push({ text:pick(VISION_WORDS), x:40+Math.random()*(w-80), y:90+Math.random()*(h-140),
+      alpha:0, targetAlpha:0.04+Math.random()*0.07, life:200+rnd(500), maxLife:700,
+      dx:(Math.random()-0.5)*0.05, dy:-0.03-Math.random()*0.04 });
 }
-
-// ─── Mode Manager (Phase M1) ─────────────────────────────────────────────
-const sharedSystems = {
-  emotionalField,
-  temporalSystem,
-  sfxManager,
-  impulseBuffer,
-  consequencePreview
-};
-const modeManager = new ModeManager(sharedSystems);
-modeManager.registerMode('grid', GridMode);
-modeManager.registerMode('shooter', ShooterMode);
-window._modeManager = modeManager;
 
 // ─── Helpers shared across systems ──────────────────────────────────────
 function _showMsg(text, color, timer) { if (game) { game.msg = text; game.msgColor = color; game.msgTimer = timer; } }
@@ -126,35 +82,86 @@ function saveScore(score, level, ds) {
   saveHighScores(trimmed);
 }
 
-function startGame(dreamIdx, mode = null) {
-  resetUpgrades(); resetSession();
-  emotionalField = new EmotionalField();
-  window._emotionalField = emotionalField;
-  temporalSystem.refresh();
-  impulseBuffer.reset();
-  consequencePreview.deactivate();
-  sfxManager.resume(); // Resume audio context on user interaction
-  
-  // Update shared systems reference
-  sharedSystems.emotionalField = emotionalField;
-  
-  // Initialize selected mode through ModeManager
-  const selectedMode = mode || CURSOR.selectedMode || 'grid';
+// ─── Environment events ─────────────────────────────────────────────────
+function triggerEnvironmentEvent(g) {
+  const event = g.ds.environmentEvent, sz = g.sz;
+  if (!event) return;
+  if (event === 'gravity_shift') {
+    const [dy, dx] = pick([[-1,0],[1,0],[0,-1],[0,1]]);
+    const ny = g.player.y+dy, nx = g.player.x+dx;
+    if (ny>=0&&ny<sz&&nx>=0&&nx<sz&&g.grid[ny][nx]!==5) { g.player.y=ny; g.player.x=nx; _showMsg('GRAVITY SHIFTS…','#8888ff',40); }
+  } else if (event === 'loop_reset') {
+    for (let dy=-2;dy<=2;dy++) for (let dx=-2;dx<=2;dx++) {
+      const ny=g.player.y+dy, nx=g.player.x+dx;
+      if (ny>=0&&ny<sz&&nx>=0&&nx<sz&&g.grid[ny][nx]===0&&Math.random()<0.25) g.grid[ny][nx]=8;
+    }
+    _showMsg('THE LOOP TIGHTENS…','#ff8800',40);
+  } else if (event === 'capture_zones') {
+    const e = pick(g.enemies); if (e) g.captureZones = [{ x:e.x, y:e.y, r:2, timer:300 }];
+    _showMsg('CAPTURE ZONE ACTIVATED','#ff2244',40);
+  } else if (event === 'rapid_spawn') {
+    if (g.enemies.length < 10) {
+      const y=2+rnd(sz-4), x=2+rnd(sz-4);
+      g.enemies.push({ y, x, timer:0, stunTimer:0, behavior:'rush', patrolAngle:0, orbitAngle:0, orbitR:2, prevY:y, prevX:x, momentum:[0,0], type:'rush' });
+      _showMsg('CHAOS ERUPTS!','#ff0044',40);
+    }
+  } else if (event === 'wall_phase') {
+    let n=0;
+    for (let y=0;y<sz&&n<4;y++) for (let x=0;x<sz&&n<4;x++) if (g.grid[y][x]===5&&Math.random()<0.3) { g.grid[y][x]=10; n++; }
+    _showMsg('MEMBRANE DISSOLVES…','#00ccff',40);
+  } else if (event === 'glide_nodes') {
+    let n=0, itr=0; while (n<2&&itr<999) { itr++; const y=rnd(sz),x=rnd(sz); if(g.grid[y][x]===0){g.grid[y][x]=12;n++;} }
+    _showMsg('GLIDE NODES APPEAR','#00aaff',40);
+  } else if (event === 'mashup') {
+    const otherDs = pick(DREAMSCAPES.filter(d => d.id !== g.ds.id));
+    if (otherDs.hazardSet[0]) { let n=0,itr=0; while(n<3&&itr<999){itr++;const y=rnd(sz),x=rnd(sz);if(g.grid[y][x]===0){g.grid[y][x]=otherDs.hazardSet[0];n++;}} }
+    _showMsg('DREAMSCAPES MERGE…','#ffaaff',40);
+  }
+  if (Math.random() < 0.4) {
+    const row = rnd(sz);
+    for (let x=0;x<sz;x++) {
+      if (g.grid[row][x]===1) g.grid[row][x]=4;
+      else if (g.grid[row][x]===4&&Math.random()<0.3) g.grid[row][x]=1;
+    }
+    anomalyData = { row, col:-1, t:50 }; anomalyActive = true;
+  }
+}
+
+// ─── Game lifecycle ──────────────────────────────────────────────────────
+function initGame(dreamIdx, prevScore, prevLevel, prevHp) {
+  const level = (prevLevel || 0) + 1;
   resizeCanvas();
+  const ds = DREAMSCAPES[dreamIdx % DREAMSCAPES.length];
+  setMatrix(ds.matrixDefault);
+  const g = buildDreamscape(ds, SZ(), level, prevScore, prevHp, UPG.maxHp, dreamHistory);
+  spawnVisions(CW(), CH()); hallucinations = []; glitchTimer = 500 + rnd(500);
+  initStars(CW(), CH());
+  return g;
+}
+
+function startGame(dreamIdx) {
+  resetUpgrades(); resetSession();
   CFG.dreamIdx = dreamIdx || 0;
   window._insightTokens = 0; window._dreamIdx = CFG.dreamIdx;
-  
-  modeManager.switchMode(selectedMode, {
-    dreamIdx: CFG.dreamIdx,
-    prevScore: 0,
-    prevLevel: 0,
-    prevHp: undefined
-  });
-  
-  game = window._game;  // GridMode exposes game to window
+  game = initGame(CFG.dreamIdx, 0, 0, undefined);
   setPhase('playing'); lastMove = 0; setMatrixHoldTime(0);
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
+}
+
+function nextDreamscape() {
+  const g = game;
+  const nextIdx = (CFG.dreamIdx + 1) % DREAMSCAPES.length;
+  CFG.dreamIdx = nextIdx; window._dreamIdx = nextIdx;
+  pushDreamHistory(g.ds.id);
+  interludeState = { text:g.ds.completionText, subtext:DREAMSCAPES[nextIdx].narrative, timer:220, ds:DREAMSCAPES[nextIdx] };
+  setPhase('interlude');
+  setTimeout(() => {
+    resizeCanvas();
+    game = initGame(nextIdx, g.score + 400 + g.level * 60, g.level, g.hp);
+    game.msg = DREAMSCAPES[nextIdx].name; game.msgColor = '#ffdd00'; game.msgTimer = 90;
+    if (phase === 'interlude') setPhase('playing');
+  }, 3600);
 }
 
 function buyUpgrade(id) {
@@ -176,7 +183,7 @@ function loop(ts) {
   const dt = ts - prevTs; prevTs = ts;
   const w = CW(), h = CH();
 
-  if (phase === 'title')       { drawTitle(ctx, w, h, backgroundStars, ts, CURSOR.menu, CURSOR.selectedMode); animId=requestAnimationFrame(loop); return; }
+  if (phase === 'title')       { drawTitle(ctx, w, h, backgroundStars, ts, CURSOR.menu); animId=requestAnimationFrame(loop); return; }
   if (phase === 'dreamselect') { drawDreamSelect(ctx, w, h, CFG.dreamIdx); animId=requestAnimationFrame(loop); return; }
   if (phase === 'options')     { drawOptions(ctx, w, h, CURSOR.opt); animId=requestAnimationFrame(loop); return; }
   if (phase === 'highscores')  { drawHighScores(ctx, w, h, highScores); animId=requestAnimationFrame(loop); return; }
@@ -185,52 +192,44 @@ function loop(ts) {
   if (phase === 'paused')      { drawPause(ctx, w, h, game, CURSOR.pause); animId=requestAnimationFrame(loop); return; }
   if (phase === 'interlude')   { drawInterlude(ctx, w, h, interludeState, ts); interludeState.timer--; if (interludeState.timer <= 0 && phase === 'interlude') setPhase('playing'); animId=requestAnimationFrame(loop); return; }
 
-  // ── Playing (delegated to ModeManager) ──────────────────────────────────
-  const stateChange = modeManager.update(dt, keys, matrixActive, ts);
-  
-  // Handle state changes from mode
-  if (stateChange) {
-    if (stateChange.phase === 'dead') {
-      game = window._game;
-      saveScore(game.score, game.level, game.ds);
-      setPhase('dead');
-      animId = requestAnimationFrame(loop);
-      return;
-    } else if (stateChange.phase === 'interlude') {
-      interludeState = stateChange.data.interludeState;
-      setPhase('interlude');
-      // Schedule next dreamscape
-      setTimeout(() => {
-        const g = window._game;
-        const nextIdx = CFG.dreamIdx;
-        resizeCanvas();
-        modeManager.switchMode('grid', {
-          dreamIdx: nextIdx,
-          prevScore: g.score + 400 + g.level * 60,
-          prevLevel: g.level,
-          prevHp: g.hp
-        });
-        game = window._game;
-        game.msg = DREAMSCAPES[nextIdx].name;
-        game.msgColor = '#ffdd00';
-        game.msgTimer = 90;
-        if (phase === 'interlude') setPhase('playing');
-      }, 3600);
-      animId = requestAnimationFrame(loop);
-      return;
+  // ── Playing ──────────────────────────────────────────────────────────
+  const MOVE_DELAY = game.slowMoves ? UPG.moveDelay * 1.5 : UPG.moveDelay;
+  const DIRS = {
+    ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1],
+    w:[-1,0],s:[1,0],a:[0,-1],d:[0,1],W:[-1,0],S:[1,0],A:[0,-1],D:[0,1],
+  };
+  if (ts - lastMove > MOVE_DELAY) {
+    for (const [k,[dy,dx]] of Object.entries(DIRS)) {
+      if (keys.has(k)) {
+        tryMove(game, dy, dx, matrixActive, nextDreamscape, _showMsg, insightTokens,
+          (n) => { while (insightTokens < n) addInsightToken(); window._insightTokens = insightTokens; });
+        lastMove = ts; break;
+      }
     }
   }
-  
-  // Render through ModeManager
-  modeManager.render(ctx, ts, {
-    DPR,
-    backgroundStars,
-    visions,
-    hallucinations,
-    anomalyActive,
-    anomalyData,
-    glitchFrames
-  });
+
+  if (game.emotionTimer > 0) { game.emotionTimer--; if (game.emotionTimer <= 0) { game.slowMoves = false; UPG.emotion = 'neutral'; } }
+
+  addMatrixHoldTime(dt);
+  if (matrixActive==='B' && matrixHoldTime>4000 && Math.random()<0.0002*dt) game.hp=Math.min(UPG.maxHp,game.hp+1);
+  if (matrixActive==='A' && matrixHoldTime>2500 && Math.random()<0.0003*dt) game.hp=Math.max(0,game.hp-1);
+
+  glitchTimer -= dt;
+  if (glitchTimer <= 0) { glitchFrames = 2 + rnd(4); glitchTimer = 500 + rnd(700); }
+  if (anomalyActive) { anomalyData.t--; if (anomalyData.t <= 0) anomalyActive = false; }
+
+  game.environmentTimer -= dt;
+  if (game.environmentTimer <= 0) { game.environmentTimer = 900 + rnd(700); if (Math.random()<0.6) triggerEnvironmentEvent(game); }
+
+  stepTileSpread(game, dt);
+  stepEnemies(game, dt, keys, matrixActive, hallucinations, _showMsg, setEmotion);
+
+  if (game.hp <= 0) {
+    saveScore(game.score, game.level, game.ds);
+    setPhase('dead'); animId=requestAnimationFrame(loop); return;
+  }
+
+  drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, hallucinations, anomalyActive, anomalyData, glitchFrames, DPR);
   animId = requestAnimationFrame(loop);
 }
 
@@ -238,18 +237,9 @@ function loop(ts) {
 window.addEventListener('keydown', e => {
   keys.add(e.key);
   if (phase === 'title') {
-    if (e.key==='ArrowUp')   { CURSOR.menu=(CURSOR.menu-1+5)%5; sfxManager.playMenuNav(); }
-    if (e.key==='ArrowDown') { CURSOR.menu=(CURSOR.menu+1)%5; sfxManager.playMenuNav(); }
-    if (e.key==='m' || e.key==='M') {
-      // Toggle between game modes
-      const modes = ['grid', 'shooter'];
-      const currentIndex = modes.indexOf(CURSOR.selectedMode);
-      CURSOR.selectedMode = modes[(currentIndex + 1) % modes.length];
-      sfxManager.playMenuNav();
-      console.log(`[Mode] Selected: ${CURSOR.selectedMode}`);
-    }
+    if (e.key==='ArrowUp')   CURSOR.menu=(CURSOR.menu-1+5)%5;
+    if (e.key==='ArrowDown') CURSOR.menu=(CURSOR.menu+1)%5;
     if (e.key==='Enter'||e.key===' ') {
-      sfxManager.playMenuSelect();
       if (CURSOR.menu===0)      startGame(CFG.dreamIdx);
       else if (CURSOR.menu===1) setPhase('dreamselect');
       else if (CURSOR.menu===2) { CURSOR.opt=0; setPhase('options'); }
@@ -303,10 +293,35 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
   if (phase === 'playing') {
-    // Try mode-specific input handling first
-    if (!modeManager.handleInput(e.key, 'keydown', e)) {
-      // Fallback to global playing phase inputs
-      if (e.key==='Escape') { CURSOR.pause=0; setPhase('paused'); }
+    if (e.key==='Escape') { CURSOR.pause=0; setPhase('paused'); }
+    if (e.key==='Shift' && !e.repeat) {
+      const next = matrixActive === 'A' ? 'B' : 'A';
+      setMatrix(next); setMatrixHoldTime(0);
+      const lbl = next==='A'?'MATRIX·A  ⟨ERASURE⟩':'MATRIX·B  ⟨COHERENCE⟩';
+      const col = next==='A'?'#ff0055':'#00ff88';
+      _showMsg(lbl, col, 55);
+      if (CFG.particles) burst(game, game.player.x, game.player.y, col, 22, 4);
+    }
+    if ((e.key==='j'||e.key==='J') && !e.repeat) {
+      if (game.archetypeActive) executeArchetypePower(game);
+      else if (UPG.temporalRewind && UPG.rewindBuffer.length>0) executeArchetypePower(game);
+      else _showMsg('NO ARCHETYPE ACTIVE', '#334455', 25);
+    }
+    if ((e.key==='r'||e.key==='R') && !e.repeat) {
+      if (UPG.glitchPulse && UPG.glitchPulseCharge>=100) triggerGlitchPulse(game, _showMsg);
+      else if (UPG.glitchPulse) _showMsg('CHARGING… '+Math.round(UPG.glitchPulseCharge)+'%','#660088',22);
+      else _showMsg('BUY GLITCH PULSE IN UPGRADES','#334455',28);
+    }
+    if ((e.key==='q'||e.key==='Q') && !e.repeat) {
+      if (UPG.freeze && UPG.freezeTimer<=0) { UPG.freezeTimer=2500; _showMsg('FREEZE ACTIVE!','#0088ff',50); burst(game,game.player.x,game.player.y,'#0088ff',20,4); }
+    }
+    if ((e.key==='c'||e.key==='C') && !e.repeat) {
+      if (insightTokens>=2) {
+        spendInsightTokens(2); window._insightTokens=insightTokens;
+        if (!game.contZones) game.contZones=[];
+        game.contZones.push({x:game.player.x,y:game.player.y,timer:240,maxTimer:240});
+        _showMsg('CONTAINMENT ZONE','#00ffcc',38);
+      } else _showMsg('NEED 2 ◆ FOR CONTAINMENT','#334455',28);
     }
   }
   const prevent = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '];
@@ -314,27 +329,6 @@ window.addEventListener('keydown', e => {
 });
 
 window.addEventListener('keyup', e => keys.delete(e.key));
-
-// ─── Mouse controls for shooter mode ─────────────────────────────────────
-canvas.addEventListener('mousemove', e => {
-  if (phase === 'playing' && modeManager.currentMode) {
-    modeManager.handleInput(null, 'mousemove', e);
-  }
-});
-
-canvas.addEventListener('mousedown', e => {
-  if (phase === 'playing' && modeManager.currentMode) {
-    modeManager.handleInput(null, 'mousedown', e);
-  } else if (phase === 'title') {
-    startGame(CFG.dreamIdx);
-  }
-});
-
-canvas.addEventListener('mouseup', e => {
-  if (phase === 'playing' && modeManager.currentMode) {
-    modeManager.handleInput(null, 'mouseup', e);
-  }
-});
 
 // ─── Mobile controls ─────────────────────────────────────────────────────
 function dpadBtn(id, key) {
@@ -347,6 +341,7 @@ function dpadBtn(id, key) {
 }
 dpadBtn('btn-up','ArrowUp'); dpadBtn('btn-down','ArrowDown');
 dpadBtn('btn-left','ArrowLeft'); dpadBtn('btn-right','ArrowRight');
+canvas.addEventListener('click', () => { if(phase==='title')startGame(CFG.dreamIdx); });
 
 // ─── Boot ─────────────────────────────────────────────────────────────────
 setHighScores(loadHighScores());

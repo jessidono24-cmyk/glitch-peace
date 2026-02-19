@@ -1,36 +1,14 @@
 {
-  "name": "glitch-peace",
-  "version": "1.0.0-alpha",
-  "description": "GLITCH·PEACE - A multidimensional consciousness exploration platform for awakening, learning, and transformation. More than a game—a research-backed tool combining psychology, neuroscience, quantum theory, and global wisdom traditions to facilitate genuine transformation through gameplay.",
-  "keywords": [
-    "consciousness",
-    "awakening",
-    "learning",
-    "transformation",
-    "addiction-cessation",
-    "intelligence-enhancement",
-    "wisdom-traditions",
-    "lucid-dreaming",
-    "game",
-    "educational",
-    "psychology",
-    "neuroscience"
-  ],
-  "author": "jessidono24-cmyk",
-  "license": "SEE LICENSE",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/jessidono24-cmyk/glitch-peace.git"
-  },
-  "homepage": "https://github.com/jessidono24-cmyk/glitch-peace#readme",
+  "name": "glitch-peace-vite",
+  "version": "1.0.0",
+  "description": "GLITCH·PEACE — consciousness simulation game. Base Layer v4.",
   "type": "module",
   "scripts": {
-    "dev": "npx vite",
-    "build": "npx vite build",
-    "preview": "npx vite preview"
+    "dev": "vite --port 3000 --open",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "devDependencies": {
-    "vite": "^6.0.11"
-  },
-  "dependencies": {}
+    "vite": "^7.3.1"
+  }
 }

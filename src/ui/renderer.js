@@ -278,98 +278,12 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
   }
 
-  // ...existing code...
-  // Ensure HUD is drawn last, after all gameplay elements
   drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive);
 }
 
 function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   const UPG_ref = UPG;
-  const hudH = 118;
-  // ─── Emotion color map ───────────────────────────────────────────────────
-  const EMOTION_COLOR = {
-    awe:        '#ccddff',
-    grief:      '#4466aa',
-    anger:      '#ff4422',
-    curiosity:  '#ffcc00',
-    shame:      '#aa4488',
-    tenderness: '#ffaabb',
-    fear:       '#cc2244',
-    joy:        '#00ffcc',
-    despair:    '#2233ff',
-    hope:       '#88ffcc',
-    peace:      '#00ff88',
-    clarity:    '#00eeff',
-    panic:      '#ff0022',
-    neutral:    '#334455',
-  };
-
-  // Realm label helper (E4-B, ASCII only)
-  function realmLabel(pd) {
-    if (pd === undefined || pd === null) pd = 0.45;
-    if (pd < 0.15) return { name: 'HEAVEN',      color: '#aaffcc' };
-    if (pd < 0.35) return { name: 'IMAGINATION', color: '#aaddff' };
-    if (pd < 0.55) return { name: 'MIND',        color: '#00ff88' };
-    if (pd < 0.75) return { name: 'PURGATORY',   color: '#ff8800' };
-    return               { name: 'HELL',          color: '#ff2200' };
-  }
-
-  function drawEmotionRow(ctx, w, field) {
-    if (!field) return;
-
-    // Try both v4 and v5 API for compatibility
-    const dominant   = typeof field.getDominantEmotion === 'function' ? (field.getDominantEmotion().id || 'neutral') : (field.getDominant?.() ?? 'neutral');
-    const coherence  = typeof field.coherence === 'number' ? field.coherence : (typeof field.getCoherence === 'function' ? field.getCoherence() : 0.5);
-    const distortion = typeof field.distortion === 'number' ? field.distortion : (typeof field.getDistortion === 'function' ? field.getDistortion() : 0);
-    const synergy    = typeof field.synergy === 'object' && field.synergy ? field.synergy.label : (typeof field.getSynergy === 'function' ? field.getSynergy() : null);
-
-    const emColor = EMOTION_COLOR[dominant] || '#334455';
-    const rowY    = 50;
-    const barW    = 88;
-
-    // Dominant emotion label
-    ctx.font = '8px Courier New'; ctx.textAlign = 'left';
-    ctx.fillStyle = '#223322'; ctx.fillText('EM', 14, rowY + 9);
-    ctx.fillStyle = emColor; ctx.shadowColor = emColor; ctx.shadowBlur = 4;
-    ctx.font = 'bold 9px Courier New';
-    ctx.fillText(dominant.toUpperCase(), 32, rowY + 9);
-    ctx.shadowBlur = 0;
-
-    // Coherence bar (blue)
-    const cohX = 32;
-    const cohY = rowY + 12;
-    ctx.fillStyle = '#0a0a1a'; ctx.fillRect(cohX, cohY, barW, 5);
-    ctx.fillStyle = '#0055cc'; ctx.shadowColor = '#0055cc'; ctx.shadowBlur = 3;
-    ctx.fillRect(cohX, cohY, barW * Math.min(1, coherence), 5);
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = 'rgba(0,80,200,0.18)'; ctx.lineWidth = 1;
-    ctx.strokeRect(cohX, cohY, barW, 5);
-
-    // Distortion bar (red/orange)
-    const distY = rowY + 19;
-    ctx.fillStyle = '#1a0a00'; ctx.fillRect(cohX, distY, barW, 5);
-    const distC = distortion > 0.6 ? '#ff2200' : '#ff8800';
-    ctx.fillStyle = distC; ctx.shadowColor = distC; ctx.shadowBlur = 3;
-    ctx.fillRect(cohX, distY, barW * Math.min(1, distortion), 5);
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = 'rgba(200,80,0,0.18)'; ctx.strokeRect(cohX, distY, barW, 5);
-
-    // Bar labels
-    ctx.font = '6px Courier New'; ctx.fillStyle = '#223344';
-    ctx.fillText('COH', cohX + barW + 3, cohY + 5);
-    ctx.fillStyle = '#332211';
-    ctx.fillText('DIS', cohX + barW + 3, distY + 5);
-
-    // Synergy label (gold, only when active)
-    if (synergy) {
-      ctx.font = 'bold 7px Courier New'; ctx.textAlign = 'center';
-      ctx.fillStyle = '#ffdd00'; ctx.shadowColor = '#ffdd00'; ctx.shadowBlur = 6;
-      ctx.fillText('⟡ ' + synergy.replace(/_/g, ' '), w / 2, rowY + 10);
-      ctx.shadowBlur = 0;
-    }
-
-    ctx.textAlign = 'left';
-  }
+  const hudH = 92;
   ctx.fillStyle = '#070714'; ctx.fillRect(0, 0, w, hudH);
   ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, hudH); ctx.lineTo(w, hudH); ctx.stroke();
@@ -377,11 +291,6 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = g.ds.bgAccent + '88'; ctx.fillRect(0, 0, w, 16);
   ctx.fillStyle = '#334455'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
   ctx.fillText(g.ds.name + '  ·  ' + g.ds.emotion, w / 2, 11); ctx.textAlign = 'left';
-
-  // DEBUG: Show current phase in top-left
-  ctx.fillStyle = '#ff00ff';
-  ctx.font = 'bold 10px Courier New';
-  ctx.fillText('PHASE: ' + (window.phase || 'unknown'), 8, 10);
 
   // HP
   const hpBarW = 138;
@@ -408,42 +317,40 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     ctx.strokeStyle = 'rgba(150,0,200,0.2)'; ctx.strokeRect(32, 53, eBarW, 6);
     ctx.fillStyle = pChr >= 1 ? '#ff00ff' : '#553355'; ctx.font = '7px Courier New'; ctx.fillText('PULSE' + (pChr >= 1 ? ' READY' : ''), 32 + eBarW + 4, 59);
   }
-  // ── Emotional field row (E3) ──────────────────────────────────────────
-  drawEmotionRow(ctx, w, window._emotionalField || null);
 
   if (g.archetypeActive && g.archetypeType) {
     const { ARCHETYPES: ARC } = import.meta ? {} : {};
-    ctx.fillStyle = '#ffdd00'; ctx.font = '8px Courier New'; ctx.fillText('[ARCH ACTIVE]', 14, 82);
+    ctx.fillStyle = '#ffdd00'; ctx.font = '8px Courier New'; ctx.fillText('[ARCH ACTIVE]', 14, 68);
   } else if (UPG_ref.shield && UPG_ref.shieldTimer > 0) {
-    ctx.fillStyle = '#00ffff'; ctx.font = '8px Courier New'; ctx.fillText('SHIELD×' + UPG_ref.shieldTimer, 14, 82);
+    ctx.fillStyle = '#00ffff'; ctx.font = '8px Courier New'; ctx.fillText('SHIELD×' + UPG_ref.shieldTimer, 14, 68);
   } else if (UPG_ref.shieldCount > 0) {
-    ctx.fillStyle = '#334455'; ctx.font = '8px Courier New'; ctx.fillText('streak ' + UPG_ref.shieldCount + '/3', 14, 82);
+    ctx.fillStyle = '#334455'; ctx.font = '8px Courier New'; ctx.fillText('streak ' + UPG_ref.shieldCount + '/3', 14, 68);
   }
 
   if (UPG_ref.comboCount > 1) {
     ctx.fillStyle = '#ffcc00'; ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 6;
-    ctx.font = '8px Courier New'; ctx.fillText('COMBO ×' + UPG_ref.resonanceMultiplier.toFixed(1), 14, 96);
+    ctx.font = '8px Courier New'; ctx.fillText('COMBO ×' + UPG_ref.resonanceMultiplier.toFixed(1), 14, 80);
     ctx.shadowBlur = 0;
   }
 
   ctx.fillStyle = '#00eeff'; ctx.shadowColor = '#00eeff'; ctx.shadowBlur = 5;
-  ctx.font = '9px Courier New'; ctx.fillText('◆×' + (window._insightTokens || 0), 14, 108); ctx.shadowBlur = 0;
+  ctx.font = '9px Courier New'; ctx.fillText('◆×' + (window._insightTokens || 0), 14, 90); ctx.shadowBlur = 0;
 
   // Score
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 10;
   ctx.font = 'bold 19px Courier New'; ctx.textAlign = 'center';
-  ctx.fillText(String(g.score).padStart(7, '0'), w / 2, 36); ctx.shadowBlur = 0;
-  ctx.fillStyle = '#222838'; ctx.font = '8px Courier New'; ctx.fillText('SCORE', w / 2, 50);
+  ctx.fillText(String(g.score).padStart(7, '0'), w / 2, 38); ctx.shadowBlur = 0;
+  ctx.fillStyle = '#222838'; ctx.font = '8px Courier New'; ctx.fillText('SCORE', w / 2, 52);
 
   const mC = matrixActive === 'A' ? '#ff0055' : '#00aa55';
   ctx.fillStyle = mC; ctx.shadowColor = mC; ctx.shadowBlur = 7;
-  ctx.font = 'bold 10px Courier New'; ctx.fillText('MTX·' + matrixActive, w / 2 - 16, 64); ctx.shadowBlur = 0;
+  ctx.font = 'bold 10px Courier New'; ctx.fillText('MTX·' + matrixActive, w / 2 - 16, 68); ctx.shadowBlur = 0;
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#445566'; ctx.font = '10px Courier New'; ctx.fillText('LVL ' + g.level, w - 12, 30);
-  ctx.fillStyle = '#005533'; ctx.fillText('◈×' + g.peaceLeft, w - 12, 46);
+  ctx.fillStyle = '#005533'; ctx.fillText('◈×' + g.peaceLeft, w - 12, 44);
   ctx.fillStyle = '#223344'; ctx.font = '8px Courier New';
-  ctx.fillText((window._dreamIdx + 1 || 1) + '/10 DREAMS', w - 12, 72);
+  ctx.fillText((window._dreamIdx + 1 || 1) + '/10 DREAMS', w - 12, 58);
   ctx.textAlign = 'left';
 
   if (g.msg && g.msgTimer > 0) {
@@ -458,12 +365,7 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = '#070714'; ctx.fillRect(0, h - 28, w, 28);
   ctx.strokeStyle = 'rgba(255,255,255,0.03)';
   ctx.beginPath(); ctx.moveTo(0, h - 28); ctx.lineTo(w, h - 28); ctx.stroke();
-  const rl = realmLabel(window._purgDepth);
-  ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'left';
-  ctx.fillStyle = rl.color; ctx.shadowColor = rl.color; ctx.shadowBlur = 5;
-  ctx.fillText(rl.name, 14, h - 11);
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = '#1a1a2a'; ctx.font = '7px Courier New'; ctx.textAlign = 'right';
-  ctx.fillText('WASD SHIFT=MTX ESC=pause J R Q C', w - 10, h - 11);
+  ctx.fillStyle = '#1a1a2a'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
+  ctx.fillText('WASD/ARROWS · SHIFT=matrix · ESC=pause · J=arch · R=pulse · Q=freeze · C=contain', w / 2, h - 11);
   ctx.textAlign = 'left';
 }

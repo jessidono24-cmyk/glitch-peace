@@ -27,6 +27,7 @@ import { ConsequencePreview } from './recovery/consequence-preview.js';
 import { sfxManager } from './audio/sfx-manager.js';
 import { ModeManager } from './modes/mode-manager.js';
 import { GridMode } from './modes/grid-mode.js';
+import { ShooterMode } from './modes/shooter-mode.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -110,6 +111,7 @@ const sharedSystems = {
 };
 const modeManager = new ModeManager(sharedSystems);
 modeManager.registerMode('grid', GridMode);
+modeManager.registerMode('shooter', ShooterMode);
 window._modeManager = modeManager;
 
 // ─── Helpers shared across systems ──────────────────────────────────────
@@ -124,7 +126,7 @@ function saveScore(score, level, ds) {
   saveHighScores(trimmed);
 }
 
-function startGame(dreamIdx) {
+function startGame(dreamIdx, mode = null) {
   resetUpgrades(); resetSession();
   emotionalField = new EmotionalField();
   window._emotionalField = emotionalField;
@@ -136,12 +138,13 @@ function startGame(dreamIdx) {
   // Update shared systems reference
   sharedSystems.emotionalField = emotionalField;
   
-  // Initialize grid mode through ModeManager
+  // Initialize selected mode through ModeManager
+  const selectedMode = mode || CURSOR.selectedMode || 'grid';
   resizeCanvas();
   CFG.dreamIdx = dreamIdx || 0;
   window._insightTokens = 0; window._dreamIdx = CFG.dreamIdx;
   
-  modeManager.switchMode('grid', {
+  modeManager.switchMode(selectedMode, {
     dreamIdx: CFG.dreamIdx,
     prevScore: 0,
     prevLevel: 0,
@@ -173,7 +176,7 @@ function loop(ts) {
   const dt = ts - prevTs; prevTs = ts;
   const w = CW(), h = CH();
 
-  if (phase === 'title')       { drawTitle(ctx, w, h, backgroundStars, ts, CURSOR.menu); animId=requestAnimationFrame(loop); return; }
+  if (phase === 'title')       { drawTitle(ctx, w, h, backgroundStars, ts, CURSOR.menu, CURSOR.selectedMode); animId=requestAnimationFrame(loop); return; }
   if (phase === 'dreamselect') { drawDreamSelect(ctx, w, h, CFG.dreamIdx); animId=requestAnimationFrame(loop); return; }
   if (phase === 'options')     { drawOptions(ctx, w, h, CURSOR.opt); animId=requestAnimationFrame(loop); return; }
   if (phase === 'highscores')  { drawHighScores(ctx, w, h, highScores); animId=requestAnimationFrame(loop); return; }
@@ -237,6 +240,14 @@ window.addEventListener('keydown', e => {
   if (phase === 'title') {
     if (e.key==='ArrowUp')   { CURSOR.menu=(CURSOR.menu-1+5)%5; sfxManager.playMenuNav(); }
     if (e.key==='ArrowDown') { CURSOR.menu=(CURSOR.menu+1)%5; sfxManager.playMenuNav(); }
+    if (e.key==='m' || e.key==='M') {
+      // Toggle between game modes
+      const modes = ['grid', 'shooter'];
+      const currentIndex = modes.indexOf(CURSOR.selectedMode);
+      CURSOR.selectedMode = modes[(currentIndex + 1) % modes.length];
+      sfxManager.playMenuNav();
+      console.log(`[Mode] Selected: ${CURSOR.selectedMode}`);
+    }
     if (e.key==='Enter'||e.key===' ') {
       sfxManager.playMenuSelect();
       if (CURSOR.menu===0)      startGame(CFG.dreamIdx);
@@ -304,6 +315,27 @@ window.addEventListener('keydown', e => {
 
 window.addEventListener('keyup', e => keys.delete(e.key));
 
+// ─── Mouse controls for shooter mode ─────────────────────────────────────
+canvas.addEventListener('mousemove', e => {
+  if (phase === 'playing' && modeManager.currentMode) {
+    modeManager.handleInput(null, 'mousemove', e);
+  }
+});
+
+canvas.addEventListener('mousedown', e => {
+  if (phase === 'playing' && modeManager.currentMode) {
+    modeManager.handleInput(null, 'mousedown', e);
+  } else if (phase === 'title') {
+    startGame(CFG.dreamIdx);
+  }
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (phase === 'playing' && modeManager.currentMode) {
+    modeManager.handleInput(null, 'mouseup', e);
+  }
+});
+
 // ─── Mobile controls ─────────────────────────────────────────────────────
 function dpadBtn(id, key) {
   const btn = document.getElementById(id); if (!btn) return;
@@ -315,7 +347,6 @@ function dpadBtn(id, key) {
 }
 dpadBtn('btn-up','ArrowUp'); dpadBtn('btn-down','ArrowDown');
 dpadBtn('btn-left','ArrowLeft'); dpadBtn('btn-right','ArrowRight');
-canvas.addEventListener('click', () => { if(phase==='title')startGame(CFG.dreamIdx); });
 
 // ─── Boot ─────────────────────────────────────────────────────────────────
 setHighScores(loadHighScores());

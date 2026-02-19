@@ -98,6 +98,7 @@ export const CURSOR = {
   shop:    0,
   dream:   0,
   upgradeFrom: 'title',
+  selectedMode: 'grid',  // Default to grid mode
 };
 
 // ─── Realm state (E4) ────────────────────────────────────────────────────

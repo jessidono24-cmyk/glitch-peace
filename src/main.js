@@ -104,6 +104,9 @@ let gameMode   = 'grid'; // 'grid' | 'shooter'
 const EMOTION_THRESHOLD      = 0.15;   // emotion must exceed this to affect gameplay
 const INTERLUDE_DURATION_MS  = 10000;  // auto-advance after 10 s
 const INTERLUDE_MIN_ADVANCE_MS = 3500; // player may skip after 3.5 s (all content visible)
+// Pre-allocated tile-type sets to avoid array creation in the hot path
+const SOMATIC_TILES  = new Set([17, 18, 19, 20]);
+const HAZARD_TILES   = new Set([1, 2, 3, 8, 9, 10, 14, 16]);
 
 // ─── Onboarding state ────────────────────────────────────────────────────
 // LANG_LIST is imported from language-system.js — single canonical source
@@ -477,14 +480,24 @@ function loop(ts) {
       else strategicThinking.onImpulsiveMove();
       logicPuzzles.onMove(wasPreviewActive, wasImpulseActive);
       // Phase M5: RPG stat events on each move
+      const _prevLevel = characterStats.level;
       if (targetTile === 6) characterStats.onInsightCollect();                         // T.INSIGHT
-      if ([17,18,19,20].includes(targetTile)) characterStats.onEmbodimentTile();       // somatic tiles
+      if (SOMATIC_TILES.has(targetTile)) characterStats.onEmbodimentTile();            // somatic tiles
       // Award hazard-survival XP when player moves to a safe tile while enemies are nearby
       if (targetTile === 0 || targetTile === 4) {   // T.VOID or T.PEACE
         const nearbyEnemies = game.enemies.filter(e =>
           Math.abs(e.y - game.player.y) + Math.abs(e.x - game.player.x) <= 2).length;
         if (nearbyEnemies > 0) characterStats.onHazardSurvived();
       }
+      if (characterStats.level > _prevLevel) {
+        sfxManager.playLevelUp();
+        _showMsg('LEVEL UP!  RPG·' + characterStats.level, '#ffdd88', 90);
+      }
+      sfxManager.resume();
+      if (targetTile === 4)              sfxManager.playPeaceCollect();   // T.PEACE
+      else if (targetTile === 6)         sfxManager.playInsightCollect(); // T.INSIGHT
+      else if (SOMATIC_TILES.has(targetTile)) sfxManager.playSomaticTile();   // somatic
+      else if (HAZARD_TILES.has(targetTile))  sfxManager.playDamage();        // hazards
       // Play Mode: count moves for puzzle mode
       if (game.moveLimit) {
         game.movesRemaining = Math.max(0, (game.movesRemaining || game.moveLimit) - 1);
@@ -659,6 +672,7 @@ function loop(ts) {
   window._characterStats    = characterStats.statObj;
 
   if (game.hp <= 0) {
+    sfxManager.playDeath();
     deadGame = game; // snapshot for death screen
     sessionTracker.endSession(game.score, sessionTracker.dreamscapesCompleted);
     saveScore(game.score, game.level, game.ds);

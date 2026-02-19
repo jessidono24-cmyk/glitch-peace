@@ -11,7 +11,7 @@ export function drawDashboard(ctx, w, h) {
   const data = gatherData();
   const pad = 16;
   const panelW = Math.min(w - 32, 440);
-  const panelH = Math.min(h - 32, 660);  // taller to fit IQ/EQ row
+  const panelH = Math.min(h - 32, 720);  // taller to fit RPG row
   const px = (w - panelW) / 2;
   const py = (h - panelH) / 2;
 
@@ -85,7 +85,16 @@ export function drawDashboard(ctx, w, h) {
 
   y += 50;
 
-  // ── Row 4: Intelligence (IQ/EQ) ──────────────────────────────────
+  // ── Row 4: Character Stats (RPG) ────────────────
+  const csData = window._characterStats || {};
+  _drawSection(ctx, col1, y, panelW - pad * 2, 58, 'CHARACTER (RPG)', [
+    { label: 'Level',  val: 'LVL ' + (csData.level || 1) + '  \u00b7  XP ' + Math.round((csData.xpPct || 0) * 100) + '%' },
+    { label: 'Stats',  val: 'STR ' + (csData.str || 1) + '  INT ' + (csData.int || 1) + '  WIS ' + (csData.wis || 1) + '  VIT ' + (csData.vit || 1) },
+    { label: 'Growth', val: csData.levelUpMsg || 'Keep exploring to grow…' },
+  ], '#ffdd88');
+  y += 74;
+
+  // ── Row 5: Intelligence (IQ/EQ) ──────────────────────────────────
   _drawSection(ctx, col1, y, panelW/2 - pad, 76, 'COGNITIVE (IQ)', [
     { label: 'Logic Score',    val: data.intelligence.iqScore + '/100' },
     { label: 'Strategy Score', val: data.intelligence.strategicScore + '/100' },

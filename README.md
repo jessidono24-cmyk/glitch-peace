@@ -2,11 +2,11 @@
 
 > **A multidimensional consciousness awakening platform** for healing, learning, and transformation — playable today as an HTML5 game, building toward a free Steam release.
 
-[![Version](https://img.shields.io/badge/version-1.6.1--alpha-blue.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
+[![Version](https://img.shields.io/badge/version-1.6.2--alpha-blue.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
 [![Lines of Code](https://img.shields.io/badge/LOC-10%2C000%2B-orange.svg)](src/)
-[![Progress](https://img.shields.io/badge/completion-54%25-yellow.svg)](#-development-roadmap)
+[![Progress](https://img.shields.io/badge/completion-56%25-yellow.svg)](#-development-roadmap)
 
 *Begin in stillness. Emerge through pattern recognition. Transform through play.*
 
@@ -92,10 +92,10 @@ Visible in the dreamscape selection screen for each level:
 | Metric | Value |
 |--------|-------|
 | Source files | 43 JS modules |
-| Lines of code | ~10,000 |
-| Bundle size | 254 KB (85 KB gzipped) |
-| Build time | ~550ms |
-| Completion | ~54% of full vision |
+| Lines of code | ~10,200 |
+| Bundle size | 259 KB (86 KB gzipped) |
+| Build time | ~530ms |
+| Completion | ~56% of full vision |
 
 ### What's In This Build
 - ✅ **Complete base game** (Phases 1-5): 17 tile types + **4 embodiment tiles**, 10 dreamscapes, 5 archetypes, 9 enemy AI behaviors
@@ -122,6 +122,10 @@ Visible in the dreamscape selection screen for each level:
 - ✅ **Onboarding flow** — age group, language, difficulty selection; ESC saves preference
 - ✅ **HOW TO PLAY screen** — built-in tile guide, controls, matrix system, first-steps walkthrough
 - ✅ **Smooth level transitions** — 10-second readable interlude; player can advance with ENTER/SPACE after 3.5 s; frame-rate independent; race-condition free
+- ✅ **Tile SFX wired** — every tile type has a distinct procedural sound: PEACE chime, INSIGHT crystalline sparkle, somatic warm chord, hazard buzz, death sound, RPG level-up fanfare
+- ✅ **Somatic tile visuals** — BODY_SCAN (breathing rings), BREATH_SYNC (sine wave), ENERGY_NODE (rotating sparkles), GROUNDING (cross+ring) — full animated renders
+- ✅ **RPG level-up detection** — level-up triggers fanfare SFX + HUD message; character stats save on every level-up
+- ✅ **Integration dashboard** — CHARACTER (RPG) panel: Level, XP%, STR/INT/WIS/VIT stats
 
 ---
 
@@ -282,7 +286,7 @@ Phase 2.5   ████████████████████ 100% �
 Phase 6-11  ████████████████████ 100% ✅  Learning/Awareness/IQ/Chakra
 Cosmologies ████████████████████ 100% ✅  12 frameworks mapped
 Phase 2.6   ████████████████████ 100% ✅  Embodiment Tiles (BODY_SCAN, BREATH_SYNC, ENERGY_NODE, GROUNDING)
-UX Polish   ████████████████████ 100% ✅  HOW TO PLAY screen; smooth level transitions
+UX Polish   ████████████████████ 100% ✅  HOW TO PLAY screen; smooth transitions; somatic tile visuals; tile SFX; level-up
 
 Phase M5    ██░░░░░░░░░░░░░░░░░░  10% 🔨  RPG Mode (character stats + archetype dialogue started)
 Phase M6    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Constellation Mode
@@ -292,7 +296,7 @@ Phase M7    ░░░░░░░░░░░░░░░░░░░░   0% �
 Phase M8    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Multiplayer / Co-op
 Steam pack  ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Electron + Steamworks
 
-Overall: ~10,000 / 20,000+ lines (~54%)
+Overall: ~10,200 / 20,000+ lines (~56%)
 ```
 
 ### 🚧 Next Steps
@@ -374,6 +378,9 @@ GLITCH·PEACE has a clear path to **free Steam release**:
 | **Onboarding** | Age group, language, difficulty; saved profile | ✅ Complete |
 | **HOW TO PLAY screen** | Tile guide, controls, matrix system, first-steps | ✅ Complete |
 | **Level transitions** | 10 s readable interlude; player-skippable; race-condition free | ✅ Complete |
+| **Tile SFX** | PEACE, INSIGHT, somatic, hazard, death, level-up — all procedural sounds | ✅ Complete |
+| **Somatic tile visuals** | Breathing rings, sine wave, rotating sparkles, cross+ring — animated | ✅ Complete |
+| **Integration dashboard** | H-key overlay; SESSION, LEARNING, EMERGENCE, CHAKRA, CHARACTER (RPG), IQ/EQ, JOURNEY | ✅ Complete |
 | **Learning systems** | 19-language vocabulary, sigils, pattern recognition | ✅ Complete |
 | **Dream Yoga** | Lucidity meter, reality checks, dream sign tracking | ✅ Complete |
 | **Emotional engine** | 10-emotion field, 7 synergy patterns, coherence | ✅ Complete |
@@ -382,7 +389,7 @@ GLITCH·PEACE has a clear path to **free Steam release**:
 | **Awareness systems** | Self-reflection, emergence indicators, chakra, tarot | ✅ Complete |
 | **Intelligence layer** | IQ/EQ proxy metrics, strategic coaching, logic puzzles | ✅ Complete |
 | **Cosmologies** | 12 frameworks mapped to dreamscapes | ✅ Complete |
-| **Integration dashboard** | H-key overlay with cross-session progress | ✅ Complete |
+| **Integration dashboard** | H-key overlay with cross-session progress | ✅ Complete (row removed — see above) |
 | **RPG basics (M5)** | STR/INT/WIS/VIT stats, XP, level, archetype dialogue | 🔨 10% |
 | **Boss system** | Multi-phase bosses, special rewards | ⬜ 0% |
 | **8 new dreamscapes** | Expand to 18 total | ⬜ 0% |
@@ -475,7 +482,7 @@ Built on:
 
 ---
 
-**v1.6.1-alpha · February 2026 · 54% Complete**
+**v1.6.2-alpha · February 2026 · 56% Complete**
 [glitch-peace](https://github.com/jessidono24-cmyk/glitch-peace) · [glitch-peace-vite](https://github.com/jessidono24-cmyk/glitch-peace-vite)
 
 *Built with intention. Shared with love. Free always.*

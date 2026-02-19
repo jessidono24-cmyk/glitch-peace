@@ -68,6 +68,7 @@ export class CharacterStats {
       this.xpToNext = this._calcXpToNext(this.level);
       this._levelUpMsg = LEVEL_MSGS[Math.max(0, this.level - 2) % LEVEL_MSGS.length];
       this._levelUpTimer = 120;
+      this._save(); // persist immediately on level-up
     }
   }
 

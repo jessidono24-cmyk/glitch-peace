@@ -359,6 +359,101 @@ export class SFXManager {
   }
 
   /**
+   * Play insight collect sound (rising crystalline sparkle, upper register)
+   */
+  playInsightCollect() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    const notes = [784, 1047, 1319, 1568]; // G5, C6, E6, G6
+    notes.forEach((freq, i) => {
+      const osc = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const t = now + i * 0.06;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.12, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      osc.connect(gain); gain.connect(this.masterGain);
+      osc.start(t); osc.stop(t + 0.25);
+    });
+  }
+
+  /**
+   * Play somatic tile collect (warm calming tones for BODY_SCAN, BREATH_SYNC, etc.)
+   */
+  playSomaticTile() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    const chord = [220, 275, 330]; // A3 + fifth + octave fifth (warm, organic)
+    chord.forEach((freq, i) => {
+      const osc = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.07, now + 0.05 + i * 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+      osc.connect(gain); gain.connect(this.masterGain);
+      osc.start(now); osc.stop(now + 0.7);
+    });
+  }
+
+  /**
+   * Play RPG level-up fanfare (ascending major arpeggio)
+   */
+  playLevelUp() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    const notes = [261.63, 329.63, 392.00, 523.25, 659.25]; // C4 E4 G4 C5 E5
+    notes.forEach((freq, i) => {
+      const osc = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const t = now + i * 0.1;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.13, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      osc.connect(gain); gain.connect(this.masterGain);
+      osc.start(t); osc.stop(t + 0.5);
+    });
+  }
+
+  /**
+   * Play death / game over sound (descending somber tones)
+   */
+  playDeath() {
+    if (!this.enabled || !this.audioContext) return;
+    this.resume();
+    const now = this.audioContext.currentTime;
+    // Descending sawtooth — dissolution
+    const osc1 = this.audioContext.createOscillator();
+    const gain1 = this.audioContext.createGain();
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(220, now);
+    osc1.frequency.exponentialRampToValueAtTime(55, now + 0.8);
+    gain1.gain.setValueAtTime(0.15, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+    osc1.connect(gain1); gain1.connect(this.masterGain);
+    osc1.start(now); osc1.stop(now + 0.8);
+    // Low drone fade-in
+    const osc2 = this.audioContext.createOscillator();
+    const gain2 = this.audioContext.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.value = 80;
+    gain2.gain.setValueAtTime(0, now + 0.2);
+    gain2.gain.linearRampToValueAtTime(0.18, now + 0.45);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+    osc2.connect(gain2); gain2.connect(this.masterGain);
+    osc2.start(now + 0.2); osc2.stop(now + 1.2);
+  }
+
+
+  /**
    * Play player hurt (low thud + static)
    */
   playPlayerHurt() {

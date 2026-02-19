@@ -122,8 +122,56 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
         ctx.fillStyle = 'rgba(100,200,150,0.15)'; ctx.fillRect(px, py, CELL, CELL);
         ctx.globalAlpha = 1;
       }
+      // ── Phase 2.6: Somatic tile renders ──────────────────────────────────
+      if (val === T.BODY_SCAN) {
+        const pulse = 0.5 + 0.5 * Math.sin(ts * 0.004 + x * 1.1 + y * 0.9);
+        ctx.shadowColor = '#00aa44'; ctx.shadowBlur = 12 * pulse;
+        for (let ring = 0; ring < 3; ring++) {
+          const r = (5 + ring * 6) + 2 * Math.sin(ts * 0.003 + ring * 1.2);
+          ctx.globalAlpha = (0.65 - ring * 0.15) * pulse;
+          ctx.strokeStyle = ring === 0 ? '#00ff88' : ring === 1 ? '#00cc66' : '#008844';
+          ctx.lineWidth = 1.5 - ring * 0.3;
+          ctx.beginPath(); ctx.arc(px + CELL / 2, py + CELL / 2, r, 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+      }
+      if (val === T.BREATH_SYNC) {
+        const phase_ = (ts * 0.0025) % (Math.PI * 2);
+        ctx.shadowColor = '#6688ff'; ctx.shadowBlur = 10;
+        ctx.strokeStyle = '#6688ff'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        const waveW = CELL - 8;
+        for (let i = 0; i <= waveW; i++) {
+          const wx = px + 4 + i;
+          const wy = py + CELL / 2 + Math.sin(phase_ + i * 0.38) * 5.5;
+          if (i === 0) ctx.moveTo(wx, wy); else ctx.lineTo(wx, wy);
+        }
+        ctx.stroke(); ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+      }
+      if (val === T.ENERGY_NODE) {
+        ctx.shadowColor = '#cc44ff'; ctx.shadowBlur = 16;
+        const ang = ts * 0.01 + x * 1.9 + y * 1.5;
+        for (let i = 0; i < 6; i++) {
+          const a = ang + i * Math.PI / 3, r = 8 + 3 * Math.sin(ts * 0.007 + i);
+          ctx.fillStyle = i % 2 === 0 ? '#cc44ff' : '#8800dd';
+          ctx.beginPath(); ctx.arc(px + CELL / 2 + Math.cos(a) * r, py + CELL / 2 + Math.sin(a) * r, 2.5, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+      }
+      if (val === T.GROUNDING) {
+        const pulse2 = 0.5 + 0.5 * Math.sin(ts * 0.003 + x + y);
+        ctx.shadowColor = '#886644'; ctx.shadowBlur = 9 * pulse2;
+        ctx.globalAlpha = 0.7 + 0.2 * pulse2;
+        ctx.strokeStyle = '#aa8855'; ctx.lineWidth = 2;
+        const cxg = px + CELL / 2, cyg = py + CELL / 2;
+        ctx.beginPath(); ctx.moveTo(cxg, cyg - 9); ctx.lineTo(cxg, cyg + 9); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cxg - 9, cyg); ctx.lineTo(cxg + 9, cyg); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cxg, cyg, 10, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+      }
       if (td.sym && val !== T.VOID && val !== T.WALL && val !== T.PEACE && val !== T.INSIGHT &&
-          val !== T.ARCHETYPE && val !== T.TELEPORT && val !== T.HIDDEN && val !== T.MEMORY) {
+          val !== T.ARCHETYPE && val !== T.TELEPORT && val !== T.HIDDEN && val !== T.MEMORY &&
+          val !== T.BODY_SCAN && val !== T.BREATH_SYNC && val !== T.ENERGY_NODE && val !== T.GROUNDING) {
         ctx.fillStyle = tp.bd; ctx.font = '12px Courier New'; ctx.textAlign = 'center';
         ctx.globalAlpha = 0.55; ctx.fillText(td.sym, px + CELL / 2, py + CELL / 2 + 5);
         ctx.globalAlpha = 1; ctx.textAlign = 'left';

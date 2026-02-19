@@ -2,7 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="GLITCH·PEACE — A dreamscape consciousness simulation. Navigate 18 symbolic dreamscapes, face your archetypes, and integrate your shadows. Free on Steam.">
+  <meta name="keywords" content="glitch peace, indie game, dreamscape, consciousness, healing, meditation, puzzle, roguelike">
+  <meta name="author" content="GLITCH·PEACE Project">
+  <!-- Open Graph / Steam -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="GLITCH·PEACE">
+  <meta property="og:description" content="A dreamscape consciousness simulation. Navigate 18 symbolic realms. Heal. Awaken.">
+  <meta property="og:image" content="social-preview.png">
+  <!-- Theme color for browser chrome -->
+  <meta name="theme-color" content="#02020a">
   <title>GLITCH·PEACE</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -27,6 +37,14 @@
       box-shadow: 0 0 80px rgba(0,255,136,0.06), 0 0 200px rgba(0,0,0,0.9);
       image-rendering: auto;
     }
+    /* Loading state */
+    #loading {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: #02020a; color: #00ff88; font-family: 'Courier New', monospace;
+      font-size: 14px; z-index: 99; letter-spacing: 2px;
+      transition: opacity 0.6s;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
     #mobile-controls {
       display: none; position: fixed; bottom: 24px; left: 50%;
       transform: translateX(-50%); gap: 6px; flex-direction: column;
@@ -44,9 +62,10 @@
     .dpad:active { background: rgba(0,255,136,0.25); }
     @media (max-width: 700px) { #mobile-controls { display: flex; } }
   </style>
-  <script type="module" crossorigin src="/assets/index-BA_M2IFV.js"></script>
+  <script type="module" crossorigin src="/assets/index-Dgwbm0k7.js"></script>
 </head>
 <body>
+  <div id="loading">GLITCH·PEACE — LOADING…</div>
   <canvas id="c"></canvas>
   <div id="mobile-controls">
     <div class="row"><button class="dpad" id="btn-up">↑</button></div>
@@ -56,5 +75,14 @@
       <button class="dpad" id="btn-right">→</button>
     </div>
   </div>
+  <script>
+    // Remove loading screen once the module starts executing
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const el = document.getElementById('loading');
+        if (el) { el.classList.add('hidden'); setTimeout(() => el.remove(), 700); }
+      }, 400);
+    });
+  </script>
 </body>
 </html>

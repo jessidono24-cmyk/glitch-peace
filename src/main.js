@@ -571,7 +571,17 @@ function loop(ts) {
   const domEmotion = emotionalField.getDominantEmotion();
   if (domEmotion.value > EMOTION_THRESHOLD) UPG.emotion = domEmotion.id;
   window._emotionSynergy = emotionalField.synergy;
-  window._purgDepth = emotionalField.purgDepth;
+  window._purgDepth      = emotionalField.purgDepth;
+  // Expose full emotion state for renderer (realm tinting, HUD header)
+  window._emotionField = {
+    realm:      emotionalField.realm       || 'Mind',
+    dominant:   domEmotion.id,
+    coherence:  emotionalField.coherence   || 0,
+    distortion: emotionalField.distortion  || 0,
+    valence:    emotionalField.valence     || 0,
+  };
+  // Expand fog radius based on insight collected
+  window._fogRadius = 4 + Math.min(3, Math.floor((window._insightTokens || 0) / 5));
 
   // ── Play Mode: Speedrun countdown ───────────────────────────────────
   if (game.speedrunActive && game.speedrunTimer > 0) {
@@ -1088,8 +1098,15 @@ window.addEventListener('keydown', e => {
       sfxManager.resume(); sfxManager.playMenuSelect();
       const chosen = GAME_MODES[CURSOR.modesel].id;
       gameMode = chosen;
-      if (chosen === 'grid' || chosen === 'challenge') {
-        if (chosen === 'challenge') { CFG.playMode = 'daily'; }
+      if (chosen === 'challenge') {
+        // Daily Challenge: seed dreamscape index from today's date (format YYYYMMDD, e.g. 20260219)
+        // Same date = same dreamscape for all players, resets at midnight local time.
+        const today = new Date();
+        const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+        CFG.playMode = 'daily';
+        CFG.dreamIdx = seed % DREAMSCAPES.length;
+        startGame(CFG.dreamIdx);
+      } else if (chosen === 'grid') {
         startGame(CFG.dreamIdx);
       } else if (chosen === 'shooter') {
         startGame(CFG.dreamIdx);

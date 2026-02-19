@@ -21,6 +21,26 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
   ctx.fillStyle = bg2; ctx.fillRect(0, 0, w, h);
   if (matrixActive === 'A') { ctx.fillStyle = 'rgba(80,0,20,0.07)'; ctx.fillRect(0, 0, w, h); }
 
+  // ── Emotion-reactive realm tinting (from EmotionalField) ─────────────
+  const efData = window._emotionField;
+  if (efData && efData.realm) {
+    const realmTints = {
+      Hell:        'rgba(120,20,0,0.09)',
+      Purgatory:   'rgba(90,40,0,0.07)',
+      Imagination: 'rgba(60,0,80,0.06)',
+      Heaven:      'rgba(0,60,40,0.06)',
+      Mind:        null,
+    };
+    const tint = realmTints[efData.realm];
+    if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, w, h); }
+    // Distortion causes subtle chromatic aberration (scanlines shift)
+    if (efData.distortion > 0.5) {
+      const dAlpha = (efData.distortion - 0.5) * 0.12;
+      ctx.fillStyle = `rgba(255,0,60,${dAlpha})`; ctx.fillRect(0, 0, 2, h);
+      ctx.fillStyle = `rgba(0,255,136,${dAlpha})`; ctx.fillRect(w - 2, 0, 2, h);
+    }
+  }
+
   // Scanlines
   for (let y = 0; y < h; y += 3) { ctx.fillStyle = 'rgba(0,0,0,0.06)'; ctx.fillRect(0, y, w, 1); }
 
@@ -189,7 +209,60 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
   }
   g.tileFlicker = g.tileFlicker.filter(f => { f.t--; return f.t > 0; });
 
-  // ── Constellation overlay: connect adjacent star tiles in Skymap mode ──
+  // ── Fog of War — visibility radius around player ──────────────────────
+  // Insight tiles expand radius; Matrix A shrinks it; normal play = 4 tiles
+  if (g.playModeId !== 'skymap' && g.playModeId !== 'meditation') {
+    const fogEnabled = CFG.difficulty !== 'easy';  // no fog on easy
+    if (fogEnabled) {
+      const FOG_RADIUS = (window._fogRadius || 4) + (UPG.aura ? 1 : 0);
+      const FOG_SOFT   = 1.5; // tiles of soft fade beyond hard edge
+      const py_ = g.player.y, px_ = g.player.x;
+      // Draw a fog overlay tile-by-tile using canvas compositing
+      // We draw a full black rect then cut a radial "torch" hole using destination-out
+      ctx.save();
+      // Create a temporary canvas for the fog mask
+      const fogCanvas = document.createElement('canvas');
+      fogCanvas.width  = ctx.canvas.width;
+      fogCanvas.height = ctx.canvas.height;
+      const fc = fogCanvas.getContext('2d');
+      // Scale for DPR FIRST so all subsequent fog drawing uses logical coordinates
+      const dpr = DPR || 1;
+      fc.scale(dpr, dpr);
+      // Fill fog over the entire logical canvas
+      fc.fillStyle = 'rgba(4,4,14,0.94)';
+      fc.fillRect(0, 0, fogCanvas.width / dpr, fogCanvas.height / dpr);
+      fc.globalCompositeOperation = 'destination-out';
+      // Player position in logical canvas coords
+      const pcx = sx + px_ * (CELL + GAP) + CELL / 2;
+      const pcy = sy + py_ * (CELL + GAP) + CELL / 2;
+      const fogPxRadius = (FOG_RADIUS + FOG_SOFT) * (CELL + GAP);
+      const grd = fc.createRadialGradient(pcx, pcy, 0, pcx, pcy, fogPxRadius);
+      grd.addColorStop(0, 'rgba(0,0,0,1)');
+      grd.addColorStop(FOG_RADIUS / (FOG_RADIUS + FOG_SOFT), 'rgba(0,0,0,1)');
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
+      fc.fillStyle = grd;
+      fc.beginPath(); fc.arc(pcx, pcy, fogPxRadius, 0, Math.PI * 2); fc.fill();
+      // Also reveal tiles near insight/archetype/peace positions (they beacon through fog)
+      for (let fy = 0; fy < sz; fy++) {
+        for (let fx = 0; fx < sz; fx++) {
+          if (g.grid[fy][fx] === T.INSIGHT || g.grid[fy][fx] === T.ARCHETYPE || g.grid[fy][fx] === T.PEACE) {
+            const tcx = sx + fx * (CELL + GAP) + CELL / 2;
+            const tcy = sy + fy * (CELL + GAP) + CELL / 2;
+            const tGrd = fc.createRadialGradient(tcx, tcy, 0, tcx, tcy, (CELL + GAP) * 1.2);
+            tGrd.addColorStop(0, 'rgba(0,0,0,0.5)');
+            tGrd.addColorStop(1, 'rgba(0,0,0,0)');
+            fc.fillStyle = tGrd;
+            fc.beginPath(); fc.arc(tcx, tcy, (CELL + GAP) * 1.2, 0, Math.PI * 2); fc.fill();
+          }
+        }
+      }
+      // Composite fog onto main canvas
+      ctx.drawImage(fogCanvas, 0, 0);
+      ctx.restore();
+    }
+  }
+
+
   if (g.playModeId === 'skymap' || g.playModeId === 'ritual_space') {
     // Collect all INSIGHT (6) and ARCHETYPE (11) positions
     const starTiles = [];
@@ -459,9 +532,25 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, hudH); ctx.lineTo(w, hudH); ctx.stroke();
 
-  ctx.fillStyle = g.ds.bgAccent + '88'; ctx.fillRect(0, 0, w, 16);
-  ctx.fillStyle = '#334455'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
-  ctx.fillText(g.ds.name + '  ·  ' + g.ds.emotion, w / 2, 11); ctx.textAlign = 'left';
+  // ── Dreamscape header band (color-matched to ds accent) ──────────────
+  const dsAccent = g.ds.bgAccent || '#001122';
+  const headerGrd = ctx.createLinearGradient(0, 0, w, 0);
+  headerGrd.addColorStop(0, dsAccent + 'cc');
+  headerGrd.addColorStop(0.5, dsAccent + '44');
+  headerGrd.addColorStop(1, dsAccent + 'cc');
+  ctx.fillStyle = headerGrd; ctx.fillRect(0, 0, w, 16);
+
+  // Show realm label from emotional field if available
+  const efData = window._emotionField;
+  const realmLabel = efData ? efData.realm : '';
+  const dominantEmotion = efData ? efData.dominant : '';
+  const coherence = efData ? efData.coherence : 0;
+  const realmColor = realmLabel === 'Heaven' ? '#aaffcc' : realmLabel === 'Hell' ? '#ff5533' :
+                     realmLabel === 'Purgatory' ? '#ff8844' : realmLabel === 'Imagination' ? '#cc88ff' : '#334455';
+  ctx.fillStyle = realmColor; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
+  const headerText = realmLabel ? (g.ds.name + '  ·  ' + (dominantEmotion || g.ds.emotion) + '  ·  ' + realmLabel)
+                                : (g.ds.name + '  ·  ' + g.ds.emotion);
+  ctx.fillText(headerText, w / 2, 11); ctx.textAlign = 'left';
 
   // HP
   const hpBarW = 138;

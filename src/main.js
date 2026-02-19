@@ -32,8 +32,13 @@ import { vocabularyEngine } from './systems/learning/vocabulary-engine.js';
 import { patternRecognition } from './systems/learning/pattern-recognition.js';
 // ─── Phase 7: Cessation Tools ────────────────────────────────────────────
 import { sessionTracker } from './systems/cessation/session-tracker.js';
+// ─── Phase 7 continuation: Cessation Tools ───────────────────────────────
+import { urgeManagement } from './systems/cessation/urge-management.js';
 // ─── Phase 8: Awareness Features ─────────────────────────────────────────
 import { selfReflection } from './systems/awareness/self-reflection.js';
+import { emergenceIndicators } from './systems/awareness/emergence-indicators.js';
+// ─── Phase 10: Cosmology Integration ─────────────────────────────────────
+import { chakraSystem } from './systems/cosmology/chakra-system.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -71,6 +76,8 @@ let prevTs     = 0;
 let lastMove   = 0;
 let gameMode   = 'grid'; // 'grid' | 'shooter'
 const EMOTION_THRESHOLD = 0.15; // emotion must exceed this to affect gameplay
+const INTERLUDE_TIMER_FRAMES = 280; // frames at ~60fps ≈ 4.67s
+const INTERLUDE_TIMEOUT_MS   = Math.round(INTERLUDE_TIMER_FRAMES / 60 * 1000) + 200; // safety margin
 
 // Expose tokens/dreamIdx to renderer via window (avoids circular import)
 window._insightTokens = insightTokens;
@@ -200,6 +207,7 @@ function startGame(dreamIdx) {
   // Phase 6-8: start learning & session tracking
   vocabularyEngine.resetSession();
   selfReflection.resetSession();
+  emergenceIndicators.resetSession();
   sessionTracker.startSession();
   patternRecognition.onScoreChange(0);
   cancelAnimationFrame(animId);
@@ -218,10 +226,16 @@ function nextDreamscape() {
   const affirmation = selfReflection.getAffirmation();
   // Phase 6: show a vocabulary word on the interlude screen
   const vocabWord = vocabularyEngine.getInterludeWord(g.ds.emotion);
+  // Phase 8: record emergence events
+  emergenceIndicators.record('dream_completion');
+  if (prompt.depth === 'mid' || prompt.depth === 'deep') emergenceIndicators.record('reflection_depth');
+  // Phase 6: record vocabulary growth
+  if (vocabularyEngine.sessionCount >= 8) emergenceIndicators.record('vocabulary_growth');
   interludeState = {
     text: g.ds.completionText,
     subtext: DREAMSCAPES[nextIdx].narrative,
-    timer: 280, // slightly longer to accommodate reflection
+    timer: INTERLUDE_TIMER_FRAMES,
+    totalTimer: INTERLUDE_TIMER_FRAMES,
     ds: DREAMSCAPES[nextIdx],
     reflectionPrompt: prompt,
     affirmation,
@@ -233,7 +247,7 @@ function nextDreamscape() {
     game = initGame(nextIdx, g.score + 400 + g.level * 60, g.level, g.hp);
     game.msg = DREAMSCAPES[nextIdx].name; game.msgColor = '#ffdd00'; game.msgTimer = 90;
     if (phase === 'interlude') setPhase('playing');
-  }, 4600); // increased to match longer timer
+  }, INTERLUDE_TIMEOUT_MS);
 }
 
 function buyUpgrade(id) {
@@ -328,6 +342,9 @@ function loop(ts) {
         if (targetTile === 4) { // T.PEACE
           patternRecognition.onPeaceCollected(game.peaceLeft);
         }
+        // Phase 8: Record emergence events on tile step
+        if (targetTile === 6) emergenceIndicators.record('insight_accumulation'); // T.INSIGHT
+        if (targetTile === 4 && UPG.comboCount >= 4) emergenceIndicators.record('peace_chain'); // T.PEACE
       }
       tryMove(game, dy, dx, matrixActive, nextDreamscape, _showMsg, insightTokens,
         (n) => { while (insightTokens < n) addInsightToken(); window._insightTokens = insightTokens; });
@@ -358,20 +375,45 @@ function loop(ts) {
   // ── Phase 6: Learning Systems tick ─────────────────────────────────
   vocabularyEngine.tick();
   patternRecognition.tick();
-  patternRecognition.onScoreChange(game.score);
+  if (game.score !== patternRecognition._lastScore) {
+    patternRecognition.onScoreChange(game.score);
+    patternRecognition._lastScore = game.score;
+  }
   // Expose to renderer
   window._vocabWord      = vocabularyEngine.activeWord;
   window._patternBanner  = patternRecognition.activeBanner;
   window._learnStats     = { words: vocabularyEngine.sessionCount, patterns: patternRecognition.sessionCount };
 
-  // ── Phase 7: Session tracker tick ──────────────────────────────────
+  // ── Phase 7: Session tracker + urge management tick ────────────────
   sessionTracker.tick();
+  urgeManagement.tick(dt / 1000);
   window._sessionWellness = sessionTracker.wellness;
   window._sessionDuration = sessionTracker.durationFormatted;
   if (sessionTracker.hasPendingSuggestion && phase === 'playing') {
     const sug = sessionTracker.consumeSuggestion();
     if (sug) _showMsg(sug.msg, '#aaffcc', 160);
   }
+
+  // ── Phase 8: Awareness — emergence indicators tick ─────────────────
+  emergenceIndicators.tick();
+  window._emergence = {
+    level:   emergenceIndicators.emergenceLevel,
+    label:   emergenceIndicators.levelLabel,
+    flash:   emergenceIndicators.newFlash,
+    alpha:   emergenceIndicators.flashAlpha,
+    session: emergenceIndicators.sessionScore,
+  };
+
+  // ── Phase 10: Chakra system tick ────────────────────────────────────
+  chakraSystem.update(emotionalField);
+  chakraSystem.tick();
+  window._chakra = {
+    dominant: chakraSystem.dominant,
+    openness: chakraSystem.openness,
+    kundalini: chakraSystem.kundalini,
+    flash: chakraSystem.flashChakra,
+    alpha: chakraSystem.flashAlpha,
+  };
 
   if (game.hp <= 0) {
     deadGame = game; // snapshot for death screen
@@ -439,13 +481,35 @@ window.addEventListener('keydown', e => {
   if (phase === 'paused') {
     if (e.key==='ArrowUp')   { CURSOR.pause=(CURSOR.pause-1+4)%4; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowDown') { CURSOR.pause=(CURSOR.pause+1)%4; sfxManager.resume(); sfxManager.playMenuNav(); }
+    // B key: cycle breathing patterns (Phase 7)
+    if (e.key==='b'||e.key==='B') {
+      const patterns = ['box', '4-7-8', 'coherent'];
+      if (!urgeManagement.isActive) {
+        urgeManagement.start('box');
+      } else {
+        const next = patterns[(patterns.indexOf(urgeManagement.patternKey) + 1) % patterns.length];
+        if (next === 'box') urgeManagement.stop();
+        else urgeManagement.start(next);
+      }
+    }
+    // Update breath state for pause menu renderer
+    if (urgeManagement.isActive) {
+      const ph = urgeManagement.currentPhase;
+      window._breathState = {
+        isActive: true, label: ph.label, color: ph.color,
+        radius: urgeManagement.breathRadius, cycles: urgeManagement.cycleCount,
+        phrase: urgeManagement.surfPhrase,
+      };
+    } else {
+      window._breathState = { isActive: false };
+    }
     if (e.key==='Enter') {
-      if(CURSOR.pause===0) { sessionTracker.resumeSession(); setPhase('playing'); }
+      if(CURSOR.pause===0) { sessionTracker.resumeSession(); urgeManagement.stop(); setPhase('playing'); }
       else if(CURSOR.pause===1){CURSOR.opt=0;setPhase('options');}
       else if(CURSOR.pause===2){CURSOR.shop=0;CURSOR.upgradeFrom='paused';setPhase('upgrade');}
       else { setPhase('title'); CURSOR.menu=0; game=null; }
     }
-    if (e.key==='Escape') { sessionTracker.resumeSession(); setPhase('playing'); }
+    if (e.key==='Escape') { sessionTracker.resumeSession(); urgeManagement.stop(); setPhase('playing'); }
     e.preventDefault(); return;
   }
   if (phase === 'playing') {
@@ -454,11 +518,12 @@ window.addEventListener('keydown', e => {
       if (e.key==='Escape') { setPhase('title'); CURSOR.menu=0; }
       e.preventDefault(); return;
     }
-    if (e.key==='Escape') { CURSOR.pause=0; sessionTracker.pauseSession(); setPhase('paused'); }
+    if (e.key==='Escape') { CURSOR.pause=0; sessionTracker.pauseSession(); emergenceIndicators.record('pause_frequency'); setPhase('paused'); }
     if (e.key==='Shift' && !e.repeat) {
       const next = matrixActive === 'A' ? 'B' : 'A';
       setMatrix(next); setMatrixHoldTime(0);
       sfxManager.resume(); sfxManager.playMatrixSwitch(next === 'A');
+      emergenceIndicators.record('matrix_mastery');
       const lbl = next==='A'?'MATRIX·A  ⟨ERASURE⟩':'MATRIX·B  ⟨COHERENCE⟩';
       const col = next==='A'?'#ff0055':'#00ff88';
       _showMsg(lbl, col, 55);

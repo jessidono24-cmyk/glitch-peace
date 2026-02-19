@@ -454,6 +454,41 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
 
+  // ── Phase 8: Emergence indicator flash ───────────────────────────────
+  const em = window._emergence;
+  if (em && em.flash) {
+    ctx.globalAlpha = Math.min(1, em.alpha);
+    ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(w/2 - 150, h*0.72, 300, 56);
+    ctx.strokeStyle = 'rgba(170,200,255,0.4)'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 150, h*0.72, 300, 56);
+    ctx.fillStyle = '#aaccff'; ctx.shadowColor = '#88aaff'; ctx.shadowBlur = 8;
+    ctx.font = 'bold 11px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('✦ EMERGENCE · ' + em.flash.label.toUpperCase(), w/2, h*0.72 + 18); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#667799'; ctx.font = '8px Courier New';
+    ctx.fillText(em.flash.desc, w/2, h*0.72 + 36);
+    ctx.fillStyle = '#334455'; ctx.font = '7px Courier New';
+    ctx.fillText('AWAKENING LEVEL: ' + em.label, w/2, h*0.72 + 50);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  // ── Phase 10: Chakra awakening flash ─────────────────────────────────
+  const ck = window._chakra;
+  if (ck && ck.flash) {
+    ctx.globalAlpha = Math.min(1, ck.alpha);
+    const fc = ck.flash;
+    ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(w/2 - 140, h*0.28, 280, 54);
+    ctx.strokeStyle = fc.color + '88'; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - 140, h*0.28, 280, 54);
+    ctx.fillStyle = fc.glow; ctx.shadowColor = fc.glow; ctx.shadowBlur = 10;
+    ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('◉ ' + fc.name.toUpperCase() + ' CHAKRA AWAKENED', w/2, h*0.28 + 18); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#aa8866'; ctx.font = '9px Courier New';
+    ctx.fillText(fc.sanskrit + '  ·  ' + fc.desc, w/2, h*0.28 + 34);
+    ctx.fillStyle = '#665544'; ctx.font = '8px Courier New';
+    ctx.fillText(fc.powerup, w/2, h*0.28 + 48);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
   ctx.fillStyle = '#070714'; ctx.fillRect(0, h - 28, w, 28);
   ctx.strokeStyle = 'rgba(255,255,255,0.03)';
   ctx.beginPath(); ctx.moveTo(0, h - 28); ctx.lineTo(w, h - 28); ctx.stroke();

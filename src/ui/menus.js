@@ -139,10 +139,10 @@ export function drawPause(ctx, w, h, game, pauseIdx) {
   ctx.fillStyle = 'rgba(0,0,0,0.87)'; ctx.fillRect(0, 0, w, h);
   ctx.textAlign = 'center';
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 14;
-  ctx.font = 'bold 24px Courier New'; ctx.fillText('PAUSED', w / 2, h / 2 - 80); ctx.shadowBlur = 0;
+  ctx.font = 'bold 24px Courier New'; ctx.fillText('PAUSED', w / 2, h / 2 - 82); ctx.shadowBlur = 0;
   if (game) {
-    ctx.fillStyle = '#223322'; ctx.font = '9px Courier New'; ctx.fillText(game.ds.name + '  ·  LEVEL ' + game.level, w / 2, h / 2 - 58);
-    ctx.fillStyle = '#334455'; ctx.fillText(game.ds.narrative, w / 2, h / 2 - 44);
+    ctx.fillStyle = '#223322'; ctx.font = '9px Courier New'; ctx.fillText(game.ds.name + '  ·  LEVEL ' + game.level, w / 2, h / 2 - 60);
+    ctx.fillStyle = '#334455'; ctx.fillText(game.ds.narrative, w / 2, h / 2 - 46);
   }
 
   // Phase 7: Session wellness display
@@ -152,28 +152,60 @@ export function drawPause(ctx, w, h, game, pauseIdx) {
   if (wellness) {
     ctx.fillStyle = wellness.color; ctx.shadowColor = wellness.color; ctx.shadowBlur = 4;
     ctx.font = '9px Courier New';
-    ctx.fillText('SESSION · ' + duration + ' · ' + wellness.label, w / 2, h / 2 - 28);
+    ctx.fillText('SESSION · ' + duration + ' · ' + wellness.label, w / 2, h / 2 - 30);
     ctx.shadowBlur = 0;
   }
   // Phase 6: Learning stats
   ctx.fillStyle = '#335533'; ctx.font = '8px Courier New';
-  ctx.fillText('WORDS LEARNED: ' + learnStats.words + '  ·  PATTERNS FOUND: ' + learnStats.patterns, w / 2, h / 2 - 16);
+  ctx.fillText('WORDS: ' + learnStats.words + '  ·  PATTERNS: ' + learnStats.patterns, w / 2, h / 2 - 18);
+
+  // Phase 8: Emergence level
+  const em = window._emergence;
+  if (em) {
+    ctx.fillStyle = '#445566'; ctx.font = '8px Courier New';
+    ctx.fillText('EMERGENCE · ' + em.label, w / 2, h / 2 - 6);
+  }
+
+  // Phase 7: Breathing panel (if active)
+  const breath = window._breathState;
+  if (breath && breath.isActive) {
+    const cx = w / 2, cy = h / 2 + 90;
+    const maxR = 28, minR = 8;
+    const r = minR + (maxR - minR) * breath.radius;
+    // Outer glow ring
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = breath.color; ctx.beginPath(); ctx.arc(cx, cy, r + 10, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    // Main circle
+    ctx.fillStyle = breath.color; ctx.shadowColor = breath.color; ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#000'; ctx.font = 'bold 9px Courier New';
+    ctx.fillText(breath.label, cx, cy + 4);
+    // Phrase below
+    ctx.fillStyle = '#667788'; ctx.font = '7px Courier New';
+    ctx.fillText(breath.phrase || '', cx, cy + 50);
+    ctx.fillStyle = '#223344'; ctx.font = '7px Courier New';
+    ctx.fillText('CYCLES: ' + (breath.cycles || 0) + '  ·  B=stop breathing', cx, h / 2 + 150);
+  } else {
+    ctx.fillStyle = '#223344'; ctx.font = '7px Courier New';
+    ctx.fillText('B = start breathing exercise (Box / 4-7-8 / Coherent)', w / 2, h - 34);
+  }
 
   PAUSE_MENU.forEach((txt, i) => {
-    const sel = i === pauseIdx, y = h / 2 + 8 + i * 36;
+    const sel = i === pauseIdx, y = h / 2 + 10 + i * 32;
     if (sel) {
-      ctx.fillStyle = 'rgba(0,255,136,0.07)'; ctx.fillRect(w / 2 - 110, y - 18, 220, 26);
-      ctx.strokeStyle = 'rgba(0,255,136,0.26)'; ctx.strokeRect(w / 2 - 110, y - 18, 220, 26);
+      ctx.fillStyle = 'rgba(0,255,136,0.07)'; ctx.fillRect(w / 2 - 110, y - 16, 220, 24);
+      ctx.strokeStyle = 'rgba(0,255,136,0.26)'; ctx.strokeRect(w / 2 - 110, y - 16, 220, 24);
     }
     ctx.fillStyle = sel ? '#00ff88' : '#334433'; ctx.shadowColor = sel ? '#00ff88' : 'transparent'; ctx.shadowBlur = sel ? 6 : 0;
-    ctx.font = sel ? 'bold 13px Courier New' : '12px Courier New'; ctx.fillText(txt, w / 2, y); ctx.shadowBlur = 0;
+    ctx.font = sel ? 'bold 12px Courier New' : '11px Courier New'; ctx.fillText(txt, w / 2, y); ctx.shadowBlur = 0;
   });
   ctx.fillStyle = '#131328'; ctx.font = '8px Courier New'; ctx.fillText('↑↓ navigate  ·  ENTER select  ·  ESC resume', w / 2, h - 20);
   ctx.textAlign = 'left';
 }
 
 export function drawInterlude(ctx, w, h, interludeState, ts) {
-  const totalTimer = 280;
+  const totalTimer = interludeState.totalTimer || 280;
   const prog = 1 - (interludeState.timer / totalTimer);
   const alpha = prog < 0.08 ? prog / 0.08 : prog > 0.92 ? (1 - prog) / 0.08 : 1;
   const ds = interludeState.ds || DREAMSCAPES[0];

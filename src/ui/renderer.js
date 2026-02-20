@@ -1,4 +1,4 @@
-import { T, TILE_DEF, ARCHETYPES, CELL, GAP, PAL_A, PAL_B } from '../core/constants.js';
+import { T, TILE_DEF, ARCHETYPES, CELL, GAP, PAL_A, PAL_B, PAL_HC } from '../core/constants.js';
 import { CFG, UPG } from '../core/state.js';
 import { spritePlayer } from '../rendering/sprite-player.js';
 import { drawBoss3D } from '../rendering/boss-renderer-3d.js';
@@ -11,7 +11,10 @@ const MSG_FONT_SMALL  = '9';
 const MSG_FONT_MEDIUM = '12';
 const MSG_FONT_LARGE  = '16';
 
-export function PAL(matrixActive) { return matrixActive === 'A' ? PAL_A : PAL_B; }
+export function PAL(matrixActive) {
+  if (CFG.highContrast) return PAL_HC;
+  return matrixActive === 'A' ? PAL_A : PAL_B;
+}
 
 export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, hallucinations, anomalyActive, anomalyData, glitchFrames, DPR, ghostPath) {
   const g = game; if (!g) return;
@@ -62,16 +65,18 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
   ctx.globalAlpha = 1;
 
   // Glitch
-  if (glitchFrames > 0) {
+  if (glitchFrames > 0 && !CFG.reducedMotion) {
     ctx.fillStyle = `rgba(${matrixActive === 'A' ? '180,0,60' : '0,180,60'},0.04)`;
     ctx.fillRect(0, Math.floor(Math.random() * h), w, 2 + Math.floor(Math.random() * 4));
   }
 
-  // Shake
+  // Shake — disabled when reducedMotion is on
   let ox = 0, oy = 0;
   if (g.shakeFrames > 0) {
-    ox = (Math.random() - 0.5) * 9 * (g.shakeFrames / 10);
-    oy = (Math.random() - 0.5) * 9 * (g.shakeFrames / 10);
+    if (!CFG.reducedMotion) {
+      ox = (Math.random() - 0.5) * 9 * (g.shakeFrames / 10);
+      oy = (Math.random() - 0.5) * 9 * (g.shakeFrames / 10);
+    }
     g.shakeFrames--;
   }
   const sx = (w - gp) / 2 + ox, sy = 110 + oy;
@@ -612,10 +617,13 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     if (rw.r >= rw.maxR) g.resonanceWave = null;
   }
 
-  // Flash
+  // Flash — skip visual overlay when reducedMotion is on (still drain counter)
   if (g.flashAlpha > 0) {
-    ctx.fillStyle = g.flashColor; ctx.globalAlpha = g.flashAlpha; ctx.fillRect(sx, sy, gp, gp);
-    ctx.globalAlpha = 1; g.flashAlpha = Math.max(0, g.flashAlpha - 0.04);
+    if (!CFG.reducedMotion) {
+      ctx.fillStyle = g.flashColor; ctx.globalAlpha = g.flashAlpha; ctx.fillRect(sx, sy, gp, gp);
+      ctx.globalAlpha = 1;
+    }
+    g.flashAlpha = Math.max(0, g.flashAlpha - 0.04);
   }
 
   // Matrix A vignette

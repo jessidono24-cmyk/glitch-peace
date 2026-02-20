@@ -82,6 +82,8 @@ import { MeditationMode } from './modes/meditation-mode.js';
 import { CoopMode } from './modes/coop-mode.js';
 // ─── SteamPack: Achievement System ────────────────────────────────────────
 import { achievementSystem, ACHIEVEMENT_DEFS } from './systems/achievements.js';
+// ─── Tone.js procedural music engine ──────────────────────────────────────
+import { musicEngine } from './audio/music-engine.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -110,6 +112,7 @@ const emotionalField = new EmotionalField();
 const consequencePreview = new ConsequencePreview();
 const impulseBuffer = new ImpulseBuffer();
 window.sfxManager = sfxManager; // allow player.js to access for future hooks
+window.musicEngine = musicEngine; // expose for external control
 
 // Shooter mode instance (shared systems)
 const shooterSharedSystems = {
@@ -150,6 +153,8 @@ adaptiveDifficulty.setAgeGroup(PLAYER_PROFILE.ageGroup || 'adult');
 if (PLAYER_PROFILE.diffTier) adaptiveDifficulty.setTier(PLAYER_PROFILE.diffTier);
 languageSystem.setNativeLang(PLAYER_PROFILE.nativeLang || 'en');
 if (PLAYER_PROFILE.targetLang) languageSystem.setTargetLang(PLAYER_PROFILE.targetLang);
+// Sync music engine volume to saved profile
+musicEngine.setVolume(PLAYER_PROFILE.sfxMuted ? 0 : (PLAYER_PROFILE.sfxVol || 0.5));
 
 // Expose tokens/dreamIdx to renderer via window (avoids circular import)
 window._insightTokens = insightTokens;
@@ -343,6 +348,7 @@ function initGame(dreamIdx, prevScore, prevLevel, prevHp) {
 
 function startGame(dreamIdx) {
   sfxManager.resume();
+  musicEngine.start().catch(() => {}); // Tone.js requires user gesture; start lazily
   temporalSystem.refresh();
   const tmods = temporalSystem.getModifiers();
   window._tmods = tmods;
@@ -747,7 +753,8 @@ function loop(ts) {
       if (targetTile === 4)              sfxManager.playPeaceCollect();   // T.PEACE
       else if (targetTile === 6)         sfxManager.playInsightCollect(); // T.INSIGHT
       else if (SOMATIC_TILES.has(targetTile)) sfxManager.playSomaticTile();   // somatic
-      else if (HAZARD_TILES.has(targetTile))  sfxManager.playDamage();        // hazards
+      else if (HAZARD_TILES.has(targetTile))  { sfxManager.playDamage(); musicEngine.onHazardHit(); } // hazards
+      if (targetTile === 4 || targetTile === 6) musicEngine.onPeaceCollect(); // peace/insight music cue
       // Quest flash → play quest SFX exactly once on new quest completion
       if (window._questFlash?.playSound) {
         sfxManager.playQuestComplete();
@@ -964,6 +971,9 @@ function loop(ts) {
   // EQ observation: feed dominant emotion to emotion-recognition
   const domEmo = emotionalField.getDominantEmotion();
   emotionRecognition.observe(domEmo.id, domEmo.value, matrixActive);
+  // Tone.js: update music engine with current dominant emotion + game mode
+  musicEngine.setEmotion(domEmo.id || UPG.emotion || 'neutral');
+  musicEngine.setGameMode(gameMode);
   // Expose intelligence data to window for dashboard + renderer
   window._iqData = {
     iqScore:          logicPuzzles.iqScore,

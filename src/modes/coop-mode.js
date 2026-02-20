@@ -50,14 +50,19 @@ export class CoopMode {
     this.isActive  = true;
     this._result   = null;
     this._dreamStartTime = performance.now();
-    this._showInstructions = true;  // show co-op instructions overlay for first 6s
-    this._instructionsTimer = 6000; // ms
+    this._showInstructions = true;
+    this._instructionsTimer = 6000;
+    this._synergyFlash   = 0;   // synergy bonus display timer
+    this._synergyMsg     = '';
+    this._p2Dead         = false;
+    this._p2ReviveTimer  = 0;   // countdown until P2 permanently removed
+    this._level          = 1;
 
     const dsIdx = config.dreamIdx || CFG.dreamIdx || 0;
     const ds    = DREAMSCAPES[dsIdx % DREAMSCAPES.length];
     const sz    = SZ();
 
-    this.game = buildDreamscape(ds, sz, 1, 0, UPG.maxHp, UPG.maxHp, []);
+    this.game = buildDreamscape(ds, sz, this._level, 0, UPG.maxHp, UPG.maxHp, []);
     const g   = this.game;
 
     // P1 starts top-left, P2 starts bottom-right
@@ -209,18 +214,71 @@ export class CoopMode {
     }
 
     // Check end conditions
-    if (g.player.hp <= 0 || this.p2.hp <= 0) {
+    if (!this._p2Dead && this.p2.hp <= 0) {
+      // P2 is downed — start revival countdown (P1 can revive by standing adjacent)
+      this._p2Dead = true;
+      this._p2ReviveTimer = 5000; // 5 seconds to revive
+      g.msg = 'P2 DOWN!  P1 STAND ADJACENT TO REVIVE…'; g.msgColor = '#ff8844'; g.msgTimer = 180;
+    }
+    if (this._p2Dead) {
+      this._p2ReviveTimer -= dt;
+      // Check if P1 is adjacent to P2 for revival
+      const adj = Math.abs(g.player.y - this.p2.y) + Math.abs(g.player.x - this.p2.x) <= 1;
+      if (adj) {
+        this.p2.hp = Math.round(UPG.maxHp * 0.5);
+        this._p2Dead = false;
+        burst(g, this.p2.x, this.p2.y, '#ff8844', 20, 4);
+        g.msg = 'P2 REVIVED!'; g.msgColor = '#ffcc44'; g.msgTimer = 90;
+        g.score += 500;
+      } else if (this._p2ReviveTimer <= 0) {
+        // No revival — P1 alone
+        g.msg = 'P2 LOST — P1 CONTINUES ALONE'; g.msgColor = '#443322'; g.msgTimer = 120;
+        this._p2Dead = false; this.p2.hp = 0; // disable P2
+      }
+    }
+    if (g.player.hp <= 0) {
       this.sfxManager.playDeath && this.sfxManager.playDeath();
       this._result = { phase: 'dead', data: { score: g.score, level: g.level, ds: g.ds } };
       return this._result;
     }
     if (g.peaceLeft <= 0) {
+      this._level++;
       window._achievementQueue = window._achievementQueue || [];
       window._achievementQueue.push('coop_partner');
-      g.score += 1500;
-      this._result = { phase: 'dead', data: { score: g.score, level: g.level, ds: g.ds } };
-      return this._result;
+      g.score += 1500 + this._level * 300;
+      // Advance to next level (re-init with new dreamscape)
+      if (this._level > 5) {
+        this._result = { phase: 'dead', data: { score: g.score, level: g.level, ds: g.ds } };
+        return this._result;
+      }
+      const nextDsIdx = (CFG.dreamIdx + this._level) % DREAMSCAPES.length;
+      const nextDs = DREAMSCAPES[nextDsIdx];
+      const sz2 = SZ();
+      const prevScore = g.score;
+      this.game = buildDreamscape(nextDs, sz2, this._level, 0, g.player.hp, UPG.maxHp, []);
+      this.game.score = prevScore;
+      this.game.player.y = 0; this.game.player.x = 0;
+      this.p2.y = sz2 - 1; this.p2.x = sz2 - 1;
+      this.game.grid[sz2-1][sz2-1] = T.VOID;
+      g.msg = '⬆ LEVEL ' + this._level + '  COOP ADVANCE!'; g.msgColor = '#ffcc44'; g.msgTimer = 120;
+      return null;
     }
+
+    // ── Synergy bonus: both players on adjacent tiles ──────────────────
+    if (this.p2.hp > 0 && !this._p2Dead) {
+      const dist = Math.abs(g.player.y - this.p2.y) + Math.abs(g.player.x - this.p2.x);
+      if (dist <= 1) {
+        // Players adjacent — sync heal and score boost (5 HP/sec = 0.005 per ms)
+        g.player.hp = Math.min(UPG.maxHp, (g.player.hp||UPG.maxHp) + 0.005 * dt);
+        this.p2.hp  = Math.min(UPG.maxHp, this.p2.hp  + 0.005 * dt);
+        if (this._synergyFlash <= 0 && Math.random() < 0.01) {
+          g.score += 50;
+          this._synergyMsg = '✦ SYNERGY BONUS +50';
+          this._synergyFlash = 80;
+        }
+      }
+    }
+    if (this._synergyFlash > 0) this._synergyFlash--;
 
     return null;
   }
@@ -272,8 +330,28 @@ export class CoopMode {
     // Mode label
     ctx.textAlign = 'center';
     ctx.fillStyle = '#334455'; ctx.font = '8px Courier New';
-    ctx.fillText('🤝  CO-OP  ·  P1=ARROWS  P2=WASD  ·  shared score', w/2, h - 14);
+    ctx.fillText('🤝  CO-OP  ·  P1=ARROWS  P2=WASD  ·  shared score  ·  LVL ' + this._level, w/2, h - 14);
     ctx.textAlign = 'left';
+
+    // ── Synergy flash banner ──────────────────────────────────────────
+    if (this._synergyFlash > 0) {
+      const sa = Math.min(1, this._synergyFlash / 20);
+      ctx.globalAlpha = sa;
+      ctx.fillStyle = '#ffcc44'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 10;
+      ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText(this._synergyMsg, w/2, h/2 - 40);
+      ctx.shadowBlur = 0; ctx.globalAlpha = 1; ctx.textAlign = 'left';
+    }
+
+    // ── P2 revival countdown bar ──────────────────────────────────────
+    if (this._p2Dead && this._p2ReviveTimer > 0) {
+      const revFrac = this._p2ReviveTimer / 5000;
+      ctx.fillStyle = 'rgba(255,100,50,0.3)'; ctx.fillRect(w - 160, 30, 150, 10);
+      ctx.fillStyle = '#ff6622'; ctx.fillRect(w - 160, 30, 150 * revFrac, 10);
+      ctx.fillStyle = '#ffaa88'; ctx.font = '8px Courier New'; ctx.textAlign = 'right';
+      ctx.fillText('REVIVE P2  ' + Math.ceil(this._p2ReviveTimer / 1000) + 's', w - 8, 42);
+      ctx.textAlign = 'left';
+    }
 
     // ── Co-op instructions overlay (shown for first 6 seconds) ──────────
     if (this._showInstructions) {

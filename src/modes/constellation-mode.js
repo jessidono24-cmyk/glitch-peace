@@ -21,6 +21,7 @@ import { UPG, insightTokens, addInsightToken } from '../core/state.js';
 import { rnd, pick } from '../core/utils.js';
 import { SZ, buildDreamscape, CW, CH } from '../game/grid.js';
 import { burst } from '../game/particles.js';
+import { getStarField } from '../rendering/three-layer.js';
 
 const STAR_DREAMSCAPE_IDS = ['orb_escape', 'integration', 'void_nexus', 'cloud_city', 'crystal_cave'];
 
@@ -176,11 +177,9 @@ export class ConstellationMode {
               this.sfxManager.playDreamComplete && this.sfxManager.playDreamComplete();
               window._achievementQueue = window._achievementQueue || [];
               window._achievementQueue.push('constellation');
-              // Calculate stars-based bonus (extra 500 per archetype node collected)
-              const archetypeBonus = this.visitedNodes.filter(n => {
-                // check if archetype node was in original star list
-                return this.starNodes.some(s => s.y === n.y && s.x === n.x);
-              }).length * 100;
+              // Calculate stars-based bonus using O(1) Set lookup
+              const starSet = new Set(this.starNodes.map(s => s.y + ',' + s.x));
+              const archetypeBonus = this.visitedNodes.filter(n => starSet.has(n.y + ',' + n.x)).length * 100;
               const completionScore = 2000 + archetypeBonus + this.visitedNodes.length * 150;
               g.score += completionScore;
               // Show rich completion overlay (renders on top for 4 s)
@@ -225,18 +224,25 @@ export class ConstellationMode {
 
     // Deep space background
     ctx.fillStyle = '#01010a'; ctx.fillRect(0, 0, w, h);
-    const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.7);
-    grad.addColorStop(0, 'rgba(10,0,30,0.8)'); grad.addColorStop(1, 'transparent');
-    ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
 
-    // Background star field
-    for (const s of this.backgroundStars) {
-      const a = s.a * (0.6 + 0.4 * Math.sin(ts * 0.0006 + s.phase));
-      ctx.globalAlpha = a;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+    // 3D-C: Three.js volumetric star field (WebGL composited onto 2D canvas)
+    try {
+      const sf = getStarField(w, h);
+      sf.update(ts);
+      sf.composite(ctx, 0, 0);
+    } catch (_e) {
+      // Fallback: 2D canvas stars if WebGL unavailable
+      const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.7);
+      grad.addColorStop(0, 'rgba(10,0,30,0.8)'); grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+      for (const s of this.backgroundStars) {
+        const a = s.a * (0.6 + 0.4 * Math.sin(ts * 0.0006 + s.phase));
+        ctx.globalAlpha = a;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
 
     // Draw connection lines between visited star nodes
     ctx.strokeStyle = 'rgba(0,220,255,0.35)';

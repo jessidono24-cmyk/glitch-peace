@@ -1,7 +1,8 @@
-'use strict';
 import { T, TILE_DEF, ARCHETYPES, CELL, GAP, PAL_A, PAL_B } from '../core/constants.js';
 import { CFG, UPG } from '../core/state.js';
 import { spritePlayer } from '../rendering/sprite-player.js';
+import { drawBoss3D } from '../rendering/boss-renderer-3d.js';
+import { getVoidNexus3D } from '../rendering/void-nexus-3d.js';
 
 // ── Message rendering thresholds ──────────────────────────────────────
 const MSG_LEN_LONG    = 55;  // chars — triggers word-wrap + small font
@@ -115,14 +116,9 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     isoOrder.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
   }
 
-  const tileLoop = ISO ? isoOrder : null;
-
-  for (let li = 0; li < sz * sz; li++) {
-    let y, x;
-    if (ISO) { [y, x] = isoOrder[li]; } else { y = Math.floor(li / sz); x = li % sz; }
-    if (!ISO && li === 0) { /* handled by flat loop below */ }
-    if (!ISO) break; // exit early — flat loop runs separately below
-    // ── Isometric tile draw ──────────────────────────────────────────
+  // 3D-B: Isometric tile loop (only runs when ISO mode is active)
+  if (ISO) for (let li = 0; li < sz * sz; li++) {
+    const [y, x] = isoOrder[li];
     const raw = g.grid[y][x];
     const fl  = flickerMap.get(y * sz + x);
     const val = (fl && fl.reveal && raw === T.HIDDEN) ? T.INSIGHT : raw;
@@ -323,6 +319,17 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     }
   }
   g.tileFlicker = g.tileFlicker.filter(f => { f.t--; return f.t > 0; });
+
+  // 3D-E: Void Nexus Three.js full-scene composite (replaces 2D grid render)
+  if (CFG.viewMode === 'iso' && ds && ds.id === 'void_nexus') {
+    try {
+      const vn = getVoidNexus3D(w, h);
+      vn.syncGrid(g.grid, sz);
+      vn.syncPlayer(g.player.y, g.player.x, sz);
+      vn.animate(ts);
+      vn.composite(ctx, 0, 0);
+    } catch (_e) { /* fallback to 2D grid if WebGL unavailable */ }
+  }
 
   // ── Fog of War — visibility radius around player ──────────────────────
   // Insight tiles expand radius; Matrix A shrinks it; normal play = 4 tiles
@@ -562,6 +569,8 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     ctx.fillText((b.phaseLabel || 'BOSS'), bx + CELL / 2, by + CELL / 2 - 3);
     ctx.fillText(Math.round(hpPct * 100) + '%', bx + CELL / 2, by + CELL / 2 + 8);
     ctx.textAlign = 'left'; ctx.shadowBlur = 0;
+    // 3D-D: composite Three.js boss model on top of 2D base
+    drawBoss3D(ctx, bx, by, CELL, ts, b);
   }
 
   // Player — animated sprite (3D-A)

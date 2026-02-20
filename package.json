@@ -1,14 +1,49 @@
 {
   "name": "glitch-peace-vite",
-  "version": "1.0.0",
+  "version": "2.3.0",
   "description": "GLITCH·PEACE — consciousness simulation game. Base Layer v4.",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
-    "dev": "vite --port 3000 --open",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev":             "vite --port 3000 --open",
+    "build":           "vite build",
+    "preview":         "vite preview",
+    "electron:dev":    "vite build && electron .",
+    "electron:build":  "vite build && electron-builder"
+  },
+  "build": {
+    "appId":       "com.glitchpeace.app",
+    "productName": "GLITCH·PEACE",
+    "copyright":   "GLITCH·PEACE — free & open source",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon":   "dist/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon":   "dist/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon":   "dist/icon.png"
+    }
   },
   "devDependencies": {
+    "electron": "^40.6.0",
+    "electron-builder": "^26.8.1",
     "vite": "^7.3.1"
+  },
+  "dependencies": {
+    "steamworks.js": "^0.4.0",
+    "three": "^0.183.0",
+    "tone": "^15.1.22"
   }
 }

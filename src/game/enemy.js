@@ -15,7 +15,7 @@ export function stepEnemies(game, dt, keys, matrixActive, hallucinations, showMs
 
   const slowMul   = g.slowMoves ? 1.5 : 1.0;
   const baseSpeed = d.eSpeedBase - g.level * 30;
-  const mSpeed    = Math.max(d.eSpeedMin, baseSpeed) * (matrixActive === 'A' ? 0.65 : 1.0) * slowMul;
+  const mSpeed    = Math.max(d.eSpeedMin, baseSpeed) * (matrixActive === 'A' ? 0.65 : 1.0) * slowMul * (g.temporalEnemyMul ?? 1.0);
 
   // Hallucinations (level 3+)
   if (g.level >= 3) {

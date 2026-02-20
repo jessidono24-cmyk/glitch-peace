@@ -636,6 +636,10 @@ function loop(ts) {
   if (domEmotion.value > EMOTION_THRESHOLD) UPG.emotion = domEmotion.id;
   window._emotionSynergy = emotionalField.synergy;
   window._purgDepth      = emotionalField.purgDepth;
+  // Apply purgDepth realm modifiers to damage and healing
+  const pd = emotionalField.purgDepth;
+  game.dmgMul  = pd >= 0.8 ? 1.30 : pd >= 0.5 ? 1.15 : 1.0;
+  game.healMul = pd <= 0.2 ? 1.25 : pd <= 0.35 ? 1.10 : 1.0;
   // Expose full emotion state for renderer (realm tinting, HUD header)
   window._emotionField = {
     realm:      emotionalField.realm       || 'Mind',

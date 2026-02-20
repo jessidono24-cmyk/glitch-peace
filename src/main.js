@@ -19,6 +19,7 @@ import { tryMove, triggerGlitchPulse, stepTileSpread, setEmotion, showMsg,
          activateArchetype, executeArchetypePower } from './game/player.js';
 import { burst, resonanceWave } from './game/particles.js';
 import { drawGame } from './ui/renderer.js';
+import { spritePlayer } from './rendering/sprite-player.js';
 import { drawTitle, drawDreamSelect, drawOptions, drawHighScores,
          drawUpgradeShop, drawPause, drawInterlude, drawDead,
          drawOnboarding, drawLanguageOptions, drawHowToPlay,
@@ -779,8 +780,12 @@ function loop(ts) {
       const _hpBeforeMove = game.hp;
       tryMove(game, dy, dx, matrixActive, nextDreamscape, _showMsg, insightTokens,
         (n) => { while (insightTokens < n) addInsightToken(); window._insightTokens = insightTokens; });
+      // 3D-A: signal walk direction to sprite player
+      spritePlayer.onMove(dy, dx);
       // Nightmare mode: peace tiles don't heal (revert any HP gain from peace tile)
       if (game.nightmareMode && targetTile === 4 && game.hp > _hpBeforeMove) game.hp = _hpBeforeMove;
+      // 3D-A: signal hit if HP dropped from tile damage
+      if (game.hp < _hpBeforeMove) spritePlayer.onHit();
       lastMove = ts;
       impulseBuffer.reset();
 
@@ -864,7 +869,10 @@ function loop(ts) {
   if (game.hp < _hpBeforeEnemies) {
     strategicThinking.onDamage(matrixActive);
     dreamYoga.onHazardHit();
+    spritePlayer.onHit(); // 3D-A: enemy damage signal
   }
+  // 3D-A: tick sprite player animation each frame
+  spritePlayer.tick(dt);
 
   // ── Phase 6: Learning Systems tick ─────────────────────────────────
   vocabularyEngine.tick();
@@ -1211,7 +1219,7 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
   if (phase === 'options') {
-    const OPT_COUNT = 7; // rows: gridsize, difficulty, particles, playstyle, sfxvol, languages, back
+    const OPT_COUNT = 8; // rows: gridsize, difficulty, particles, playstyle, viewmode, sfxvol, languages, back
     if (e.key==='ArrowUp')   { CURSOR.opt=(CURSOR.opt-1+OPT_COUNT)%OPT_COUNT; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowDown') { CURSOR.opt=(CURSOR.opt+1)%OPT_COUNT; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowLeft'||e.key==='ArrowRight') {
@@ -1223,7 +1231,8 @@ window.addEventListener('keydown', e => {
         const i=PLAY_MODE_LIST.indexOf(CFG.playMode||'arcade');
         CFG.playMode=PLAY_MODE_LIST[(i+dir+PLAY_MODE_LIST.length)%PLAY_MODE_LIST.length];
       }
-      else if(CURSOR.opt===4) {  // SFX VOLUME: cycle 0%, 25%, 50%, 75%, 100%
+      else if(CURSOR.opt===4) { CFG.viewMode = CFG.viewMode === 'iso' ? 'flat' : 'iso'; } // VIEW MODE toggle
+      else if(CURSOR.opt===5) {  // SFX VOLUME: cycle 0%, 25%, 50%, 75%, 100%
         const SFX_VOL_STEPS = [0, 0.25, 0.5, 0.75, 1.0];
         const SFX_VOL_DEFAULT_IDX = 2;   // index of 50% (default)
         // Use direct equality since these are exact preset values, not free-form floats
@@ -1236,14 +1245,14 @@ window.addEventListener('keydown', e => {
       sfxManager.resume(); sfxManager.playMenuNav();
     }
     if (e.key==='Enter') {
-      if(CURSOR.opt===4) { // Toggle mute
+      if(CURSOR.opt===5) { // Toggle mute
         PLAYER_PROFILE.sfxMuted=!PLAYER_PROFILE.sfxMuted;
         sfxManager.setVolume(PLAYER_PROFILE.sfxMuted ? 0 : (PLAYER_PROFILE.sfxVol || 0.5));
         savePlayerProfile();
         sfxManager.resume(); sfxManager.playMenuSelect();
       }
-      else if(CURSOR.opt===5) { setPhase('langopts'); }  // Language settings
-      else if(CURSOR.opt===6) setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
+      else if(CURSOR.opt===6) { setPhase('langopts'); }  // Language settings
+      else if(CURSOR.opt===7) setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
     }
     if (e.key==='Escape') setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
     e.preventDefault(); return;

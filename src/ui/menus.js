@@ -216,6 +216,7 @@ export function drawOptions(ctx, w, h, optIdx) {
     { label:'PARTICLES',   opts:['on','off'], cur:CFG.particles ? 'on' : 'off' },
     { label:'PLAY STYLE',  opts:['‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›'], cur:'‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›',
       hint: playMeta.desc },
+    { label:'VIEW MODE',   opts:['flat','iso'], cur: CFG.viewMode || 'flat', hint: 'flat = grid · iso = isometric 2.5D' },
     { label:'SFX VOLUME',  opts:['0%','25%','50%','75%','100%'], cur: sfxPct + '%', hint: sfxMuted ? 'muted — ←→ adjust volume  ENTER=toggle mute' : '←→ adjust volume  ENTER=toggle mute' },
     { label:'LANGUAGES',   opts:['OPEN →'], cur:'OPEN →', hint: (langMeta.emoji||'') + ' → ' + (tgtMeta.emoji||'') + ' ' + (tgtMeta.name||'') },
     { label:'',            opts:['← BACK'], cur:'← BACK' },

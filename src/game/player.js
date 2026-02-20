@@ -63,6 +63,99 @@ export function executeArchetypePower(g) {
     for (const e of g.enemies) e.stunTimer = 1500;
     if (g.boss) g.boss.stunTimer = 2000;
     burst(g, g.player.x, g.player.y, '#88ccff', 30, 6); showMsg(g, 'PROTECT — ENEMIES STUNNED!', '#88ccff', 55);
+  // ── Extended 10 archetypes (blueprint expansion) ─────────────────────
+  } else if (power === 'map_reveal') {
+    // Cartographer: reveal a 5×5 fog area around player and uncover HIDDEN tiles nearby
+    const pr = 3, py_ = g.player.y, px_ = g.player.x;
+    for (let dy2 = -pr; dy2 <= pr; dy2++) for (let dx2 = -pr; dx2 <= pr; dx2++) {
+      const ny2 = py_ + dy2, nx2 = px_ + dx2;
+      if (ny2 >= 0 && ny2 < sz && nx2 >= 0 && nx2 < sz && g.grid[ny2][nx2] === T.HIDDEN)
+        g.tileFlicker.push({ y: ny2, x: nx2, t: 300, reveal: true });
+    }
+    window._fogRevealBonus = (window._fogRevealBonus || 0) + 1; // signal to fog system
+    burst(g, g.player.x, g.player.y, '#ffdd88', 22, 4);
+    showMsg(g, 'CARTOGRAPHER — MAP REVEALED!', '#ffdd88', 50);
+  } else if (power === 'area_protect') {
+    // Guardian: stun all enemies in 3-tile radius
+    let stunCount = 0;
+    for (const e of g.enemies) {
+      if (Math.abs(e.y - g.player.y) + Math.abs(e.x - g.player.x) <= 4) { e.stunTimer = 3000; stunCount++; }
+    }
+    if (g.boss) g.boss.stunTimer = 1500;
+    burst(g, g.player.x, g.player.y, '#66ffaa', 28, 5);
+    showMsg(g, 'GUARDIAN FIELD — ' + stunCount + ' ENEMIES STUNNED', '#66ffaa', 55);
+  } else if (power === 'consume') {
+    // Devourer: remove up to 4 adjacent hazard tiles and gain 8 HP each
+    const HAZARDS = new Set([1,2,3,8,9,10,14,16]);
+    let consumed = 0;
+    for (const [dy2, dx2] of [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]) {
+      const ny2 = g.player.y + dy2, nx2 = g.player.x + dx2;
+      if (ny2 >= 0 && ny2 < sz && nx2 >= 0 && nx2 < sz && HAZARDS.has(g.grid[ny2][nx2])) {
+        g.grid[ny2][nx2] = T.VOID; g.hp = Math.min(UPG.maxHp, g.hp + 8); consumed++;
+      }
+    }
+    burst(g, g.player.x, g.player.y, '#ff6644', 20, 4);
+    showMsg(g, consumed > 0 ? `DEVOURED ${consumed} HAZARDS  +${consumed*8}HP` : 'NOTHING TO DEVOUR', '#ff6644', 45);
+  } else if (power === 'reflect') {
+    // Mirror: next enemy hit is reflected (damage to enemy, not player) for 10 moves
+    UPG.mirrorActive = 10;
+    burst(g, g.player.x, g.player.y, '#ccddff', 18, 4);
+    showMsg(g, 'MIRROR — REFLECT NEXT HIT', '#ccddff', 50);
+  } else if (power === 'weave') {
+    // Weaver: convert 3 random hazard tiles to peace within 4-tile radius
+    const HAZARDS = new Set([1,2,3,8,9,10,14,16]);
+    let woven = 0;
+    const candidates = [];
+    for (let y2 = 0; y2 < sz; y2++) for (let x2 = 0; x2 < sz; x2++)
+      if (HAZARDS.has(g.grid[y2][x2]) && Math.abs(y2-g.player.y)+Math.abs(x2-g.player.x) <= 4)
+        candidates.push([y2, x2]);
+    // pick up to 3
+    candidates.sort(() => Math.random() - 0.5);
+    for (let i = 0; i < Math.min(3, candidates.length); i++) {
+      const [wy, wx] = candidates[i];
+      g.grid[wy][wx] = T.PEACE; g.peaceLeft++;
+      burst(g, wx, wy, '#dd88ff', 10, 3); woven++;
+    }
+    showMsg(g, woven > 0 ? `WEAVER — ${woven} HAZARDS WOVEN TO PEACE` : 'WEAVER FINDS NO HAZARDS', '#dd88ff', 50);
+  } else if (power === 'witness') {
+    // Witness: score ×3 multiplier for next 20 moves
+    UPG.witnessMovesLeft = 20; UPG.witnessMultiplier = 3;
+    burst(g, g.player.x, g.player.y, '#aaffee', 16, 3);
+    showMsg(g, 'WITNESS — ×3 SCORE FOR 20 MOVES', '#aaffee', 55);
+  } else if (power === 'far_move') {
+    // Wanderer: teleport to a random open tile at least 4 tiles away
+    const candidates2 = [];
+    for (let y2 = 0; y2 < sz; y2++) for (let x2 = 0; x2 < sz; x2++)
+      if (g.grid[y2][x2] === T.VOID && Math.abs(y2-g.player.y)+Math.abs(x2-g.player.x) >= 4)
+        candidates2.push([y2, x2]);
+    if (candidates2.length > 0) {
+      const [ty, tx] = candidates2[Math.floor(Math.random() * candidates2.length)];
+      burst(g, g.player.x, g.player.y, '#ffcc88', 14, 3);
+      g.player.y = ty; g.player.x = tx;
+      burst(g, g.player.x, g.player.y, '#ffcc88', 20, 4);
+      showMsg(g, 'WANDERER STEPS BEYOND…', '#ffcc88', 50);
+    } else showMsg(g, 'WANDERER FINDS NO PATH', '#664422', 30);
+  } else if (power === 'transmute_all') {
+    // Judge: transmute all hazard tiles currently visible to VOID
+    const HAZARDS = new Set([1,2,3,8,9,10,14,16]);
+    let judged = 0;
+    for (let y2 = 0; y2 < sz; y2++) for (let x2 = 0; x2 < sz; x2++)
+      if (HAZARDS.has(g.grid[y2][x2])) { g.grid[y2][x2] = T.VOID; judged++; }
+    burst(g, g.player.x, g.player.y, '#ff8888', 36, 6);
+    showMsg(g, 'JUDGE — ' + judged + ' HAZARDS CLEARED', '#ff8888', 60);
+  } else if (power === 'alchemy_burst') {
+    // Alchemist archetype: triple element seed gain for next 5 element tiles
+    g.alchemyArchBurst = 5;
+    burst(g, g.player.x, g.player.y, '#ffee44', 22, 4);
+    showMsg(g, 'ALCHEMIST — ×3 SEEDS × 5 TILES', '#ffee44', 55);
+  } else if (power === 'herald_rush') {
+    // Herald: movement speed ×2 and trail for 15 moves
+    UPG.heraldMovesLeft = 15;
+    const prevDelay = UPG.moveDelay;
+    UPG.moveDelay   = Math.round(UPG.moveDelay * 0.5);
+    g._heraldPrevDelay = prevDelay;
+    burst(g, g.player.x, g.player.y, '#88ffff', 24, 5);
+    showMsg(g, 'HERALD RUSH — SPEED ×2 FOR 15 MOVES', '#88ffff', 55);
   }
 }
 
@@ -103,12 +196,27 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
   else                      UPG.energy = Math.min(UPG.energyMax, UPG.energy + 0.5);
   if (g.archetypeActive) { g.archetypeTimer--; if (g.archetypeTimer <= 0) { g.archetypeActive = false; UPG.archetypePower = null; } }
 
+  // ── Extended archetype per-move countdowns ──────────────────────────
+  if (UPG.witnessMovesLeft > 0) {
+    UPG.witnessMovesLeft--;
+    if (UPG.witnessMovesLeft === 0) { UPG.witnessMultiplier = 1; onMsg('WITNESS FADES…', '#334455', 25); }
+  }
+  if (UPG.heraldMovesLeft > 0) {
+    UPG.heraldMovesLeft--;
+    if (UPG.heraldMovesLeft === 0) {
+      if (g._heraldPrevDelay) { UPG.moveDelay = g._heraldPrevDelay; g._heraldPrevDelay = 0; }
+      onMsg('HERALD RUSH ENDS…', '#336666', 25);
+    }
+  }
+  if (UPG.mirrorActive > 0) UPG.mirrorActive--;
+
   // ── Tile effects ──
   const d = { dmgMul: CFG.difficulty === 'hard' ? 1.45 : CFG.difficulty === 'easy' ? 0.55 : 1.0 };
   const sMul = g.scoreMulMode || 1.0; // play-mode score multiplier (e.g. Horror 3×, Nightmare 5×)
 
   if (tileType === T.PEACE) {
-    const pts = Math.round((150 + g.level * 20) * UPG.resonanceMultiplier * sMul);
+    const wMul = UPG.witnessMovesLeft > 0 ? (UPG.witnessMultiplier || 1) : 1;
+    const pts = Math.round((150 + g.level * 20) * UPG.resonanceMultiplier * sMul * wMul);
     g.score += pts;
     // Reverse mode: peace tiles damage instead of healing
     if (g.reverseMode) {

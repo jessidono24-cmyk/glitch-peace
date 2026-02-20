@@ -108,7 +108,22 @@ export class ConstellationMode {
 
   update(dt, keys, _matrix, ts) {
     const g = this.game;
-    if (!g || this._deathPending) return null;
+    if (!g) return null;
+
+    // If completion overlay is up, wait for timer or ENTER press
+    if (this._deathPending) {
+      const cc = window._constellationComplete;
+      if (!cc || cc.timer <= 0) {
+        window._constellationComplete = null;
+        return { phase: 'dead', data: { score: g.score, level: g.level, ds: g.ds } };
+      }
+      // Allow ENTER to skip early
+      if (keys.has('Enter') || keys.has(' ')) {
+        window._constellationComplete = null;
+        return { phase: 'dead', data: { score: g.score, level: g.level, ds: g.ds } };
+      }
+      return null;
+    }
 
     this.meditationTime += dt;
 
@@ -161,13 +176,26 @@ export class ConstellationMode {
               this.sfxManager.playDreamComplete && this.sfxManager.playDreamComplete();
               window._achievementQueue = window._achievementQueue || [];
               window._achievementQueue.push('constellation');
-              window._constellationFlash = {
-                name: '✦  ' + this.constellationName + '  COMPLETE  ✦',
-                alpha: 0, timer: 300,
+              // Calculate stars-based bonus (extra 500 per archetype node collected)
+              const archetypeBonus = this.visitedNodes.filter(n => {
+                // check if archetype node was in original star list
+                return this.starNodes.some(s => s.y === n.y && s.x === n.x);
+              }).length * 100;
+              const completionScore = 2000 + archetypeBonus + this.visitedNodes.length * 150;
+              g.score += completionScore;
+              // Show rich completion overlay (renders on top for 4 s)
+              window._constellationComplete = {
+                name:         this.constellationName,
+                stars:        this.visitedNodes.length,
+                totalStars:   this.starNodes.length,
+                timeMs:       this.meditationTime,
+                score:        g.score,
+                bonus:        completionScore,
+                timer:        240, // frames
+                alpha:        0,
               };
               this._deathPending = true;
-              g.score += 2000;
-              return { phase: 'dead', data: { score: g.score, level: g.level, ds: g.ds } };
+              return null; // hold on complete screen before transition
             }
           }
           break;
@@ -324,6 +352,53 @@ export class ConstellationMode {
       ctx.font = 'bold 16px Courier New';
       ctx.fillText(cf.name, w/2, h/2);
       ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    }
+
+    // ── Constellation completion overlay ────────────────────────────
+    const cc = window._constellationComplete;
+    if (cc && cc.timer > 0) {
+      cc.timer--;
+      cc.alpha = cc.timer > 180 ? (240 - cc.timer) / 60 : cc.timer > 40 ? 1 : cc.timer / 40;
+      ctx.globalAlpha = Math.min(1, cc.alpha);
+      // Panel
+      ctx.fillStyle = 'rgba(0,0,15,0.95)';
+      ctx.fillRect(w/2 - 200, h/2 - 110, 400, 220);
+      ctx.strokeStyle = 'rgba(0,238,255,0.6)'; ctx.lineWidth = 2;
+      ctx.strokeRect(w/2 - 200, h/2 - 110, 400, 220);
+      // Title
+      ctx.fillStyle = '#aaddff'; ctx.shadowColor = '#00eeff'; ctx.shadowBlur = 20;
+      ctx.font = 'bold 20px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('✦  CONSTELLATION COMPLETE  ✦', w/2, h/2 - 78); ctx.shadowBlur = 0;
+      // Name
+      ctx.fillStyle = '#00eeff'; ctx.shadowColor = '#00eeff'; ctx.shadowBlur = 12;
+      ctx.font = 'bold 15px Courier New';
+      ctx.fillText(cc.name, w/2, h/2 - 52); ctx.shadowBlur = 0;
+      // Stats
+      const statY = h/2 - 22;
+      ctx.fillStyle = '#667788'; ctx.font = '11px Courier New';
+      ctx.fillText('STARS CONNECTED:  ' + cc.stars + ' / ' + cc.totalStars, w/2, statY);
+      ctx.fillText('SESSION TIME:  ' + Math.round(cc.timeMs / 1000) + 's', w/2, statY + 20);
+      ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 8;
+      ctx.font = 'bold 14px Courier New';
+      ctx.fillText('SCORE BONUS  +' + cc.bonus, w/2, statY + 48); ctx.shadowBlur = 0;
+      ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 10;
+      ctx.font = 'bold 18px Courier New';
+      ctx.fillText('TOTAL  ' + String(cc.score).padStart(7,'0'), w/2, statY + 74); ctx.shadowBlur = 0;
+      // Insight tokens reward line
+      ctx.fillStyle = '#00eeff'; ctx.font = '10px Courier New';
+      ctx.fillText('◆ ' + cc.stars + ' INSIGHT TOKENS EARNED', w/2, statY + 98);
+      // Exit hint
+      const blinkA = cc.timer < 80 ? 0.4 + 0.6 * Math.sin(cc.timer * 0.3) : 0.55;
+      ctx.globalAlpha = cc.alpha * blinkA;
+      ctx.fillStyle = '#334455'; ctx.font = '9px Courier New';
+      ctx.fillText('press ENTER or wait…', w/2, h/2 + 100);
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+
+      // Auto-exit when timer expires
+      if (cc.timer <= 0) {
+        window._constellationComplete = null;
+        return { phase: 'dead', data: { score: g.score, level: g.level, ds: g.ds } };
+      }
     }
 
     // Footer

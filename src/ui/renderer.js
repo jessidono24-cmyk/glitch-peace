@@ -1,6 +1,7 @@
 'use strict';
 import { T, TILE_DEF, ARCHETYPES, CELL, GAP, PAL_A, PAL_B } from '../core/constants.js';
 import { CFG, UPG } from '../core/state.js';
+import { spritePlayer } from '../rendering/sprite-player.js';
 
 // ── Message rendering thresholds ──────────────────────────────────────
 const MSG_LEN_LONG    = 55;  // chars — triggers word-wrap + small font
@@ -89,6 +90,113 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
   // Grid
   // Build tileFlicker lookup Map for O(1) per-tile query (was O(n) array.find)
   const flickerMap = new Map(g.tileFlicker.map(f => [f.y * sz + f.x, f]));
+
+  // 3D-B: isometric view — when CFG.viewMode === 'iso' use parallelogram tiles
+  const ISO = CFG.viewMode === 'iso';
+  // Isometric coordinate helpers
+  const TW = CELL + GAP;   // tile pitch
+  const isoTileW = TW;     // iso face width
+  const isoTileH = TW / 2; // iso face height (half-diamond)
+  // Origin for iso grid centred in canvas
+  const isoOriginX = w / 2;
+  const isoOriginY = sy + (sz * isoTileH) / 2;
+  function isoXY(col, row) {
+    return {
+      x: isoOriginX + (col - row) * (isoTileW / 2),
+      y: isoOriginY + (col + row) * (isoTileH / 2),
+    };
+  }
+  // Isometric tile depth-sort: render higher row+col first (painter's algo)
+  const isoOrder = [];
+  if (ISO) {
+    for (let y2 = 0; y2 < sz; y2++)
+      for (let x2 = 0; x2 < sz; x2++)
+        isoOrder.push([y2, x2]);
+    isoOrder.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
+  }
+
+  const tileLoop = ISO ? isoOrder : null;
+
+  for (let li = 0; li < sz * sz; li++) {
+    let y, x;
+    if (ISO) { [y, x] = isoOrder[li]; } else { y = Math.floor(li / sz); x = li % sz; }
+    if (!ISO && li === 0) { /* handled by flat loop below */ }
+    if (!ISO) break; // exit early — flat loop runs separately below
+    // ── Isometric tile draw ──────────────────────────────────────────
+    const raw = g.grid[y][x];
+    const fl  = flickerMap.get(y * sz + x);
+    const val = (fl && fl.reveal && raw === T.HIDDEN) ? T.INSIGHT : raw;
+    const td  = TILE_DEF[val] || TILE_DEF[T.VOID];
+    const tp  = P[val] || P[T.VOID];
+    const { x: ipx, y: ipy } = isoXY(x, y);
+    const hw = isoTileW / 2, hh = isoTileH / 2;
+
+    ctx.shadowColor = tp.glow || 'transparent';
+    ctx.shadowBlur  = tp.glow ? 8 : 0;
+
+    // Top face (diamond)
+    ctx.fillStyle = tp.bg;
+    ctx.beginPath();
+    ctx.moveTo(ipx,       ipy - hh);
+    ctx.lineTo(ipx + hw,  ipy);
+    ctx.lineTo(ipx,       ipy + hh);
+    ctx.lineTo(ipx - hw,  ipy);
+    ctx.closePath(); ctx.fill();
+
+    // Left face (vertical depth illusion)
+    const faceH = isoTileH * 0.55;
+    const darker = tp.bg + 'cc';
+    ctx.fillStyle = darker;
+    ctx.beginPath();
+    ctx.moveTo(ipx - hw, ipy);
+    ctx.lineTo(ipx,      ipy + hh);
+    ctx.lineTo(ipx,      ipy + hh + faceH);
+    ctx.lineTo(ipx - hw, ipy + faceH);
+    ctx.closePath(); ctx.fill();
+
+    // Right face
+    const darkerR = tp.bg + '88';
+    ctx.fillStyle = darkerR;
+    ctx.beginPath();
+    ctx.moveTo(ipx,      ipy + hh);
+    ctx.lineTo(ipx + hw, ipy);
+    ctx.lineTo(ipx + hw, ipy + faceH);
+    ctx.lineTo(ipx,      ipy + hh + faceH);
+    ctx.closePath(); ctx.fill();
+
+    // Border on top face
+    ctx.strokeStyle = tp.bd; ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(ipx, ipy - hh); ctx.lineTo(ipx + hw, ipy);
+    ctx.lineTo(ipx, ipy + hh); ctx.lineTo(ipx - hw, ipy);
+    ctx.closePath(); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Tile symbol (icon) centered on top face
+    if (td.sym && val !== T.VOID && val !== T.WALL && val !== T.HIDDEN) {
+      ctx.fillStyle = tp.bd; ctx.font = '9px Courier New'; ctx.textAlign = 'center';
+      ctx.globalAlpha = 0.7;
+      ctx.fillText(td.sym, ipx, ipy + 4);
+      ctx.globalAlpha = 1; ctx.textAlign = 'left';
+    }
+
+    // Player on iso grid
+    if (g.player.y === y && g.player.x === x) {
+      const { x: ppx, y: ppy } = isoXY(x, y);
+      ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 18;
+      ctx.fillStyle = '#005533';
+      ctx.beginPath();
+      ctx.moveTo(ppx,       ppy - hh - 4);
+      ctx.lineTo(ppx + hw * 0.7, ppy - 2);
+      ctx.lineTo(ppx,       ppy + hh * 0.5);
+      ctx.lineTo(ppx - hw * 0.7, ppy - 2);
+      ctx.closePath(); ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  // Flat grid (default view)
+  if (!ISO)
   for (let y = 0; y < sz; y++) {
     for (let x = 0; x < sz; x++) {
       const raw = g.grid[y][x];
@@ -456,42 +564,21 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     ctx.textAlign = 'left'; ctx.shadowBlur = 0;
   }
 
-  // Player
+  // Player — animated sprite (3D-A)
   {
     const px = sx + g.player.x * (CELL + GAP), py = sy + g.player.y * (CELL + GAP);
-    const pulse = 0.55 + 0.45 * Math.sin(ts * 0.009);
-    const shld = UPG.shield && UPG.shieldTimer > 0;
-    const phase_ = UPG.phaseShift && UPG.phaseTimer > 0;
-    const em = UPG.emotion;
-    const emTint = em === 'panic' ? '#ff0022' : em === 'hopeless' ? '#0033aa' : em === 'peace' ? '#00ffcc' : em === 'clarity' ? '#00eeff' : '#00ffaa';
-    const pGlow = matrixActive === 'A' ? '#ff0088' : (shld ? '#00ffff' : phase_ ? '#00aaff' : emTint);
-    ctx.shadowColor = pGlow; ctx.shadowBlur = (shld ? 36 : UPG.aura ? 30 : 22) * pulse;
-    const c1 = matrixActive === 'A' ? '#aa0055' : '#005533';
-    const c2 = matrixActive === 'A' ? '#cc0077' : '#00cc77';
-    const c3 = matrixActive === 'A' ? 'rgba(200,0,120,0.9)' : 'rgba(0,255,170,0.9)';
-    ctx.fillStyle = c1; ctx.beginPath(); ctx.roundRect(px + 4, py + 4, CELL - 8, CELL - 8, 8); ctx.fill();
-    ctx.fillStyle = c2; ctx.beginPath(); ctx.roundRect(px + 9, py + 9, CELL - 18, CELL - 18, 5); ctx.fill();
-    ctx.fillStyle = c3; ctx.beginPath(); ctx.roundRect(px + 15, py + 15, CELL - 30, CELL - 30, 3); ctx.fill();
-    if (g.archetypeActive) {
-      const arch = ARCHETYPES[g.archetypeType || 'orb'];
-      ctx.strokeStyle = arch.glow; ctx.lineWidth = 2; ctx.shadowColor = arch.glow; ctx.shadowBlur = 16;
-      ctx.beginPath(); ctx.roundRect(px + 1, py + 1, CELL - 2, CELL - 2, 8); ctx.stroke();
-    }
-    if (shld) { ctx.strokeStyle = 'rgba(0,255,255,0.75)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(px, py, CELL, CELL, 8); ctx.stroke(); }
-    if (phase_) ctx.globalAlpha = 0.4;
-    if (UPG.aura) {
-      ctx.strokeStyle = `rgba(0,255,136,${0.12 + 0.08 * pulse})`; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(px + CELL / 2, py + CELL / 2, (CELL / 2 + 7) * pulse, 0, Math.PI * 2); ctx.stroke();
-    }
-    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
-    ctx.strokeStyle = pGlow; ctx.lineWidth = 2;
-    const bk = 9;
-    [[px, py], [px + CELL, py], [px, py + CELL], [px + CELL, py + CELL]].forEach(([bx, by], i) => {
-      const ddx = i % 2 === 0 ? 1 : -1, ddy = i < 2 ? 1 : -1;
-      ctx.beginPath(); ctx.moveTo(bx + ddx * 2, by); ctx.lineTo(bx + ddx * (2 + bk), by); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(bx, by + ddy * 2); ctx.lineTo(bx, by + ddy * (2 + bk)); ctx.stroke();
+    const shld    = UPG.shield && UPG.shieldTimer > 0;
+    const phase_  = UPG.phaseShift && UPG.phaseTimer > 0;
+    const arch    = g.archetypeActive ? (ARCHETYPES[g.archetypeType || 'orb'] || {}) : {};
+    spritePlayer.draw(ctx, px, py, CELL, ts, {
+      matrixActive,
+      archetypeActive: !!g.archetypeActive,
+      archetypeGlow:   arch.glow || '#ffdd00',
+      shielded:        shld,
+      phaseShift:      phase_,
+      aura:            UPG.aura,
+      emotion:         UPG.emotion,
     });
-    ctx.shadowBlur = 0;
   }
 
   // Particles

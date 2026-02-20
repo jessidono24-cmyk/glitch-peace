@@ -45,8 +45,9 @@
       "gatekeeperAssess":   false,
       "entitlements":       "build/entitlements.mac.plist",
       "entitlementsInherit":"build/entitlements.mac.plist",
-      "notarize":           false
+      "notarize":           { "teamId": "${env.APPLE_TEAM_ID}" }
     },
+    "afterSign":            "build/notarize.js",
     "linux": {
       "target":   "AppImage",
       "icon":     "dist/icon.png",

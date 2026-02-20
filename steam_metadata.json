@@ -2,6 +2,54 @@
   "app_id": "glitch_peace",
   "app_name": "GLITCH·PEACE",
   "short_description": "A consciousness-awakening dreamscape simulation — navigate 18 dreamscapes, face your archetypes, and integrate your shadows.",
+  "long_description": "GLITCH·PEACE is a psychedelic, trauma-informed consciousness-exploration game built at the intersection of depth psychology, somatic therapy, and cross-cultural mythology.\n\nNavigate 18 procedurally-generated DREAMSCAPES — each a symbolic realm drawn from Jungian archetypes, somatic awareness, and the living world of the imagination. Face the Dragon. Integrate the Shadow. Find sovereignty.\n\n[h2]6 Gameplay Modes[/h2]\n[list]\n[*][b]Grid Mode[/b] — Strategic tile navigation across a living emotional field. Collect PEACE nodes, avoid shadow tiles, transmute fear into insight.\n[*][b]Shooter Mode[/b] — Fast-paced arena survival with BPM-locked rhythm bonuses. Every shot is a breath; every wave a deeper layer.\n[*][b]Constellation Mode[/b] — Meditative star-connection puzzle. Trace mythological patterns across the dreamscape sky.\n[*][b]Meditation Mode[/b] — Breathing and somatic awareness. No enemies. Just the field, the breath, and the self.\n[*][b]Co-op Mode[/b] — Local 2-player shared dreamscape. Navigate together; integrate together.\n[*][b]Daily Challenge[/b] — A freshly seeded dreamscape every 24 hours. Compete on the global leaderboard.\n[/list]\n\n[h2]Deep Systems[/h2]\n[list]\n[*]Adaptive difficulty — 5 tiers from gentle to sovereign-level\n[*]Multilingual vocabulary learning (12 languages)\n[*]Pattern recognition and IQ training integration\n[*]Emotional field engine — 10 emotions with coherence and distortion tracking\n[*]Lunar temporal system — real-world moon phase modifies gameplay\n[*]Jungian archetype system — Dragon, Child, Orb, Captor, Protector\n[*]Alchemical transmutation mechanics\n[*]Boss encounters with cinematic 3D rendering\n[*]Dream Yoga and lucid dreaming mechanics\n[*]Cessation and recovery support tools\n[*]Biome overlays driven by your live emotional state\n[*]Rhythm M7 full note-fall mode with BPM-locked scoring\n[/list]\n\n[h2]25 Steam Achievements[/h2]\nFrom First Breath to Philosopher's Stone — every run unlocks something new.\n\n[h2]Steam Deck Verified[/h2]\nFull gamepad support. Adaptive full-screen at 720p. Touch d-pad for portable play.",
+  "developer": "GLITCH·PEACE",
+  "publisher": "GLITCH·PEACE",
+  "release_date": "TBD",
+  "languages": ["English"],
+  "capsule_art": {
+    "main_capsule":  { "width": 1920, "height": 620,  "format": "PNG", "file": "steam/capsule_main.png",  "note": "1920x620 — hero key art; dark dreamscape background with GLITCH·PEACE logotype" },
+    "small_capsule": { "width": 231,  "height": 87,   "format": "PNG", "file": "steam/capsule_small.png", "note": "231x87 — store list thumbnail" },
+    "header":        { "width": 460,  "height": 215,  "format": "PNG", "file": "steam/header.png",        "note": "460x215 — store header image" },
+    "library_600":   { "width": 600,  "height": 900,  "format": "PNG", "file": "steam/library_600.png",   "note": "600x900 — library portrait" },
+    "library_hero":  { "width": 3840, "height": 1240, "format": "PNG", "file": "steam/library_hero.png",  "note": "3840x1240 — library hero (retina capsule)" }
+  },
+  "screenshots": [
+    {
+      "id": 1,
+      "file": "steam/screenshot_01_grid.png",
+      "caption": "Grid Mode — navigate the emotional field, collect PEACE nodes, face the Dragon archetype.",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": 2,
+      "file": "steam/screenshot_02_shooter.png",
+      "caption": "Shooter Mode — BPM-locked arena survival across neon dreamscapes.",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": 3,
+      "file": "steam/screenshot_03_biome.png",
+      "caption": "Biome System — 8 emotion-driven overlays transform every dreamscape in real time.",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": 4,
+      "file": "steam/screenshot_04_rhythm.png",
+      "caption": "Rhythm M7 Mode — 4-lane note-fall with procedural patterns seeded per dreamscape.",
+      "width": 1920,
+      "height": 1080
+    }
+  ],
+  "content_warnings": [
+    "Symbolic representations of difficult emotions (despair, terror, rage, grief)",
+    "Non-graphic depictions of psychological shadow material",
+    "Flashing lights / scanline effects (adjustable in options)",
+    "Mature psychological themes — trauma-informed, compassionate framing throughout"
+  ],
   "version": "4.0.0",
   "modes": [
     { "id": "grid",          "label": "Grid Mode",          "phase": "complete" },
@@ -40,6 +88,22 @@
     { "api_name": "SOVEREIGNTY",       "id": "sovereignty",     "hidden": true  }
   ],
   "platforms": ["windows", "macos", "linux", "steam_deck"],
-  "tags": ["indie", "puzzle", "psychological", "healing", "meditation", "roguelike", "consciousness"],
-  "content_rating": { "esrb": "T", "pegi": "12" }
+  "tags": [
+    "Indie", "Puzzle", "Adventure", "Psychological Horror", "Relaxing",
+    "Healing", "Meditation", "Roguelike", "Consciousness", "Atmospheric",
+    "Procedural Generation", "Singleplayer", "Co-op", "Rhythm", "2D"
+  ],
+  "genre": ["Indie", "Puzzle", "Adventure"],
+  "content_rating": {
+    "esrb":  "T",
+    "pegi":  "12",
+    "descriptors": ["Mature Themes", "Symbolic Violence (non-graphic)"]
+  },
+  "steam_deck": {
+    "verified": true,
+    "controller_support": "full",
+    "resolution": "adaptive",
+    "legible_720p": true,
+    "touch_dpad": true
+  }
 }

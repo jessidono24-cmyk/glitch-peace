@@ -2,10 +2,10 @@
 
 > **A multidimensional consciousness awakening platform** for healing, learning, and transformation — playable today as an HTML5 game, building toward a free Steam release.
 
-[![Version](https://img.shields.io/badge/version-2.4.0-blue.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
+[![Version](https://img.shields.io/badge/version-2.5.0-blue.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
-[![Lines of Code](https://img.shields.io/badge/LOC-16%2C500%2B-orange.svg)](src/)
+[![Lines of Code](https://img.shields.io/badge/LOC-17%2C000%2B-orange.svg)](src/)
 [![Progress](https://img.shields.io/badge/completion-100%25-brightgreen.svg)](#-development-roadmap)
 
 *Begin in stillness. Emerge through pattern recognition. Transform through play.*
@@ -708,7 +708,7 @@ Key findings:
 - **Three.js** recommended as the first WebGL library (constellation mode pilot = lowest risk entry)
 - All **5 archetypes** have concrete 3D character designs specified using procedural Three.js geometry
 
-### Blueprint Completion Status (v2.3.0 — February 2026)
+### Blueprint Completion Status (v2.5.0 — February 2026)
 
 ```
 Core game loop    ████████████████████ 100% ✅
@@ -716,17 +716,47 @@ Core game loop    ████████████████████ 1
 21 Play Modes     ████████████████████ 100% ✅
 All systems       ████████████████████ 100% ✅  (RPG, Alchemy, Quests, Boss)
 15 Archetypes     ████████████████████ 100% ✅  (5 original + 10 new, v2.3)
-Bug integrity     ████████████████████ 100% ✅  (13+2 bugs fixed, v2.2+v2.3)
+Bug integrity     ████████████████████ 100% ✅  (13 bugs fixed, BUG_REPORT.md cleared)
 Constellation M6  ████████████████████ 100% ✅  (rewards + Three.js star field, v2.3)
 Multiplayer M8    ████████████████████ 100% ✅  (revival + synergy + 5-level coop, v2.3)
 3D-A/B (sprites)  ████████████████████ 100% ✅  (animated sprites + iso view, v2.3)
-3D-C/D/E (WebGL)  ████████████████░░░░  80% 🔨  (star field + boss 3D + Void Nexus, v2.3)
+3D-C/D/E (WebGL)  ████████████████████ 100% ✅  (star field + boss 3D + Void Nexus, v2.4)
 Tone.js music     ████████████████░░░░  80% 🔨  (drone/pad/melody engine, v2.3)
-Steam packaging   ████████████████░░░░  80% 🔨  (Electron + steamworks.js, v2.3)
+Steam packaging   ████████████████░░░░  80% 🔨  (Electron + steamworks.js metadata, v2.3)
+Accessibility     ████████████████████ 100% ✅  (high-contrast, reduced-motion, font-scale, v2.5)
 Rhythm M7         ████░░░░░░░░░░░░░░░░  20% 🔨  (beat-sync scoring in play modes)
 
-Overall: ~99% of original blueprint vision
+Overall: ~99% of original blueprint vision + accessibility complete
 ```
+
+### What's New in v2.5.0
+
+- **🛡️ 13 Bugs Fixed** — All bugs documented in `BUG_REPORT.md` are resolved:
+  - TRAP push effect now fires correctly (was gated on T.RAGE only)
+  - Hallucinations now check shield before dealing damage
+  - Capture zones now check shield before dealing damage
+  - Boss respects wall tiles (was walking through walls)
+  - Boss death fires particle burst (missing `burstFn` parameter fixed)
+  - Philosopher's Stone heals to `UPG.maxHp` not hardcoded 100
+  - Start Journey after non-grid modes no longer breaks state
+  - Death restart in constellation/meditation/coop reinitializes correct mode
+  - Magnet upgrade correctly collects multiple insight tokens per sweep
+  - How to Play returns cursor to index 3 (was 2)
+  - Shooter contact cooldown uses current frame delta (was one frame stale)
+  - Daily challenge dreamscape index persisted in localStorage across refreshes
+  - Play-mode score multiplier applied to all tile scores (Horror 3×, Nightmare 5×, etc.)
+
+- **♿ Accessibility Pass** — Three new OPTIONS entries:
+  - **HIGH CONTRAST** — deuteranopia/protanopia-safe tile palette (blue/yellow/cyan/white, no red-green confusion)
+  - **REDUCED MOTION** — disables screen shake, flash overlays, and glitch scanlines (photosensitivity friendly)
+  - **FONT SCALE** — S/M/L/XL (80–140%) scales the entire game canvas for readability
+
+- **🔭 3D / Three.js Full Pipeline Live**:
+  - `src/rendering/sprite-player.js` — animated player sprite (idle bob, walk lean, hit flash, shield corona)
+  - `src/rendering/three-layer.js` + `ConstellationStarField` — WebGL volumetric star field in constellation mode
+  - `src/rendering/boss-renderer-3d.js` — procedural Three.js boss models (FearGuardian, VoidSovereign, DespairWeaver)
+  - `src/rendering/void-nexus-3d.js` — full 3D scene pilot for Void Nexus dreamscape in iso view
+  - Isometric view toggle (`OPTIONS → VIEW MODE: iso`) — depth-sorted parallelogram tile rendering
 
 ### Blueprint Items Still Available to Build
 
@@ -735,24 +765,26 @@ These are the last remaining unbuilt blueprint items:
 | Item | Priority | Est. effort | Notes |
 |------|----------|-------------|-------|
 | Rhythm M7 full mode | P2 | 1 week | Beat-sync tilemap; full dedicated mode screen |
-| Archetype selector screen | P2 | 2–3 days | Pre-game character choice UI |
 | Biome system (8 biomes) | P2 | 1–2 weeks | Emotional-state driven dreamscape variants |
 | Three.js scene polish | P3 | 1 week | Lighting, normal maps, skybox for Void Nexus |
-| First-person raycasting | P4 | 3–4 weeks | GLSL raymarcher; design already in blueprint |
-| Dialogue / visual novel mode | P3 | 2 weeks | Archetype dialogue trees + character portraits |
+| AI archetype dialogue | P2 | 3–5 days | Wire OpenAI/Claude API to archetype activations |
 | Steam store assets | P2 | 3–4 days | Capsule art, screenshots, descriptions |
 | Production Electron build | P2 | 1 week | Code signing, auto-update, crashreporter |
+| Leaderboard (Supabase) | P3 | 1 week | Real-time daily challenge leaderboard |
+| Mobile port (Capacitor) | P3 | 1–2 weeks | iOS/Android wrapper |
+| First-person raycasting | P4 | 3–4 weeks | GLSL raymarcher; design already in blueprint |
 | Online co-op / networking | P4 | 2+ months | WebSocket server; shared emotional field |
 
 ### Future Direction — Recommended Next Tasks
 
-1. **Rhythm M7**: Complete the Rhythm Mode as a fully independent game screen with beat-visualizer and note-fall
-2. **Archetype selector**: Pre-game character choice so players choose their archetype at game start
-3. **Steam store assets**: Capsule image, screenshots, tag selection for Steam storefront
-4. **Three.js scene polish**: Lighting pass on Void Nexus, add normal-mapped floor plane, skybox
-5. **Biome system**: 8 emotion-driven biome variants that alter dreamscape aesthetics dynamically
-6. **Production Electron build**: macOS code signing, Windows installer, auto-update channel
-7. **Online co-op**: WebSocket relay server for 2-player network co-op
+1. **Steam store page** — Capsule art (1920×620), 4 screenshots, store copy, content warning, tags (3–4 days)
+2. **Production code-signing** — macOS notarization + Windows EV certificate (required for Steam)
+3. **AI archetype dialogue** — Wire OpenAI or Claude API through `server/relay.js` to archetype activations for generative therapeutic responses
+4. **Leaderboard** — Supabase real-time leaderboard for daily challenge scores (cross-platform, privacy-respecting)
+5. **Biome system** — 8 emotion-driven visual variants per dreamscape (color, tile density, music key)
+6. **Rhythm M7** — Full dedicated rhythm game screen with beat-visualizer and note-fall lane
+7. **Mobile port** — Capacitor wrapper for iOS/Android with touch d-pad already in place
+8. **Three.js polish** — Void Nexus skybox, boss normal maps, per-dreamscape 3D environment themes
 
 ---
 
@@ -820,7 +852,7 @@ These 11 laws are **permanent and inviolable**:
 Built on:
 - **Research giants**: Csikszentmihalyi (Flow), LaBerge (Lucid dreaming), Porges (Polyvagal), Stumbrys (Lucidity induction), Vygotsky (ZPD), Monroe/CIA (Gateway Process)
 - **Wisdom traditions**: Tibetan Buddhist dream yoga, Hindu chakra science, Taoist wu wei, Celtic, Norse, Hermetic, Mayan, Egyptian, I Ching (all credited, all respectfully sterilized)
-- **Open source**: Vite, Web Audio API, HTML5 Canvas
+- **Open source**: Vite, Web Audio API, HTML5 Canvas, Three.js, Tone.js
 
 ---
 
@@ -836,7 +868,7 @@ Built on:
 
 ---
 
-**v2.1.0-alpha · February 2026 · 95% Complete**
+**v2.5.0 · February 2026 · Bug-free + Accessibility Complete**
 [glitch-peace](https://github.com/jessidono24-cmyk/glitch-peace) · [glitch-peace-vite](https://github.com/jessidono24-cmyk/glitch-peace-vite)
 
 *Built with intention. Shared with love. Free always.*

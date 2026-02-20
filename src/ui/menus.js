@@ -211,16 +211,21 @@ export function drawOptions(ctx, w, h, optIdx) {
   // SFX volume display  (PLAYER_PROFILE.sfxVol 0-1 → percentage label)
   const sfxPct   = Math.round((PLAYER_PROFILE.sfxVol !== undefined ? PLAYER_PROFILE.sfxVol : 0.3) * 100);
   const sfxMuted = PLAYER_PROFILE.sfxMuted || false;
+  const FONT_SCALE_LABELS = { 0.8: 'S', 1.0: 'M', 1.2: 'L', 1.4: 'XL' };
+  const fontScaleLabel = FONT_SCALE_LABELS[CFG.fontScale] || 'M';
   const rows = [
-    { label:'GRID SIZE',   opts:OPT_GRID, cur:CFG.gridSize },
-    { label:'DIFFICULTY',  opts:OPT_DIFF, cur:CFG.difficulty },
-    { label:'PARTICLES',   opts:['on','off'], cur:CFG.particles ? 'on' : 'off' },
-    { label:'PLAY STYLE',  opts:['‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›'], cur:'‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›',
+    { label:'GRID SIZE',      opts:OPT_GRID, cur:CFG.gridSize },
+    { label:'DIFFICULTY',     opts:OPT_DIFF, cur:CFG.difficulty },
+    { label:'PARTICLES',      opts:['on','off'], cur:CFG.particles ? 'on' : 'off' },
+    { label:'PLAY STYLE',     opts:['‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›'], cur:'‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›',
       hint: playMeta.desc },
-    { label:'VIEW MODE',   opts:['flat','iso'], cur: CFG.viewMode || 'flat', hint: 'flat = grid · iso = isometric 2.5D' },
-    { label:'SFX VOLUME',  opts:['0%','25%','50%','75%','100%'], cur: sfxPct + '%', hint: sfxMuted ? 'muted — ←→ adjust volume  ENTER=toggle mute' : '←→ adjust volume  ENTER=toggle mute' },
-    { label:'LANGUAGES',   opts:['OPEN →'], cur:'OPEN →', hint: (langMeta.emoji||'') + ' → ' + (tgtMeta.emoji||'') + ' ' + (tgtMeta.name||'') },
-    { label:'',            opts:['← BACK'], cur:'← BACK' },
+    { label:'VIEW MODE',      opts:['flat','iso'], cur: CFG.viewMode || 'flat', hint: 'flat = grid · iso = isometric 2.5D' },
+    { label:'SFX VOLUME',     opts:['0%','25%','50%','75%','100%'], cur: sfxPct + '%', hint: sfxMuted ? 'muted — ←→ adjust volume  ENTER=toggle mute' : '←→ adjust volume  ENTER=toggle mute' },
+    { label:'HIGH CONTRAST',  opts:['off','on'], cur: CFG.highContrast ? 'on' : 'off', hint: 'colorblind-friendly palette' },
+    { label:'REDUCED MOTION', opts:['off','on'], cur: CFG.reducedMotion ? 'on' : 'off', hint: 'no screen shake or flash' },
+    { label:'FONT SCALE',     opts:['S','M','L','XL'], cur: fontScaleLabel, hint: 'text size: S=80%  M=100%  L=120%  XL=140%' },
+    { label:'LANGUAGES',      opts:['OPEN →'], cur:'OPEN →', hint: (langMeta.emoji||'') + ' → ' + (tgtMeta.emoji||'') + ' ' + (tgtMeta.name||'') },
+    { label:'',               opts:['← BACK'], cur:'← BACK' },
   ];
   rows.forEach((row, i) => {
     const sel = i === optIdx, baseY = OPT_START_Y + i * OPT_ROW_H;

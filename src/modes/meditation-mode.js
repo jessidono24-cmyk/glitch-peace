@@ -188,6 +188,7 @@ export class MeditationMode {
             this.phraseAlpha   = 0;
             this.sfxManager.playSomaticTile && this.sfxManager.playSomaticTile();
             g.grid[ny][nx] = 0; // consume tile (gently)
+            if (this.emotionalField) this.emotionalField.addEmotion('hope', 0.04);
           }
           if (tile === T.PEACE) {
             g.grid[ny][nx] = 0;
@@ -195,11 +196,13 @@ export class MeditationMode {
             g.score += 100;
             this.sfxManager.playPeaceCollect();
             burst(g, nx, ny, '#00ff88', 8, 3);
+            if (this.emotionalField) this.emotionalField.addEmotion('peace', 0.06);
           }
           if (tile === T.INSIGHT) {
             g.grid[ny][nx] = 0;
             g.score += 200;
             this.sfxManager.playInsightCollect && this.sfxManager.playInsightCollect();
+            if (this.emotionalField) this.emotionalField.addEmotion('clarity', 0.05);
           }
           break;
         }

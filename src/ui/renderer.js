@@ -79,7 +79,7 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
     }
     g.shakeFrames--;
   }
-  const sx = (w - gp) / 2 + ox, sy = 110 + oy;
+  const sx = (w - gp) / 2 + ox, sy = 124 + oy;
 
   // Vision words
   for (const v of visions) {
@@ -636,9 +636,92 @@ export function drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, 
   drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive);
 }
 
+// ── Emotion color map ────────────────────────────────────────────────────
+const EMOTION_COLOR = {
+  awe:        '#ccddff',
+  grief:      '#4466aa',
+  anger:      '#ff4422',
+  curiosity:  '#ffcc00',
+  shame:      '#aa4488',
+  tenderness: '#ffaabb',
+  fear:       '#cc2244',
+  joy:        '#00ffcc',
+  despair:    '#2233ff',
+  hope:       '#88ffcc',
+  peace:      '#00ff88',
+  clarity:    '#00eeff',
+  panic:      '#ff0022',
+  neutral:    '#334455',
+};
+
+function drawEmotionRow(ctx, w, efData) {
+  if (!efData) return;
+  const dominant   = efData.dominant   || 'neutral';
+  const coherence  = efData.coherence  || 0;
+  const distortion = efData.distortion || 0;
+  const synergy    = window._emotionSynergy;
+
+  const emColor = EMOTION_COLOR[dominant] || '#334455';
+  const rowY    = 74;
+  const barW    = 88;
+
+  // Dominant emotion label
+  ctx.font = '8px Courier New'; ctx.textAlign = 'left';
+  ctx.fillStyle = '#223322'; ctx.fillText('EM', 14, rowY + 9);
+  ctx.fillStyle = emColor; ctx.shadowColor = emColor; ctx.shadowBlur = 4;
+  ctx.font = 'bold 9px Courier New';
+  ctx.fillText(dominant.toUpperCase(), 32, rowY + 9);
+  ctx.shadowBlur = 0;
+
+  // Coherence bar (blue)
+  const cohX = 32;
+  const cohY = rowY + 12;
+  ctx.fillStyle = '#0a0a1a'; ctx.fillRect(cohX, cohY, barW, 5);
+  ctx.fillStyle = '#0055cc'; ctx.shadowColor = '#0055cc'; ctx.shadowBlur = 3;
+  ctx.fillRect(cohX, cohY, barW * Math.min(1, coherence), 5);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(0,80,200,0.18)'; ctx.lineWidth = 1;
+  ctx.strokeRect(cohX, cohY, barW, 5);
+
+  // Distortion bar (red/orange)
+  const distY = rowY + 19;
+  ctx.fillStyle = '#1a0a00'; ctx.fillRect(cohX, distY, barW, 5);
+  const distC = distortion > 0.6 ? '#ff2200' : '#ff8800';
+  ctx.fillStyle = distC; ctx.shadowColor = distC; ctx.shadowBlur = 3;
+  ctx.fillRect(cohX, distY, barW * Math.min(1, distortion), 5);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(200,80,0,0.18)'; ctx.strokeRect(cohX, distY, barW, 5);
+
+  // Bar labels
+  ctx.font = '6px Courier New'; ctx.fillStyle = '#223344';
+  ctx.fillText('COH', cohX + barW + 3, cohY + 5);
+  ctx.fillStyle = '#332211';
+  ctx.fillText('DIS', cohX + barW + 3, distY + 5);
+
+  // Synergy label (gold, only when active)
+  if (synergy) {
+    ctx.font = 'bold 7px Courier New'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffdd00'; ctx.shadowColor = '#ffdd00'; ctx.shadowBlur = 6;
+    ctx.fillText(synergy.label ? synergy.label.replace(/_/g, ' ').toUpperCase() : '', w / 2, rowY + 10);
+    ctx.shadowBlur = 0;
+  }
+
+  ctx.textAlign = 'left';
+}
+
+function realmLabel(pd) {
+  const DEFAULT_PURG_DEPTH = 0.45; // neutral mid-realm
+  if (pd === undefined || pd === null) pd = DEFAULT_PURG_DEPTH;
+  if (pd < 0.15) return { name: 'HEAVEN',      color: '#aaffcc' };
+  if (pd < 0.35) return { name: 'IMAGINATION', color: '#aaddff' };
+  if (pd < 0.55) return { name: 'MIND',        color: '#00ff88' };
+  if (pd < 0.75) return { name: 'PURGATORY',   color: '#ff8800' };
+  return               { name: 'HELL',         color: '#ff2200' };
+}
+
 function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   const UPG_ref = UPG;
-  const hudH = 106;
+  const hudH = 120;
   ctx.fillStyle = '#070714'; ctx.fillRect(0, 0, w, hudH);
   ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, hudH); ctx.lineTo(w, hudH); ctx.stroke();
@@ -653,14 +736,15 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
 
   // Show realm label from emotional field if available
   const efData = window._emotionField;
-  const realmLabel = efData ? efData.realm : '';
+  const realmName = efData ? efData.realm : '';
   const dominantEmotion = efData ? efData.dominant : '';
-  const coherence = efData ? efData.coherence : 0;
-  const realmColor = realmLabel === 'Heaven' ? '#aaffcc' : realmLabel === 'Hell' ? '#ff5533' :
-                     realmLabel === 'Purgatory' ? '#ff8844' : realmLabel === 'Imagination' ? '#cc88ff' : '#334455';
+  const realmColor = realmName === 'Heaven' ? '#aaffcc' : realmName === 'Hell' ? '#ff5533' :
+                     realmName === 'Purgatory' ? '#ff8844' : realmName === 'Imagination' ? '#cc88ff' : '#334455';
   ctx.fillStyle = realmColor; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
-  const headerText = realmLabel ? (g.ds.name + '  ·  ' + (dominantEmotion || g.ds.emotion) + '  ·  ' + realmLabel)
-                                : (g.ds.name + '  ·  ' + g.ds.emotion);
+  const tm = window._tmods;
+  const temporalSuffix = tm ? ('  |  ' + tm.lunarName + '  ' + tm.planetName) : '';
+  const headerText = realmName ? (g.ds.name + '  ·  ' + (dominantEmotion || g.ds.emotion) + '  ·  ' + realmName + temporalSuffix)
+                               : (g.ds.name + '  ·  ' + g.ds.emotion + temporalSuffix);
   ctx.fillText(headerText, w / 2, 11); ctx.textAlign = 'left';
 
   // HP
@@ -732,31 +816,27 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
     }
   }
 
+  // ── Emotional field row (E3) ──────────────────────────────────────────
+  drawEmotionRow(ctx, w, window._emotionField || null);
+
   if (g.archetypeActive && g.archetypeType) {
     const arch = ARCHETYPES[g.archetypeType];
     ctx.fillStyle = arch ? arch.color : '#ffdd00'; ctx.shadowColor = arch ? arch.glow : '#ffdd00'; ctx.shadowBlur = 4;
-    ctx.font = '8px Courier New'; ctx.fillText(arch ? arch.name + ' ACTIVE' : '[ARCH ACTIVE]', 14, 76); ctx.shadowBlur = 0;
+    ctx.font = '8px Courier New'; ctx.fillText(arch ? arch.name + ' ACTIVE' : '[ARCH ACTIVE]', 14, 90); ctx.shadowBlur = 0;
   } else if (UPG_ref.shield && UPG_ref.shieldTimer > 0) {
-    ctx.fillStyle = '#00ffff'; ctx.font = '8px Courier New'; ctx.fillText('SHIELD×' + UPG_ref.shieldTimer, 14, 76);
+    ctx.fillStyle = '#00ffff'; ctx.font = '8px Courier New'; ctx.fillText('SHIELD×' + UPG_ref.shieldTimer, 14, 90);
   } else if (UPG_ref.shieldCount > 0) {
-    ctx.fillStyle = '#334455'; ctx.font = '8px Courier New'; ctx.fillText('streak ' + UPG_ref.shieldCount + '/3', 14, 76);
-  }
-
-  // Emotional synergy label
-  const synergy = window._emotionSynergy;
-  if (synergy) {
-    ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 5;
-    ctx.font = '7px Courier New'; ctx.fillText('⚡ ' + synergy.label.toUpperCase(), 14, 84); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#334455'; ctx.font = '8px Courier New'; ctx.fillText('streak ' + UPG_ref.shieldCount + '/3', 14, 90);
   }
 
   if (UPG_ref.comboCount > 1) {
     ctx.fillStyle = '#ffcc00'; ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 6;
-    ctx.font = '8px Courier New'; ctx.fillText('COMBO ×' + UPG_ref.resonanceMultiplier.toFixed(1), 14, 91);
+    ctx.font = '8px Courier New'; ctx.fillText('COMBO ×' + UPG_ref.resonanceMultiplier.toFixed(1), 14, 105);
     ctx.shadowBlur = 0;
   }
 
   ctx.fillStyle = '#00eeff'; ctx.shadowColor = '#00eeff'; ctx.shadowBlur = 5;
-  ctx.font = '9px Courier New'; ctx.fillText('◆×' + (window._insightTokens || 0), 14, 99); ctx.shadowBlur = 0;
+  ctx.font = '9px Courier New'; ctx.fillText('◆×' + (window._insightTokens || 0), 14, 113); ctx.shadowBlur = 0;
 
   // Score
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 10;
@@ -773,21 +853,14 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = '#005533'; ctx.fillText('◈×' + g.peaceLeft, w - 12, 44);
   ctx.fillStyle = '#223344'; ctx.font = '8px Courier New';
   ctx.fillText((window._dreamIdx + 1 || 1) + '/18 DREAMS', w - 12, 58);
-  // Temporal system info (lunar + planet)
-  const tmods = window._tmods;
-  if (tmods) {
-    ctx.fillStyle = '#223344'; ctx.font = '7px Courier New';
-    ctx.fillText(tmods.lunarName || '', w - 12, 70);
-    ctx.fillText(tmods.planetName || '', w - 12, 80);
-  }
   // Phase M5: Character level display
   const cs = window._characterStats;
   if (cs) {
     ctx.fillStyle = '#334455'; ctx.font = '7px Courier New';
-    ctx.fillText('LVL·' + cs.level + '  XP ' + Math.round(cs.xpPercent * 100) + '%', w - 12, 90);
+    ctx.fillText('LVL·' + cs.level + '  XP ' + Math.round(cs.xpPercent * 100) + '%', w - 12, 104);
     if (cs.levelUpMsg) {
       ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 4;
-      ctx.font = '7px Courier New'; ctx.fillText(cs.levelUpMsg, w - 12, 100);
+      ctx.font = '7px Courier New'; ctx.fillText(cs.levelUpMsg, w - 12, 114);
       ctx.shadowBlur = 0;
     }
   }
@@ -1067,8 +1140,13 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   ctx.fillStyle = '#070714'; ctx.fillRect(0, h - 28, w, 28);
   ctx.strokeStyle = 'rgba(255,255,255,0.03)';
   ctx.beginPath(); ctx.moveTo(0, h - 28); ctx.lineTo(w, h - 28); ctx.stroke();
-  ctx.fillStyle = '#1a1a2a'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
-  ctx.fillText('WASD/ARROWS · SHIFT=matrix · J=arch · R=pulse · Q=freeze · C=contain · ESC=pause · H=dashboard', w / 2, h - 11);
+  const rl = realmLabel(window._purgDepth);
+  ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'left';
+  ctx.fillStyle = rl.color; ctx.shadowColor = rl.color; ctx.shadowBlur = 5;
+  ctx.fillText(rl.name, 14, h - 11);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#1a1a2a'; ctx.font = '7px Courier New'; ctx.textAlign = 'right';
+  ctx.fillText('WASD SHIFT=MTX J R Q C ESC=pause H=dash', w - 10, h - 11);
   ctx.textAlign = 'left';
 
   // ── Rhythm mode: beat pulse indicator in bottom bar ──────────────────

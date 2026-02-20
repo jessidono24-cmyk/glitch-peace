@@ -559,7 +559,7 @@ function loop(ts) {
     drawAchievementPopup(ctx, w, h, achievementSystem.popup, ts);
     if (result && result.phase === 'dead') {
       deadGame = result.data;
-      setPhase('dead'); gameMode = 'grid';
+      setPhase('dead');
     }
     animId = requestAnimationFrame(loop); return;
   }
@@ -1386,6 +1386,10 @@ window.addEventListener('keydown', e => {
         cancelAnimationFrame(animId); animId = requestAnimationFrame(loop);
       } else if (gameMode === 'coop') {
         coopMode.init({ dreamIdx: CFG.dreamIdx });
+        setPhase('playing');
+        cancelAnimationFrame(animId); animId = requestAnimationFrame(loop);
+      } else if (gameMode === 'rhythm') {
+        rhythmMode.init({ level: 1, dsIdx: CFG.dreamIdx });
         setPhase('playing');
         cancelAnimationFrame(animId); animId = requestAnimationFrame(loop);
       } else {

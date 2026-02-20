@@ -16,7 +16,7 @@ export class ImpulseBuffer {
   constructor() {
     this.activeDirection = null;  // [dy, dx] or null
     this.holdStartTime = 0;
-    this.holdDuration = 1000;     // 1 second in ms
+    this.holdDuration = 400;      // 0.4 second in ms — brief pause for awareness without blocking
     this.isHazard = false;
     this.cancelled = false;
   }

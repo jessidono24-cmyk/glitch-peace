@@ -269,6 +269,78 @@ export const OPT_GRID   = ['small', 'medium', 'large'];
 export const OPT_DIFF   = ['easy', 'normal', 'hard'];
 
 // ═══════════════════════════════════════════════════════════
+//  NATURE FACTS  (shown in Forest / Mycelium / predator dreamscapes)
+// ═══════════════════════════════════════════════════════════
+export const BIRD_FACTS = [
+  'Crows remember human faces and can hold grudges for years.',
+  'Ravens gift shiny objects to people who feed them — a token of trust.',
+  'Albatrosses can sleep while flying, riding updrafts for thousands of miles.',
+  'Clark\'s nutcrackers remember up to 30,000 seed cache locations.',
+  'Lyrebirds mimic chainsaws, car alarms, and human voices with perfect fidelity.',
+  'Bar-tailed godwits fly 11,000 km non-stop from Alaska to New Zealand.',
+  'Woodpeckers have shock-absorbing skulls and hyoid bones that wrap the entire skull.',
+  'European starlings form murmurations — shape-shifting flocks of millions.',
+  'Hummingbirds enter torpor nightly, dropping heart rate from 1,200 to 50 bpm.',
+  'Peregrine falcons dive at 390 km/h — the fastest animal on Earth.',
+  'Flamingos are born grey; their pink comes entirely from carotenoids in algae.',
+  'Parrots experience REM sleep and rehearse complex vocalizations in dreams.',
+  'Arctic terns migrate pole to pole — 90,000 km per year over a lifetime.',
+  'Great tits in urban areas sing at higher frequencies to cut through city noise.',
+  'Vultures use stomach acid pH of 1 to safely digest anthrax and cholera.',
+  'Owls have fixed eye sockets and rotate their head 270° instead.',
+  'Bowerbirds decorate bowers with optical illusions to appear larger to mates.',
+  'Frigatebirds can stay airborne for two months without landing.',
+  'Kea parrots solve multi-step puzzles and engage in contagious play.',
+  'Superb fairywrens teach a secret password song to their eggs before hatching.',
+];
+
+export const MUSHROOM_FACTS = [
+  'Fungi are genetically closer to animals than to plants.',
+  'The honey fungus in Oregon covers 9 km² and may be 8,000 years old.',
+  'Mycelium transmits electrical signals between trees — the "wood wide web".',
+  'Cordyceps fungi hi-jack insect brains to spread their spores.',
+  'Penicillin was discovered from Penicillium mold in 1928, saving millions.',
+  'Psilocybin mushrooms may promote neuroplasticity and new neural pathways.',
+  'Fungi break down lignin — the only organisms that can fully decompose wood.',
+  'Mycorrhizal networks transfer carbon, water, and minerals between tree species.',
+  'Some fungi glow in the dark — bioluminescence to attract spore-spreading insects.',
+  'Yeast (a fungus) converts sugar to alcohol — it has shaped human civilization.',
+  'Truffle fungi communicate with trees through volatiles to time spore release.',
+  'Slime molds (not true fungi) can solve mazes and optimize road-network layouts.',
+  'The fly agaric (Amanita muscaria) was used ritually by Siberian shamans for millennia.',
+  'Mycelium can be grown into packaging, construction materials, and leather substitutes.',
+  'Decomposers return 90% of the nutrients from dead matter back to living systems.',
+  'Zombie-ant fungi (Ophiocordyceps) target only one species — with surgical precision.',
+  'Fungi lack chlorophyll and cannot photosynthesize — they are chemotrophs.',
+  'Matsutake mushrooms form partnerships with pine trees and cannot be farmed.',
+  'The ghostly pale Indian pipe plant survives entirely by parasitizing mycorrhizal fungi.',
+  'Oyster mushrooms can digest petroleum hydrocarbons and clean oil spills.',
+];
+
+export const PREDATOR_FACTS = [
+  'Lions cooperate in complex coordinated hunts, assigning roles by individual ability.',
+  'Tigers can take down prey 3× their weight — using a suffocating neck bite.',
+  'Crocodiles have the strongest bite on Earth (3,700 psi) and have barely evolved in 80M years.',
+  'Polar bears can smell prey through 3 feet of ice and from 32 km away.',
+  'Great white sharks have electromagnetic sensors (ampullae of Lorenzini) to detect heartbeats.',
+  'Orcas have culture, dialects, and teach complex hunting strategies to their young.',
+  'Eagles can see UV light and spot a rabbit from 3 km at 150 km/h.',
+  'Octopi can change color in 0.2 seconds and have three hearts and blue blood.',
+  'Mantis shrimp punch at 90 km/h — fast enough to cavitate water into plasma bubbles.',
+  'Sperm whales produce the loudest biological sound on Earth (230 dB) to stun prey.',
+  'Cheetahs sacrifice stability for speed — their spine flexes like a spring, adding 7 m per stride.',
+  'Komodo dragons use venom + bacteria combo; their saliva causes rapid blood shock.',
+  'Wolves use howling to synchronize pack hunting over ranges of 10+ km.',
+  'Falcons have a nictitating membrane to protect eyes from 390 km/h dives.',
+  'Elephants display grief, empathy, and can recognize themselves in mirrors.',
+  'Dolphins use signature whistles (names) and sleep with one brain hemisphere at a time.',
+  'Jaguar skulls are the densest of all big cats — they bite through turtle shells.',
+  'Giant Pacific octopus can unscrew jar lids, open latches, and escape any enclosure.',
+  'Bottlenose dolphins have been observed rescuing humans and protecting them from sharks.',
+  'Dragonflies catch 95% of their prey — the most precise hunters on Earth.',
+];
+
+// ═══════════════════════════════════════════════════════════
 //  CONSTELLATION NAMES  (skymap mode star-pattern rewards)
 // ═══════════════════════════════════════════════════════════
 export const CONSTELLATION_NAMES = [

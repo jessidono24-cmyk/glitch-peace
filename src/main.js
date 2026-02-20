@@ -4,7 +4,7 @@
 //  Entry point: state machine + game loop.
 //  All game logic lives in src/game/, src/ui/, src/core/.
 // ═══════════════════════════════════════════════════════════════════════
-import { T, DREAMSCAPES, UPGRADE_SHOP, VISION_WORDS, CELL, GAP, PAL_A, PAL_B, CONSTELLATION_NAMES } from './core/constants.js';
+import { T, DREAMSCAPES, UPGRADE_SHOP, VISION_WORDS, CELL, GAP, PAL_A, PAL_B, CONSTELLATION_NAMES, BIRD_FACTS, MUSHROOM_FACTS, PREDATOR_FACTS } from './core/constants.js';
 import { CFG, UPG, CURSOR, phase, setPhase, resetUpgrades, resetSession,
          checkOwned, matrixActive, setMatrix, matrixHoldTime, setMatrixHoldTime, addMatrixHoldTime,
          insightTokens, addInsightToken, spendInsightTokens,
@@ -164,6 +164,18 @@ let backgroundStars = [];
 let visions = [];
 let interludeState = { text:'', subtext:'', elapsed:0, duration: INTERLUDE_DURATION_MS, minAdvanceMs: INTERLUDE_MIN_ADVANCE_MS, ds:null, nextGame:null };
 let _prevAlchemyPhase = 'nigredo'; // track to call onAuroraPhase only once on transition
+
+// ─── Movement speed emotion tracking ─────────────────────────────────────
+const MOVE_SPEED_WINDOW_MS  = 4000;  // rolling window for speed calculation
+const MOVE_SPEED_FAST_THR   = 2.5;   // moves/sec → agitation/anticipation signal
+const MOVE_SPEED_SLOW_THR   = 0.4;   // moves/sec → sadness/disconnection signal
+let _recentMoveTimes = [];           // timestamps of recent moves (rolling window)
+
+// ─── Nature facts state ───────────────────────────────────────────────────
+let _birdFactIdx      = 0;
+let _mushroomFactIdx  = 0;
+let _predatorFactIdx  = 0;
+let _lastNatureDsId   = null;  // track dreamscape changes to reset cycle per visit
 
 const keys = new Set();
 
@@ -474,6 +486,10 @@ function loop(ts) {
   const w = CW(), h = CH();
   pollGamepad(); // Controller support — runs every frame
 
+  // ── Full-screen background: match body to current dreamscape to remove black bars ──
+  const _dsColor = (game?.ds?.bgColor) || ((phase === 'interlude' && interludeState.ds?.bgColor) ? interludeState.ds.bgColor : '#02020a');
+  if (document.body.style.background !== _dsColor) document.body.style.background = _dsColor;
+
   // ── Achievement tick ──────────────────────────────────────────────────
   achievementSystem.tick(dt);
   // Process external achievement queue (from modes)
@@ -763,6 +779,52 @@ function loop(ts) {
       if (game.nightmareMode && targetTile === 4 && game.hp > _hpBeforeMove) game.hp = _hpBeforeMove;
       lastMove = ts;
       impulseBuffer.reset();
+
+      // ── Movement speed → emotion tracking ──────────────────────────────
+      _recentMoveTimes.push(ts);
+      _recentMoveTimes = _recentMoveTimes.filter(t => ts - t < MOVE_SPEED_WINDOW_MS);
+      const _movesPerSec = _recentMoveTimes.length / (MOVE_SPEED_WINDOW_MS / 1000);
+      window._moveSpeedMPS = _movesPerSec;
+      if (_movesPerSec > MOVE_SPEED_FAST_THR) {
+        // Fast movement → rising anticipation / agitation
+        emotionalField.addEmotion('anticipation', 0.06 * Math.min(_movesPerSec / MOVE_SPEED_FAST_THR, 2));
+        if (_movesPerSec > MOVE_SPEED_FAST_THR * 1.5) emotionalField.addEmotion('fear', 0.03);
+      } else if (_movesPerSec < MOVE_SPEED_SLOW_THR && _movesPerSec > 0) {
+        // Very slow, deliberate movement → sadness / contemplation signal
+        emotionalField.addEmotion('sadness', 0.04);
+      }
+      // Steady pace → boost trust/coherence
+      if (_movesPerSec >= 0.8 && _movesPerSec <= 2.0) emotionalField.addEmotion('trust', 0.02);
+
+      // ── Nature facts: show rotating fact in Forest & Mycelium dreamscapes ──
+      const _dsId = game.ds.id;
+      if (_dsId !== _lastNatureDsId) {
+        _lastNatureDsId = _dsId;
+        // New dreamscape entry — show a fact on first move
+        if (_dsId === 'forest_sanctuary') {
+          const fact = BIRD_FACTS[_birdFactIdx % BIRD_FACTS.length];
+          _showMsg('🐦 ' + fact, '#88ffaa', 200);
+          _birdFactIdx++;
+        } else if (_dsId === 'mycelium_depths') {
+          const fact = MUSHROOM_FACTS[_mushroomFactIdx % MUSHROOM_FACTS.length];
+          _showMsg('🍄 ' + fact, '#aaddcc', 200);
+          _mushroomFactIdx++;
+        } else if (_dsId === 'summit' || _dsId === 'mountain_dragon') {
+          const fact = PREDATOR_FACTS[_predatorFactIdx % PREDATOR_FACTS.length];
+          _showMsg('🦅 ' + fact, '#ffcc88', 200);
+          _predatorFactIdx++;
+        }
+      } else if (_dsId === 'forest_sanctuary' && Math.random() < 0.04) {
+        // Occasional new bird fact while exploring
+        const fact = BIRD_FACTS[_birdFactIdx % BIRD_FACTS.length];
+        _showMsg('🐦 ' + fact, '#88ffaa', 180);
+        _birdFactIdx++;
+      } else if (_dsId === 'mycelium_depths' && Math.random() < 0.04) {
+        const fact = MUSHROOM_FACTS[_mushroomFactIdx % MUSHROOM_FACTS.length];
+        _showMsg('🍄 ' + fact, '#aaddcc', 180);
+        _mushroomFactIdx++;
+      }
+
       // SteamPack: first move + score achievements
       achievementSystem.onFirstMove();
       achievementSystem.onScoreUpdate(game.score);

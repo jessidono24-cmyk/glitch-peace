@@ -194,7 +194,7 @@ export class MeditationMode {
             g.peaceLeft = Math.max(0, g.peaceLeft - 1);
             g.score += 100;
             this.sfxManager.playPeaceCollect();
-            burst(g.particles, ny*(CELL+GAP)+CELL/2, nx*(CELL+GAP)+CELL/2, '#00ff88', 8);
+            burst(g, nx, ny, '#00ff88', 8, 3);
           }
           if (tile === T.INSIGHT) {
             g.grid[ny][nx] = 0;

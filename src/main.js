@@ -180,6 +180,8 @@ let backgroundStars = [];
 let visions = [];
 let interludeState = { text:'', subtext:'', elapsed:0, duration: INTERLUDE_DURATION_MS, minAdvanceMs: INTERLUDE_MIN_ADVANCE_MS, ds:null, nextGame:null };
 let _prevAlchemyPhase = 'nigredo'; // track to call onAuroraPhase only once on transition
+let _lastRawVocab  = null; // cache to avoid re-picking multilingual word every frame
+let _lastMultiWord = null; // cached multilingual word for current vocab entry
 
 // ─── Movement speed emotion tracking ─────────────────────────────────────
 const MOVE_SPEED_WINDOW_MS  = 4000;  // rolling window for speed calculation
@@ -934,14 +936,22 @@ function loop(ts) {
   const vocabTier = adaptiveDifficulty.tier.vocabTier || 'advanced';
   let displayVocab = rawVocab;
   if (rawVocab && languageSystem.targetLang !== languageSystem.nativeLang) {
-    const tileType = rawVocab.tileType || 4;
-    const multiWord = languageSystem.getWordForTile(tileType, vocabTier);
-    if (multiWord) {
-      multiWord.tileType = tileType;
-      // Record word as seen for progressive unlock
-      languageSystem.onWordSeen(multiWord.id, languageSystem.targetLang);
-      displayVocab = multiWord;
+    // Only pick a new multilingual word when rawVocab changes; avoids re-randomising every frame
+    if (rawVocab !== _lastRawVocab) {
+      const tileType = rawVocab.tileType || 4;
+      const multiWord = languageSystem.getWordForTile(tileType, vocabTier);
+      if (multiWord) {
+        multiWord.tileType = tileType;
+        // Record word as seen for progressive unlock (once per word, not per frame)
+        languageSystem.onWordSeen(multiWord.id, languageSystem.targetLang);
+      }
+      _lastRawVocab  = rawVocab;
+      _lastMultiWord = multiWord || null;
     }
+    if (_lastMultiWord) displayVocab = _lastMultiWord;
+  } else {
+    // No active vocab or same language — clear cache so next word gets a fresh pick
+    _lastRawVocab = null; _lastMultiWord = null;
   }
   window._vocabWord      = displayVocab;
   window._vocabTimer     = vocabularyEngine.recentTimer; // 150→0, drives renderer fade-out

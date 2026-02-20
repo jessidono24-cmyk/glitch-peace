@@ -50,6 +50,8 @@ export class CoopMode {
     this.isActive  = true;
     this._result   = null;
     this._dreamStartTime = performance.now();
+    this._showInstructions = true;  // show co-op instructions overlay for first 6s
+    this._instructionsTimer = 6000; // ms
 
     const dsIdx = config.dreamIdx || CFG.dreamIdx || 0;
     const ds    = DREAMSCAPES[dsIdx % DREAMSCAPES.length];
@@ -140,6 +142,12 @@ export class CoopMode {
   update(dt, keys, _matrix, ts) {
     const g = this.game;
     if (!g || this._result) return this._result;
+
+    // Tick down instructions overlay
+    if (this._showInstructions) {
+      this._instructionsTimer -= dt;
+      if (this._instructionsTimer <= 0) this._showInstructions = false;
+    }
 
     this.glitchTimer -= dt;
     if (this.glitchTimer <= 0) { this.glitchFrames = 2 + rnd(4); this.glitchTimer = 500 + rnd(700); }
@@ -266,6 +274,42 @@ export class CoopMode {
     ctx.fillStyle = '#334455'; ctx.font = '8px Courier New';
     ctx.fillText('🤝  CO-OP  ·  P1=ARROWS  P2=WASD  ·  shared score', w/2, h - 14);
     ctx.textAlign = 'left';
+
+    // ── Co-op instructions overlay (shown for first 6 seconds) ──────────
+    if (this._showInstructions) {
+      const fade = Math.min(1, this._instructionsTimer / 800); // fade out last 800ms
+      const fadeIn = Math.min(1, (6000 - this._instructionsTimer) < 400 ? (6000 - this._instructionsTimer) / 400 : 1);
+      const a = Math.min(fade, fadeIn);
+      ctx.globalAlpha = a * 0.92;
+      ctx.fillStyle = '#010a08';
+      ctx.fillRect(w/2 - 175, h/2 - 100, 350, 200);
+      ctx.strokeStyle = '#ffcc44'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(w/2 - 175, h/2 - 100, 350, 200);
+      ctx.globalAlpha = a;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffcc44'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 12;
+      ctx.font = 'bold 16px Courier New';
+      ctx.fillText('🤝  CO-OP MODE', w/2, h/2 - 74);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#aaffcc'; ctx.font = '10px Courier New';
+      ctx.fillText('TWO PLAYERS · ONE DREAMSCAPE · SHARED SCORE', w/2, h/2 - 52);
+      ctx.fillStyle = '#556677'; ctx.font = '9px Courier New';
+      ctx.fillText('─────────────────────────────────', w/2, h/2 - 36);
+      ctx.fillStyle = '#00ff88'; ctx.font = 'bold 11px Courier New';
+      ctx.fillText('PLAYER 1', w/2 - 80, h/2 - 16);
+      ctx.fillStyle = '#ff8844'; ctx.fillText('PLAYER 2', w/2 + 80, h/2 - 16);
+      ctx.fillStyle = '#aaccaa'; ctx.font = '10px Courier New';
+      ctx.fillText('Arrow Keys', w/2 - 80, h/2 + 2);
+      ctx.fillStyle = '#cc9977'; ctx.fillText('W A S D', w/2 + 80, h/2 + 2);
+      ctx.fillStyle = '#667788'; ctx.font = '8px Courier New';
+      ctx.fillText('Collect ◈ PEACE tiles to advance the dreamscape', w/2, h/2 + 24);
+      ctx.fillText('Somatic tiles heal BOTH players · Hazards damage individually', w/2, h/2 + 38);
+      ctx.fillText("If either player's HP reaches 0, the journey ends", w/2, h/2 + 52);
+      ctx.fillStyle = '#334455';
+      ctx.fillText('ESC to return to title', w/2, h/2 + 72);
+      ctx.globalAlpha = 1;
+      ctx.textAlign = 'left';
+    }
   }
 
   handleInput(key, action) {

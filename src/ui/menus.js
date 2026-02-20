@@ -194,6 +194,12 @@ export function drawDreamSelect(ctx, w, h, dreamIdx) {
 }
 
 export function drawOptions(ctx, w, h, optIdx) {
+  const OPT_START_Y   = 48;  // y of first row label
+  const OPT_ROW_H     = 46;  // vertical spacing between rows
+  const OPT_BTN_SPACE = 90;  // horizontal spacing between option buttons
+  const OPT_BTN_W     = 90;  // button width
+  const OPT_BTN_HALF  = 44;  // half button width (for fillRect offset)
+  const OPT_BTN_H     = 22;  // button height
   ctx.fillStyle = '#02020a'; ctx.fillRect(0, 0, w, h);
   ctx.textAlign = 'center';
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 16;
@@ -201,34 +207,46 @@ export function drawOptions(ctx, w, h, optIdx) {
   const langMeta  = LANGUAGES[PLAYER_PROFILE.nativeLang] || {};
   const tgtMeta   = LANGUAGES[PLAYER_PROFILE.targetLang]  || {};
   const playMeta  = getPlayModeMeta(CFG.playMode || 'arcade');
+  // SFX volume display  (PLAYER_PROFILE.sfxVol 0-1 → percentage label)
+  const sfxPct   = Math.round((PLAYER_PROFILE.sfxVol !== undefined ? PLAYER_PROFILE.sfxVol : 0.3) * 100);
+  const sfxMuted = PLAYER_PROFILE.sfxMuted || false;
   const rows = [
     { label:'GRID SIZE',   opts:OPT_GRID, cur:CFG.gridSize },
     { label:'DIFFICULTY',  opts:OPT_DIFF, cur:CFG.difficulty },
     { label:'PARTICLES',   opts:['on','off'], cur:CFG.particles ? 'on' : 'off' },
     { label:'PLAY STYLE',  opts:['‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›'], cur:'‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›',
       hint: playMeta.desc },
+    { label:'SFX VOLUME',  opts:['0%','25%','50%','75%','100%'], cur: sfxPct + '%', hint: sfxMuted ? 'muted — ←→ adjust volume  ENTER=toggle mute' : '←→ adjust volume  ENTER=toggle mute' },
     { label:'LANGUAGES',   opts:['OPEN →'], cur:'OPEN →', hint: (langMeta.emoji||'') + ' → ' + (tgtMeta.emoji||'') + ' ' + (tgtMeta.name||'') },
     { label:'',            opts:['← BACK'], cur:'← BACK' },
   ];
   rows.forEach((row, i) => {
-    const sel = i === optIdx, baseY = 80 + i * 52;
+    const sel = i === optIdx, baseY = OPT_START_Y + i * OPT_ROW_H;
     if (row.label) {
       ctx.fillStyle = '#334455'; ctx.font = '9px Courier New'; ctx.fillText(row.label, w / 2, baseY);
-      if (row.hint) { ctx.fillStyle = '#445566'; ctx.font = '8px Courier New'; ctx.fillText(row.hint.slice(0, 55), w / 2, baseY + 12); }
+      if (row.hint) { ctx.fillStyle = '#445566'; ctx.font = '8px Courier New'; ctx.fillText(row.hint.slice(0, 60), w / 2, baseY + 12); }
     }
     const rowOpts = row.opts;
     rowOpts.forEach((opt, j) => {
       const active = opt === row.cur;
       const oy_off = row.hint ? 30 : 22;
-      const ox = w / 2 + (j - (rowOpts.length - 1) / 2) * 110, oy = baseY + oy_off;
-      ctx.fillStyle = (sel && active) ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.02)'; ctx.fillRect(ox - 60, oy - 14, 120, 22);
-      ctx.strokeStyle = (sel && active) ? 'rgba(0,255,136,0.5)' : active ? 'rgba(0,255,136,0.18)' : 'rgba(255,255,255,0.04)'; ctx.strokeRect(ox - 60, oy - 14, 120, 22);
+      const ox = w / 2 + (j - (rowOpts.length - 1) / 2) * OPT_BTN_SPACE, oy = baseY + oy_off;
+      ctx.fillStyle = (sel && active) ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.02)'; ctx.fillRect(ox - OPT_BTN_HALF, oy - OPT_BTN_H + 8, OPT_BTN_W, OPT_BTN_H);
+      ctx.strokeStyle = (sel && active) ? 'rgba(0,255,136,0.5)' : active ? 'rgba(0,255,136,0.18)' : 'rgba(255,255,255,0.04)'; ctx.strokeRect(ox - OPT_BTN_HALF, oy - OPT_BTN_H + 8, OPT_BTN_W, OPT_BTN_H);
       ctx.fillStyle = active ? '#00ff88' : '#334455'; ctx.shadowColor = active ? '#00ff88' : 'transparent'; ctx.shadowBlur = active ? 5 : 0;
       ctx.font = active ? 'bold 10px Courier New' : '9px Courier New'; ctx.fillText(opt.toUpperCase().slice(0, 22), ox, oy); ctx.shadowBlur = 0;
     });
     if (sel) { ctx.fillStyle = '#00ff88'; ctx.font = '12px Courier New'; ctx.fillText('▶', w / 2 - 154, baseY + (row.hint ? 30 : 22)); }
+    // SFX row: draw a live volume bar
+    if (row.label === 'SFX VOLUME' && sel) {
+      const barX = w / 2 - 110, barY = baseY + (row.hint ? 30 : 22) - 6, barW = 220, barH = 6;
+      ctx.fillStyle = '#111122'; ctx.fillRect(barX, barY, barW, barH);
+      ctx.fillStyle = sfxMuted ? '#443344' : '#00cc77';
+      ctx.fillRect(barX, barY, barW * (sfxPct / 100), barH);
+      ctx.strokeStyle = 'rgba(0,255,136,0.2)'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH);
+    }
   });
-  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New'; ctx.fillText('↑↓ row  ·  ←→ value  ·  ENTER opens  ·  ESC back', w / 2, h - 20);
+  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New'; ctx.fillText('↑↓ row  ·  ←→ value  ·  ENTER action  ·  ESC back', w / 2, h - 20);
   ctx.textAlign = 'left';
 }
 
@@ -755,10 +773,18 @@ export function drawLanguageOptions(ctx, w, h, langOb) {
   ctx.fillStyle = '#aaddff'; ctx.shadowColor = '#aaddff'; ctx.shadowBlur = 14;
   ctx.font = 'bold 18px Courier New'; ctx.fillText('LANGUAGE SETTINGS', w / 2, 50); ctx.shadowBlur = 0;
 
+  // Display mode human labels
+  const DISPLAY_LABELS = {
+    native:    'NATIVE ONLY',
+    bilingual: 'BILINGUAL',
+    target:    'IMMERSION (target only)',
+  };
+
   const sections = [
     { label: 'NATIVE LANGUAGE', idx: langOb.nativeIdx, list: LANG_LIST, col: '#00ff88' },
     { label: 'LEARNING TARGET', idx: langOb.targetIdx, list: (LANGUAGE_PATHS[LANG_LIST[langOb.nativeIdx]] || LANGUAGE_PATHS.en), col: '#aaddff' },
-    { label: 'DISPLAY MODE',    idx: langOb.modeIdx,   list: ['native','bilingual','target'], col: '#ffdd88' },
+    { label: 'DISPLAY MODE',    idx: langOb.modeIdx,   list: ['native','bilingual','target'], col: '#ffdd88',
+      hintFn: (code) => DISPLAY_LABELS[code] || code },
   ];
 
   sections.forEach((sec, si) => {
@@ -769,7 +795,7 @@ export function drawLanguageOptions(ctx, w, h, langOb) {
     const opts = sec.list.slice(0, 8);
     opts.forEach((code, i) => {
       const lang = LANGUAGES[code];
-      const label = lang ? lang.emoji + ' ' + lang.name : code.toUpperCase();
+      const label = sec.hintFn ? sec.hintFn(code) : (lang ? lang.emoji + ' ' + lang.name : code.toUpperCase());
       const active = i === sec.idx;
       const ox = w / 2 + (i - (opts.length - 1) / 2) * 78;
       ctx.fillStyle = (sel && active) ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.02)';
@@ -778,9 +804,20 @@ export function drawLanguageOptions(ctx, w, h, langOb) {
       ctx.strokeRect(ox - 34, baseY + 14, 68, 22);
       ctx.fillStyle = active ? sec.col : '#334455';
       ctx.font = active ? 'bold 9px Courier New' : '8px Courier New';
-      ctx.fillText(label, ox, baseY + 29);
+      ctx.fillText(label.slice(0, 20), ox, baseY + 29);
     });
   });
+
+  // Mode description hint
+  const modeList = ['native','bilingual','target'];
+  const modeDescriptions = {
+    native:    'Shows words in your native language only.',
+    bilingual: 'Shows both native + target language words.',
+    target:    'Full immersion — target language only. Sink or swim.',
+  };
+  const curMode = modeList[langOb.modeIdx] || 'bilingual';
+  ctx.fillStyle = '#334455'; ctx.font = '8px Courier New';
+  ctx.fillText(modeDescriptions[curMode] || '', w / 2, h - 36);
 
   ctx.fillStyle = '#131328'; ctx.font = '8px Courier New';
   ctx.fillText('↑↓ row  ·  ←→ value  ·  ENTER/ESC back', w / 2, h - 20);
@@ -900,6 +937,27 @@ export function drawHowToPlay(ctx, w, h) {
     ctx.fillStyle = '#335544'; ctx.font = '8px Courier New';
     ctx.fillText(s, w / 2, fsY + 22 + i * 16);
   });
+
+  // ── Co-op Setup ───────────────────────────────────────────────────────
+  const coopY = fsY + 22 + STEPS.length * 16 + 16;
+  ctx.strokeStyle = 'rgba(255,204,68,0.15)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(w / 2 - 200, coopY - 6); ctx.lineTo(w / 2 + 200, coopY - 6); ctx.stroke();
+  ctx.fillStyle = '#ffcc44'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 8;
+  ctx.font = 'bold 11px Courier New'; ctx.fillText('🤝  CO-OP SETUP  (two players on one keyboard)', w / 2, coopY + 6);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#998844'; ctx.font = '8px Courier New';
+  ctx.fillText('From the title, choose SELECT MODE → CO-OP MODE and press ENTER.', w / 2, coopY + 22);
+  ctx.fillStyle = '#00ff88'; ctx.font = 'bold 9px Courier New';
+  ctx.fillText('PLAYER 1:', w / 2 - 100, coopY + 38);
+  ctx.fillStyle = '#ff8844';
+  ctx.fillText('PLAYER 2:', w / 2 + 60, coopY + 38);
+  ctx.fillStyle = '#aaccaa'; ctx.font = '8px Courier New';
+  ctx.fillText('Arrow Keys ↑↓←→', w / 2 - 100, coopY + 52);
+  ctx.fillStyle = '#cc9977';
+  ctx.fillText('W A S D', w / 2 + 60, coopY + 52);
+  ctx.fillStyle = '#445566'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
+  ctx.fillText('Both share the same dreamscape. Collect ◈ tiles to clear the level together.', w / 2, coopY + 68);
+  ctx.fillText('Somatic tiles (◯ ≋ ✦ ⊕) heal both players simultaneously.', w / 2, coopY + 82);
 
   // ── Footer ────────────────────────────────────────────────────────────
   ctx.fillStyle = '#1a2a1a'; ctx.font = 'italic 7px Courier New';

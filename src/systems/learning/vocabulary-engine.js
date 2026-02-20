@@ -159,9 +159,9 @@ export class VocabularyEngine {
       this._save();
     }
 
-    this._recentWord  = entry;
+    this._recentWord  = { ...entry, tileType: tileId }; // tileType enables language-system lookup
     this._recentTimer = 150; // ~5s at 30fps
-    return entry;
+    return this._recentWord;
   }
 
   // ─── Update — call each frame ─────────────────────────────────────
@@ -173,6 +173,7 @@ export class VocabularyEngine {
   // ─── Accessors ────────────────────────────────────────────────────
   get activeWord()    { return this._recentTimer > 0 ? this._recentWord : null; }
   get wordProgress()  { return this._recentTimer / 150; }   // 1→0
+  get recentTimer()   { return this._recentTimer; }         // 150→0, for renderer alpha
   get sessionCount()  { return this._sessionWords.length; }
   get totalCount()    { return this._totalLearned; }
   get sessionWords()  { return [...this._sessionWords]; }

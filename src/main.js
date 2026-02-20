@@ -4,7 +4,7 @@
 //  Entry point: state machine + game loop.
 //  All game logic lives in src/game/, src/ui/, src/core/.
 // ═══════════════════════════════════════════════════════════════════════
-import { T, DREAMSCAPES, UPGRADE_SHOP, VISION_WORDS, CELL, GAP, PAL_A, PAL_B, CONSTELLATION_NAMES } from './core/constants.js';
+import { T, DREAMSCAPES, UPGRADE_SHOP, VISION_WORDS, CELL, GAP, PAL_A, PAL_B, CONSTELLATION_NAMES, BIRD_FACTS, MUSHROOM_FACTS, PREDATOR_FACTS } from './core/constants.js';
 import { CFG, UPG, CURSOR, phase, setPhase, resetUpgrades, resetSession,
          checkOwned, matrixActive, setMatrix, matrixHoldTime, setMatrixHoldTime, addMatrixHoldTime,
          insightTokens, addInsightToken, spendInsightTokens,
@@ -164,6 +164,19 @@ let backgroundStars = [];
 let visions = [];
 let interludeState = { text:'', subtext:'', elapsed:0, duration: INTERLUDE_DURATION_MS, minAdvanceMs: INTERLUDE_MIN_ADVANCE_MS, ds:null, nextGame:null };
 let _prevAlchemyPhase = 'nigredo'; // track to call onAuroraPhase only once on transition
+
+// ─── Movement speed emotion tracking ─────────────────────────────────────
+const MOVE_SPEED_WINDOW_MS  = 4000;  // rolling window for speed calculation
+const MOVE_SPEED_FAST_THR   = 2.5;   // moves/sec → agitation/anticipation signal
+const MOVE_SPEED_SLOW_THR   = 0.4;   // moves/sec → sadness/disconnection signal
+let _recentMoveTimes = [];           // timestamps of recent moves (rolling window)
+
+// ─── Nature facts state ───────────────────────────────────────────────────
+const NATURE_FACT_PROB = 0.04;  // probability per move of showing a new fact mid-exploration
+let _birdFactIdx      = 0;
+let _mushroomFactIdx  = 0;
+let _predatorFactIdx  = 0;
+let _lastNatureDsId   = null;  // track dreamscape changes to reset cycle per visit
 
 const keys = new Set();
 
@@ -367,6 +380,9 @@ function startGame(dreamIdx) {
   archetypeDialogue.reset();
   bossSystem.reset();
   alchemySystem.resetSession();
+  // Reset movement speed tracking + nature facts state
+  _recentMoveTimes = [];
+  _lastNatureDsId = null;
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -473,6 +489,10 @@ function loop(ts) {
   const dt = Math.min(ts - prevTs, 100); prevTs = ts; // cap at 100 ms to absorb tab-switch spikes
   const w = CW(), h = CH();
   pollGamepad(); // Controller support — runs every frame
+
+  // ── Full-screen background: match body to current dreamscape to remove black bars ──
+  const _dsColor = (game?.ds?.bgColor) || ((phase === 'interlude' && interludeState.ds?.bgColor) ? interludeState.ds.bgColor : '#02020a');
+  if (document.body.style.background !== _dsColor) document.body.style.background = _dsColor;
 
   // ── Achievement tick ──────────────────────────────────────────────────
   achievementSystem.tick(dt);
@@ -763,6 +783,52 @@ function loop(ts) {
       if (game.nightmareMode && targetTile === 4 && game.hp > _hpBeforeMove) game.hp = _hpBeforeMove;
       lastMove = ts;
       impulseBuffer.reset();
+
+      // ── Movement speed → emotion tracking ──────────────────────────────
+      _recentMoveTimes.push(ts);
+      _recentMoveTimes = _recentMoveTimes.filter(t => ts - t < MOVE_SPEED_WINDOW_MS);
+      const _movesPerSec = _recentMoveTimes.length / (MOVE_SPEED_WINDOW_MS / 1000);
+      window._moveSpeedMPS = _movesPerSec;
+      if (_movesPerSec > MOVE_SPEED_FAST_THR) {
+        // Fast movement → rising anticipation / agitation
+        emotionalField.addEmotion('anticipation', 0.06 * Math.min(_movesPerSec / MOVE_SPEED_FAST_THR, 2));
+        if (_movesPerSec > MOVE_SPEED_FAST_THR * 1.5) emotionalField.addEmotion('fear', 0.03);
+      } else if (_movesPerSec < MOVE_SPEED_SLOW_THR && _movesPerSec > 0) {
+        // Very slow, deliberate movement → sadness / contemplation signal
+        emotionalField.addEmotion('sadness', 0.04);
+      }
+      // Steady pace → boost trust/coherence
+      if (_movesPerSec >= 0.8 && _movesPerSec <= 2.0) emotionalField.addEmotion('trust', 0.02);
+
+      // ── Nature facts: show rotating fact in Forest & Mycelium dreamscapes ──
+      const _dsId = game.ds.id;
+      if (_dsId !== _lastNatureDsId) {
+        _lastNatureDsId = _dsId;
+        // New dreamscape entry — show a fact on first move
+        if (_dsId === 'forest_sanctuary') {
+          const fact = BIRD_FACTS[_birdFactIdx % BIRD_FACTS.length];
+          _showMsg('🐦 ' + fact, '#88ffaa', 200);
+          _birdFactIdx++;
+        } else if (_dsId === 'mycelium_depths') {
+          const fact = MUSHROOM_FACTS[_mushroomFactIdx % MUSHROOM_FACTS.length];
+          _showMsg('🍄 ' + fact, '#aaddcc', 200);
+          _mushroomFactIdx++;
+        } else if (_dsId === 'summit' || _dsId === 'mountain_dragon') {
+          const fact = PREDATOR_FACTS[_predatorFactIdx % PREDATOR_FACTS.length];
+          _showMsg('🦅 ' + fact, '#ffcc88', 200);
+          _predatorFactIdx++;
+        }
+      } else if (_dsId === 'forest_sanctuary' && Math.random() < NATURE_FACT_PROB) {
+        // Occasional new bird fact while exploring
+        const fact = BIRD_FACTS[_birdFactIdx % BIRD_FACTS.length];
+        _showMsg('🐦 ' + fact, '#88ffaa', 180);
+        _birdFactIdx++;
+      } else if (_dsId === 'mycelium_depths' && Math.random() < NATURE_FACT_PROB) {
+        const fact = MUSHROOM_FACTS[_mushroomFactIdx % MUSHROOM_FACTS.length];
+        _showMsg('🍄 ' + fact, '#aaddcc', 180);
+        _mushroomFactIdx++;
+      }
+
       // SteamPack: first move + score achievements
       achievementSystem.onFirstMove();
       achievementSystem.onScoreUpdate(game.score);
@@ -823,6 +889,7 @@ function loop(ts) {
     }
   }
   window._vocabWord      = displayVocab;
+  window._vocabTimer     = vocabularyEngine.recentTimer; // 150→0, drives renderer fade-out
   window._patternBanner  = patternRecognition.activeBanner;
   window._learnStats     = {
     words: vocabularyEngine.sessionCount,
@@ -1135,8 +1202,9 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
   if (phase === 'options') {
-    if (e.key==='ArrowUp')   { CURSOR.opt=(CURSOR.opt-1+6)%6; sfxManager.resume(); sfxManager.playMenuNav(); }
-    if (e.key==='ArrowDown') { CURSOR.opt=(CURSOR.opt+1)%6; sfxManager.resume(); sfxManager.playMenuNav(); }
+    const OPT_COUNT = 7; // rows: gridsize, difficulty, particles, playstyle, sfxvol, languages, back
+    if (e.key==='ArrowUp')   { CURSOR.opt=(CURSOR.opt-1+OPT_COUNT)%OPT_COUNT; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowDown') { CURSOR.opt=(CURSOR.opt+1)%OPT_COUNT; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowLeft'||e.key==='ArrowRight') {
       const dir=e.key==='ArrowLeft'?-1:1;
       if(CURSOR.opt===0){const i=['small','medium','large'].indexOf(CFG.gridSize);CFG.gridSize=['small','medium','large'][(i+dir+3)%3];}
@@ -1146,11 +1214,27 @@ window.addEventListener('keydown', e => {
         const i=PLAY_MODE_LIST.indexOf(CFG.playMode||'arcade');
         CFG.playMode=PLAY_MODE_LIST[(i+dir+PLAY_MODE_LIST.length)%PLAY_MODE_LIST.length];
       }
+      else if(CURSOR.opt===4) {  // SFX VOLUME: cycle 0%, 25%, 50%, 75%, 100%
+        const SFX_VOL_STEPS = [0, 0.25, 0.5, 0.75, 1.0];
+        const SFX_VOL_DEFAULT_IDX = 2;   // index of 50% (default)
+        // Use direct equality since these are exact preset values, not free-form floats
+        const curI = SFX_VOL_STEPS.indexOf(PLAYER_PROFILE.sfxVol);
+        const nI = (curI < 0 ? SFX_VOL_DEFAULT_IDX : curI) + dir;
+        PLAYER_PROFILE.sfxVol = SFX_VOL_STEPS[(nI + SFX_VOL_STEPS.length) % SFX_VOL_STEPS.length];
+        if(!PLAYER_PROFILE.sfxMuted) sfxManager.setVolume(PLAYER_PROFILE.sfxVol);
+        savePlayerProfile();
+      }
       sfxManager.resume(); sfxManager.playMenuNav();
     }
     if (e.key==='Enter') {
-      if(CURSOR.opt===4) { setPhase('langopts'); }  // Language settings
-      else if(CURSOR.opt===5) setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
+      if(CURSOR.opt===4) { // Toggle mute
+        PLAYER_PROFILE.sfxMuted=!PLAYER_PROFILE.sfxMuted;
+        sfxManager.setVolume(PLAYER_PROFILE.sfxMuted ? 0 : (PLAYER_PROFILE.sfxVol || 0.5));
+        savePlayerProfile();
+        sfxManager.resume(); sfxManager.playMenuSelect();
+      }
+      else if(CURSOR.opt===5) { setPhase('langopts'); }  // Language settings
+      else if(CURSOR.opt===6) setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
     }
     if (e.key==='Escape') setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
     e.preventDefault(); return;
@@ -1396,6 +1480,12 @@ canvas.addEventListener('click', () => { if(phase==='title')startGame(CFG.dreamI
 // ─── Boot ─────────────────────────────────────────────────────────────────
 setHighScores(loadHighScores());
 initStars(CW(), CH());
+// Apply saved audio settings
+if (PLAYER_PROFILE.sfxMuted) {
+  sfxManager.setVolume(0);
+} else if (PLAYER_PROFILE.sfxVol !== undefined) {
+  sfxManager.setVolume(PLAYER_PROFILE.sfxVol);
+}
 // Show onboarding screen on first ever launch (no saved profile)
 if (!PLAYER_PROFILE.onboardingDone) {
   setPhase('onboarding');

@@ -65,6 +65,7 @@ export function resetUpgrades() {
     phaseShift:false, phaseTimer:0, temporalRewind:false, rewindBuffer:[],
     glitchPulse:false, glitchPulseCharge:0, resonanceMultiplier:1, comboCount:0,
     emotion:'neutral', emotionTimer:0,
+    mirrorActive:0, witnessMovesLeft:0, witnessMultiplier:1, heraldMovesLeft:0,
   });
 }
 

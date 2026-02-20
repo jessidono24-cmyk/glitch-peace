@@ -86,7 +86,7 @@ export class ShooterMode extends GameMode {
     this.updateEnemies(dtSec);
     this.updatePowerUps(dtSec);
     this.updateParticles(dtSec);
-    this.checkCollisions();
+    this.checkCollisions(dtSec);
     this.updateWaveSpawning(dtSec);
     this.updateCamera();
     if (this.player.invincible > 0) this.player.invincible -= dtSec;
@@ -208,7 +208,7 @@ export class ShooterMode extends GameMode {
     }
   }
 
-  checkCollisions() {
+  checkCollisions(dt) {
     outer: for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i];
       for (let j = this.enemies.length - 1; j >= 0; j--) {
@@ -247,7 +247,7 @@ export class ShooterMode extends GameMode {
           }
           if (dist > 0) { this.player.x += (dx/dist)*4; this.player.y += (dy/dist)*4; }
         }
-        if (e._contactCooldown > 0) e._contactCooldown -= this._lastDt;
+        if (e._contactCooldown > 0) e._contactCooldown -= dt;
       }
     }
     for (let i = this.powerUps.length - 1; i >= 0; i--) {

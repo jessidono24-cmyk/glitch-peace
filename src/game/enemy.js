@@ -33,9 +33,14 @@ export function stepEnemies(game, dt, keys, matrixActive, hallucinations, showMs
         const ny = h.y + dy, nx = h.x + dx;
         if (ny >= 0 && ny < sz && nx >= 0 && nx < sz) { h.y = ny; h.x = nx; }
         if (h.y === g.player.y && h.x === g.player.x) {
-          g.hp = Math.max(0, g.hp - 8); h.life = 0;
-          g.shakeFrames = 4; g.flashColor = '#8800ff'; g.flashAlpha = 0.18;
-          showMsg('CHAOS PHANTOM!', '#aa00ff', 35);
+          h.life = 0;
+          if (UPG.shield && UPG.shieldTimer > 0) {
+            showMsg('SHIELD HELD vs PHANTOM!', '#00ffcc', 35);
+          } else {
+            g.hp = Math.max(0, g.hp - 8);
+            g.shakeFrames = 4; g.flashColor = '#8800ff'; g.flashAlpha = 0.18;
+            showMsg('CHAOS PHANTOM!', '#aa00ff', 35);
+          }
         }
       }
     }
@@ -55,8 +60,8 @@ export function stepEnemies(game, dt, keys, matrixActive, hallucinations, showMs
       }
       const bdy = ty - b.y, bdx = tx - b.x;
       const dy = bdy > 0 ? 1 : bdy < 0 ? -1 : 0, dx = bdx > 0 ? 1 : bdx < 0 ? -1 : 0;
-      if (dy && b.y + dy >= 0 && b.y + dy < sz) b.y += dy;
-      else if (dx && b.x + dx >= 0 && b.x + dx < sz) b.x += dx;
+      if (dy && b.y + dy >= 0 && b.y + dy < sz && g.grid[b.y + dy][b.x] !== T.WALL) b.y += dy;
+      else if (dx && b.x + dx >= 0 && b.x + dx < sz && g.grid[b.y][b.x + dx] !== T.WALL) b.x += dx;
       if (b.y === g.player.y && b.x === g.player.x) {
         const dmg = Math.round(40 * d.dmgMul * (matrixActive === 'A' ? 1.3 : 1));
         g.hp = Math.max(0, g.hp - dmg);
@@ -212,8 +217,12 @@ export function stepEnemies(game, dt, keys, matrixActive, hallucinations, showMs
     }
     for (const cz of g.captureZones) {
       if (Math.abs(e.x - g.player.x) <= cz.r && Math.abs(e.y - g.player.y) <= cz.r) {
-        g.hp = Math.max(0, g.hp - 5);
-        showMsg('CAPTURED!', '#ff0044', 25);
+        if (UPG.shield && UPG.shieldTimer > 0) {
+          showMsg('SHIELDED vs CAPTURE!', '#00ffcc', 25);
+        } else {
+          g.hp = Math.max(0, g.hp - 5);
+          showMsg('CAPTURED!', '#ff0044', 25);
+        }
       }
     }
     // Containment zones (player-placed via C key): stun enemies inside

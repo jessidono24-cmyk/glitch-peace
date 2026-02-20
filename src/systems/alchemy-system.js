@@ -32,6 +32,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { T } from '../core/constants.js';
+import { UPG } from '../core/state.js';
 
 // ─── Element definitions ───────────────────────────────────────────────
 export const ELEMENTS = {
@@ -159,7 +160,7 @@ export class AlchemySystem {
     if (allFourUsed || fallbackHit) {
       // Reset element-used history so the cycle can repeat
       this._classicElementsUsed.clear();
-      game.hp = game.maxHp || 100;
+      game.hp = UPG.maxHp;
       game.score = (game.score || 0) + 5000;
       this._philosopherStones++;
       this._save();

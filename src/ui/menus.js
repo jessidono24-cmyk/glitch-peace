@@ -17,8 +17,9 @@ function stars(ctx, backgroundStars, ts) {
 export const GAME_MODES = [
   { id: 'grid',          label: '🗂️  GRID MODE',          sub: 'tactical tile navigation · original',         color: '#00ff88' },
   { id: 'shooter',       label: '🔫  SHOOTER MODE',        sub: 'fast-paced arena combat · reflex',            color: '#ff6622' },
+  { id: 'rhythm',        label: '🎵  RHYTHM MODE',         sub: 'note-fall · beat timing · 5 dreamscapes  M7', color: '#ffaa44' },
   { id: 'constellation', label: '✦   CONSTELLATION MODE',  sub: 'connect star nodes · meditative puzzle  M6',  color: '#aaddff' },
-  { id: 'meditation',    label: '🌸  MEDITATION MODE',     sub: 'breathing & awareness · no enemies  M7',      color: '#88ffcc' },
+  { id: 'meditation',    label: '🌸  MEDITATION MODE',     sub: 'breathing & awareness · no enemies',          color: '#88ffcc' },
   { id: 'coop',          label: '🤝  CO-OP MODE',          sub: 'two-player journey · shared dreamscape  M8',  color: '#ffcc44' },
   { id: 'challenge',     label: '📅  DAILY CHALLENGE',     sub: 'new seeded run every 24 hours',               color: '#cc88ff' },
 ];
@@ -216,6 +217,7 @@ export function drawOptions(ctx, w, h, optIdx) {
     { label:'PARTICLES',   opts:['on','off'], cur:CFG.particles ? 'on' : 'off' },
     { label:'PLAY STYLE',  opts:['‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›'], cur:'‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›',
       hint: playMeta.desc },
+    { label:'VIEW MODE',   opts:['flat','iso'], cur: CFG.viewMode || 'flat', hint: 'flat = grid · iso = isometric 2.5D' },
     { label:'SFX VOLUME',  opts:['0%','25%','50%','75%','100%'], cur: sfxPct + '%', hint: sfxMuted ? 'muted — ←→ adjust volume  ENTER=toggle mute' : '←→ adjust volume  ENTER=toggle mute' },
     { label:'LANGUAGES',   opts:['OPEN →'], cur:'OPEN →', hint: (langMeta.emoji||'') + ' → ' + (tgtMeta.emoji||'') + ' ' + (tgtMeta.name||'') },
     { label:'',            opts:['← BACK'], cur:'← BACK' },
@@ -1046,5 +1048,103 @@ export function drawAchievements(ctx, w, h, achievementSystem, scrollOffset) {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#131328'; ctx.font = '8px Courier New';
   ctx.fillText('↑↓ scroll  ·  ENTER / ESC back', w / 2, h - 20);
+  ctx.textAlign = 'left';
+}
+
+// ─── Archetype Selector ───────────────────────────────────────────────────
+export function drawArchetypeSelect(ctx, w, h, selIdx, backgroundStars, ts) {
+  // Background
+  ctx.fillStyle = '#01010a'; ctx.fillRect(0, 0, w, h);
+  for (let y2 = 0; y2 < h; y2 += 4) { ctx.fillStyle = 'rgba(0,0,0,0.10)'; ctx.fillRect(0, y2, w, 1); }
+  if (backgroundStars) {
+    for (const s of backgroundStars) {
+      ctx.globalAlpha = s.a * (0.4 + 0.3 * Math.sin(ts * 0.0008 + s.phase));
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffdd44'; ctx.shadowColor = '#ffdd44'; ctx.shadowBlur = 18;
+  ctx.font = 'bold 18px Courier New'; ctx.fillText('CHOOSE YOUR ARCHETYPE', w / 2, 44); ctx.shadowBlur = 0;
+  ctx.fillStyle = '#334422'; ctx.font = '9px Courier New';
+  ctx.fillText('your power shapes the dreamscape', w / 2, 60);
+
+  const archKeys = Object.keys(ARCHETYPES);
+  const COLS_ARCH = 3;
+  const rowH = 80, colW = Math.floor((w - 40) / COLS_ARCH);
+  const startX = 20, startY = 80;
+
+  archKeys.forEach((key, i) => {
+    const arch = ARCHETYPES[key];
+    const col  = i % COLS_ARCH;
+    const row  = Math.floor(i / COLS_ARCH);
+    const rx   = startX + col * colW;
+    const ry   = startY + row * rowH;
+    const sel  = i === selIdx;
+    const pulse = sel ? 0.5 + 0.5 * Math.sin(ts * 0.006) : 0;
+
+    // Card background
+    if (sel) {
+      const bg = ctx.createLinearGradient(rx, ry, rx + colW - 6, ry + rowH - 4);
+      bg.addColorStop(0, arch.color + '22');
+      bg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = bg; ctx.fillRect(rx, ry, colW - 6, rowH - 4);
+      ctx.strokeStyle = arch.color + Math.round(60 + pulse * 80).toString(16).padStart(2,'0');
+      ctx.lineWidth = 1.5; ctx.strokeRect(rx, ry, colW - 6, rowH - 4);
+    } else {
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1; ctx.strokeRect(rx, ry, colW - 6, rowH - 4);
+    }
+
+    // Archetype name
+    ctx.fillStyle = sel ? arch.color : '#2a3a2a';
+    ctx.shadowColor = sel ? arch.color : 'transparent'; ctx.shadowBlur = sel ? 8 : 0;
+    ctx.font = sel ? 'bold 10px Courier New' : '9px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillText(arch.name, rx + 8, ry + 18); ctx.shadowBlur = 0;
+
+    // Power description (truncated)
+    ctx.fillStyle = sel ? '#88aacc' : '#1a2a1a'; ctx.font = '7px Courier New';
+    const pd = (arch.powerDesc || '').length > 32 ? arch.powerDesc.slice(0,30)+'…' : (arch.powerDesc||'');
+    ctx.fillText(pd, rx + 8, ry + 32);
+
+    // Activation message preview
+    if (sel) {
+      ctx.fillStyle = '#445533'; ctx.font = '7px Courier New';
+      const am = (arch.activationMsg || '').length > 34 ? arch.activationMsg.slice(0,32)+'…' : (arch.activationMsg||'');
+      ctx.fillText(am, rx + 8, ry + 46);
+    }
+
+    // Selection marker
+    if (sel) {
+      ctx.fillStyle = arch.color; ctx.shadowColor = arch.color; ctx.shadowBlur = 4;
+      ctx.font = 'bold 8px Courier New';
+      ctx.fillText('▶', rx + 2, ry + 18); ctx.shadowBlur = 0;
+    }
+    ctx.textAlign = 'left';
+  });
+
+  // Selected archetype details panel at bottom
+  const selKey  = archKeys[selIdx] || archKeys[0];
+  const selArch = ARCHETYPES[selKey];
+  if (selArch) {
+    const panY = h - 72;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(20, panY, w - 40, 60);
+    ctx.strokeStyle = selArch.color + '44'; ctx.lineWidth = 1;
+    ctx.strokeRect(20, panY, w - 40, 60);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = selArch.color; ctx.font = 'bold 12px Courier New';
+    ctx.fillText(selArch.name, 32, panY + 18);
+    ctx.fillStyle = '#aabbcc'; ctx.font = '9px Courier New';
+    ctx.fillText(selArch.powerDesc || '', 32, panY + 32);
+    ctx.fillStyle = '#334455'; ctx.font = '8px Courier New';
+    ctx.fillText(selArch.completionBonus || '', 32, panY + 44);
+  }
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#0d1a0d'; ctx.font = '8px Courier New';
+  ctx.fillText('↑↓←→ navigate  ·  ENTER select  ·  ESC skip (no archetype)', w / 2, h - 10);
   ctx.textAlign = 'left';
 }

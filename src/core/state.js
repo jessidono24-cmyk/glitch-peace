@@ -9,6 +9,8 @@ export const CFG = {
   particles:  true,
   dreamIdx:   0,
   playMode:   'arcade',  // see src/systems/play-modes.js
+  viewMode:   'flat',    // 'flat' | 'iso'  — 3D-B isometric toggle
+  chosenArchetype: null, // key into ARCHETYPES, set by archetype selector; null = random/dreamscape default
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -125,6 +127,7 @@ export const CURSOR = {
   shop:    0,
   dream:   0,
   modesel: 0,        // mode select cursor
+  archsel: 0,        // archetype selector cursor (0..N-1)
   achieveScroll: 0,  // achievements list scroll offset
   upgradeFrom: 'title',
   optFrom:     'title',  // tracks which screen opened the options panel

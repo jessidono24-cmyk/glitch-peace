@@ -8,12 +8,11 @@
 //  Dream ends when EITHER player's HP reaches 0, or all peace nodes
 //  are collected.
 //
-//  Design:
-//    - Two distinct player objects on the same dreamscape grid
-//    - Shared peace node collection & score
-//    - Individual HP tracking (P1 shown left, P2 shown right)
-//    - Enemies target the nearest player
-//    - Cooperative synergy: both collect somatic tiles for combined healing
+//  Online mode (config.online = true):
+//    Connects to the WebSocket relay at config.relayUrl (default:
+//    ws://localhost:8765).  Local player is always P1; remote is P2.
+//    P1 sends { type:'input', data:{key,dy,dx} } on every move.
+//    Receives { type:'relay', from:'p2', data:{key,dy,dx} } from server.
 // ═══════════════════════════════════════════════════════════════════════
 
 import { T, DREAMSCAPES, CELL, GAP } from '../core/constants.js';
@@ -23,6 +22,79 @@ import { SZ, buildDreamscape, CW, CH } from '../game/grid.js';
 import { stepEnemies } from '../game/enemy.js';
 import { burst } from '../game/particles.js';
 import { drawGame } from '../ui/renderer.js';
+
+// ── Network relay client ─────────────────────────────────────────────────
+const DEFAULT_RELAY_URL = 'ws://localhost:8765';
+
+class RelayClient {
+  constructor(url, roomId) {
+    this._ws       = null;
+    this._role     = null;
+    this._ready    = false;     // true when peer has joined
+    this._inQueue  = [];        // incoming messages from peer
+    this._url      = url;
+    this._roomId   = roomId;
+    this._connect();
+  }
+
+  _connect() {
+    try {
+      this._ws = new WebSocket(this._url);
+    } catch (_e) {
+      console.warn('[CoopRelay] WebSocket unavailable');
+      return;
+    }
+    this._ws.onopen = () => {
+      this._send({ type: 'join', roomId: this._roomId });
+    };
+    this._ws.onmessage = (evt) => {
+      let msg;
+      try { msg = JSON.parse(evt.data); } catch (_e) { return; }
+      switch (msg.type) {
+        case 'joined':
+          this._role = msg.role;
+          console.log(`[CoopRelay] joined as ${this._role} in room ${msg.roomId}`);
+          break;
+        case 'peer_joined':
+          this._ready = true;
+          console.log('[CoopRelay] peer joined — starting online co-op');
+          break;
+        case 'peer_left':
+          this._ready = false;
+          console.log('[CoopRelay] peer left');
+          break;
+        case 'relay':
+          this._inQueue.push(msg);
+          break;
+      }
+    };
+    this._ws.onerror = (e) => console.warn('[CoopRelay] error', e.message || e);
+    this._ws.onclose = () => { this._ready = false; };
+  }
+
+  _send(obj) {
+    try {
+      if (this._ws?.readyState === WebSocket.OPEN) this._ws.send(JSON.stringify(obj));
+    } catch (_e) {}
+  }
+
+  sendInput(data) { this._send({ type: 'input', data }); }
+
+  /** Drain incoming queue, return array of messages */
+  drain() {
+    const q = this._inQueue.splice(0);
+    return q;
+  }
+
+  get isOnline()   { return this._ready; }
+  get role()       { return this._role; }
+
+  destroy() {
+    try { this._ws?.close(); } catch (_e) {}
+    this._ws = null;
+  }
+}
+
 
 export class CoopMode {
   constructor(sharedSystems) {
@@ -44,20 +116,39 @@ export class CoopMode {
     this.anomalyData     = { row: -1, col: -1, t: 0 };
     this._result         = null;
     this._dreamStartTime = 0;
+    this._relay          = null;  // RelayClient instance (online co-op)
+    this._online         = false; // true when connected to relay
+    this._roomId         = null;
   }
 
   init(config) {
     this.isActive  = true;
     this._result   = null;
     this._dreamStartTime = performance.now();
-    this._showInstructions = true;  // show co-op instructions overlay for first 6s
-    this._instructionsTimer = 6000; // ms
+    this._showInstructions = true;
+    this._instructionsTimer = 6000;
+    this._synergyFlash   = 0;   // synergy bonus display timer
+    this._synergyMsg     = '';
+    this._p2Dead         = false;
+    this._p2ReviveTimer  = 0;   // countdown until P2 permanently removed
+    this._level          = 1;
+
+    // ── Online relay setup ─────────────────────────────────────────────
+    if (this._relay) { this._relay.destroy(); this._relay = null; }
+    this._online = !!(config.online);
+    if (this._online) {
+      const url    = config.relayUrl || DEFAULT_RELAY_URL;
+      const roomId = config.roomId   || Math.random().toString(36).slice(2,8).toUpperCase();
+      this._relay  = new RelayClient(url, roomId);
+      this._roomId = roomId;
+      console.log(`[CoopMode] online — room ${roomId}  relay ${url}`);
+    }
 
     const dsIdx = config.dreamIdx || CFG.dreamIdx || 0;
     const ds    = DREAMSCAPES[dsIdx % DREAMSCAPES.length];
     const sz    = SZ();
 
-    this.game = buildDreamscape(ds, sz, 1, 0, UPG.maxHp, UPG.maxHp, []);
+    this.game = buildDreamscape(ds, sz, this._level, 0, UPG.maxHp, UPG.maxHp, []);
     const g   = this.game;
 
     // P1 starts top-left, P2 starts bottom-right
@@ -159,20 +250,38 @@ export class CoopMode {
     };
     for (const [k,[dy,dx]] of Object.entries(P1_DIRS)) {
       if (keys.has(k)) {
+        const prevT = this.lastMoveP1;
         this.lastMoveP1 = this._movePlayer(g.player, dy, dx, ts, this.lastMoveP1);
+        // Relay P1 input to online peer
+        if (this._online && this._relay && this.lastMoveP1 !== prevT) {
+          this._relay.sendInput({ key: k, dy, dx });
+        }
         break;
       }
     }
 
-    // P2 movement: WASD
-    const P2_DIRS = {
-      w:[-1,0], s:[1,0], a:[0,-1], d:[0,1],
-      W:[-1,0], S:[1,0], A:[0,-1], D:[0,1],
-    };
-    for (const [k,[dy,dx]] of Object.entries(P2_DIRS)) {
-      if (keys.has(k)) {
-        this.lastMoveP2 = this._movePlayer(this.p2, dy, dx, ts, this.lastMoveP2);
-        break;
+    // P2 movement: WASD (local) OR relayed from online peer
+    if (this._online && this._relay) {
+      // Process incoming peer messages as P2 movement
+      for (const msg of this._relay.drain()) {
+        if (msg.type === 'relay' && msg.data) {
+          const { dy, dx } = msg.data;
+          if (dy !== undefined && dx !== undefined) {
+            this.lastMoveP2 = this._movePlayer(this.p2, dy, dx, ts, this.lastMoveP2);
+          }
+        }
+      }
+    } else {
+      // Local P2 movement: WASD
+      const P2_DIRS = {
+        w:[-1,0], s:[1,0], a:[0,-1], d:[0,1],
+        W:[-1,0], S:[1,0], A:[0,-1], D:[0,1],
+      };
+      for (const [k,[dy,dx]] of Object.entries(P2_DIRS)) {
+        if (keys.has(k)) {
+          this.lastMoveP2 = this._movePlayer(this.p2, dy, dx, ts, this.lastMoveP2);
+          break;
+        }
       }
     }
 
@@ -209,18 +318,73 @@ export class CoopMode {
     }
 
     // Check end conditions
-    if (g.player.hp <= 0 || this.p2.hp <= 0) {
+    if (!this._p2Dead && this.p2.hp <= 0) {
+      // P2 is downed — start revival countdown (P1 can revive by standing adjacent)
+      this._p2Dead = true;
+      this._p2ReviveTimer = 5000; // 5 seconds to revive
+      g.msg = 'P2 DOWN!  P1 STAND ADJACENT TO REVIVE…'; g.msgColor = '#ff8844'; g.msgTimer = 180;
+    }
+    if (this._p2Dead) {
+      this._p2ReviveTimer -= dt;
+      // Check if P1 is adjacent to P2 for revival
+      const adj = Math.abs(g.player.y - this.p2.y) + Math.abs(g.player.x - this.p2.x) <= 1;
+      if (adj) {
+        this.p2.hp = Math.round(UPG.maxHp * 0.5);
+        this._p2Dead = false;
+        burst(g, this.p2.x, this.p2.y, '#ff8844', 20, 4);
+        g.msg = 'P2 REVIVED!'; g.msgColor = '#ffcc44'; g.msgTimer = 90;
+        g.score += 500;
+      } else if (this._p2ReviveTimer <= 0) {
+        // No revival — P1 alone
+        g.msg = 'P2 LOST — P1 CONTINUES ALONE'; g.msgColor = '#443322'; g.msgTimer = 120;
+        this._p2Dead = false; this.p2.hp = 0; // disable P2
+      }
+    }
+    if (g.player.hp <= 0) {
       this.sfxManager.playDeath && this.sfxManager.playDeath();
       this._result = { phase: 'dead', data: { score: g.score, level: g.level, ds: g.ds } };
       return this._result;
     }
     if (g.peaceLeft <= 0) {
+      this._level++;
       window._achievementQueue = window._achievementQueue || [];
       window._achievementQueue.push('coop_partner');
-      g.score += 1500;
-      this._result = { phase: 'dead', data: { score: g.score, level: g.level, ds: g.ds } };
-      return this._result;
+      g.score += 1500 + this._level * 300;
+      // Advance to next level (re-init with new dreamscape)
+      if (this._level > 5) {
+        this._result = { phase: 'dead', data: { score: g.score, level: g.level, ds: g.ds } };
+        return this._result;
+      }
+      const nextDsIdx = (CFG.dreamIdx + this._level) % DREAMSCAPES.length;
+      const nextDs = DREAMSCAPES[nextDsIdx];
+      const sz2 = SZ();
+      const prevScore = g.score;
+      const prevHp    = g.player.hp;
+      this.game = buildDreamscape(nextDs, sz2, this._level, 0, prevHp, UPG.maxHp, []);
+      this.game.score = prevScore;
+      this.game.player.y = 0; this.game.player.x = 0;
+      this.p2.y = sz2 - 1; this.p2.x = sz2 - 1;
+      this.game.grid[sz2-1][sz2-1] = T.VOID;
+      this.game.msg = '⬆ LEVEL ' + this._level + '  COOP ADVANCE!';
+      this.game.msgColor = '#ffcc44'; this.game.msgTimer = 120;
+      return null;
     }
+
+    // ── Synergy bonus: both players on adjacent tiles ──────────────────
+    if (this.p2.hp > 0 && !this._p2Dead) {
+      const dist = Math.abs(g.player.y - this.p2.y) + Math.abs(g.player.x - this.p2.x);
+      if (dist <= 1) {
+        // Players adjacent — sync heal and score boost (5 HP/sec = 0.005 per ms)
+        g.player.hp = Math.min(UPG.maxHp, (g.player.hp||UPG.maxHp) + 0.005 * dt);
+        this.p2.hp  = Math.min(UPG.maxHp, this.p2.hp  + 0.005 * dt);
+        if (this._synergyFlash <= 0 && Math.random() < 0.01) {
+          g.score += 50;
+          this._synergyMsg = '✦ SYNERGY BONUS +50';
+          this._synergyFlash = 80;
+        }
+      }
+    }
+    if (this._synergyFlash > 0) this._synergyFlash--;
 
     return null;
   }
@@ -272,8 +436,28 @@ export class CoopMode {
     // Mode label
     ctx.textAlign = 'center';
     ctx.fillStyle = '#334455'; ctx.font = '8px Courier New';
-    ctx.fillText('🤝  CO-OP  ·  P1=ARROWS  P2=WASD  ·  shared score', w/2, h - 14);
+    ctx.fillText('🤝  CO-OP  ·  P1=ARROWS  P2=WASD  ·  shared score  ·  LVL ' + this._level, w/2, h - 14);
     ctx.textAlign = 'left';
+
+    // ── Synergy flash banner ──────────────────────────────────────────
+    if (this._synergyFlash > 0) {
+      const sa = Math.min(1, this._synergyFlash / 20);
+      ctx.globalAlpha = sa;
+      ctx.fillStyle = '#ffcc44'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 10;
+      ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText(this._synergyMsg, w/2, h/2 - 40);
+      ctx.shadowBlur = 0; ctx.globalAlpha = 1; ctx.textAlign = 'left';
+    }
+
+    // ── P2 revival countdown bar ──────────────────────────────────────
+    if (this._p2Dead && this._p2ReviveTimer > 0) {
+      const revFrac = this._p2ReviveTimer / 5000;
+      ctx.fillStyle = 'rgba(255,100,50,0.3)'; ctx.fillRect(w - 160, 30, 150, 10);
+      ctx.fillStyle = '#ff6622'; ctx.fillRect(w - 160, 30, 150 * revFrac, 10);
+      ctx.fillStyle = '#ffaa88'; ctx.font = '8px Courier New'; ctx.textAlign = 'right';
+      ctx.fillText('REVIVE P2  ' + Math.ceil(this._p2ReviveTimer / 1000) + 's', w - 8, 42);
+      ctx.textAlign = 'left';
+    }
 
     // ── Co-op instructions overlay (shown for first 6 seconds) ──────────
     if (this._showInstructions) {
@@ -320,6 +504,7 @@ export class CoopMode {
     this.isActive = false;
     this.game = null;
     this.p2   = null;
+    if (this._relay) { this._relay.destroy(); this._relay = null; }
   }
 
   getState() {

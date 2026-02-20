@@ -87,11 +87,23 @@ export const PAL_A = makePal({
 //  ARCHETYPES
 // ═══════════════════════════════════════════════════════════
 export const ARCHETYPES = {
-  dragon:    { name:'DRAGON',          color:'#ffaa00', glow:'#ff8800', power:'wall_jump',    powerDesc:'DRAGON LEAP — jump 2 tiles (J)',       activationMsg:'Dragon grants you passage…',        completionBonus:'dragon protection persists…' },
-  child:     { name:'CHILD GUIDE',     color:'#aaffcc', glow:'#00ffaa', power:'reveal',       powerDesc:'CHILD SIGHT — hidden nodes revealed',   activationMsg:'Child guide illuminates the path…', completionBonus:'child\'s sight lingers…' },
-  orb:       { name:'ORB / SHEEP',     color:'#aaddff', glow:'#00ccff', power:'phase_walk',   powerDesc:'ORB PHASE — walk through walls (J)',    activationMsg:'Orb opens the membrane…',           completionBonus:'orb carries you forward…' },
-  captor:    { name:'CAPTOR-TEACHER',  color:'#ffaadd', glow:'#dd0088', power:'rewind',       powerDesc:'REWIND — undo last 3 moves (J)',        activationMsg:'Captor shows you the loop…',        completionBonus:'you learned from the captor…' },
-  protector: { name:'PROTECTOR',       color:'#88ccff', glow:'#4488ff', power:'shield_burst', powerDesc:'PROTECT — shield burst (J)',            activationMsg:'Protector stands between…',         completionBonus:'protection endures…' },
+  // ── Original 5 ──────────────────────────────────────────
+  dragon:       { name:'DRAGON',          color:'#ffaa00', glow:'#ff8800', power:'wall_jump',      powerDesc:'DRAGON LEAP — jump 2 tiles (J)',              activationMsg:'Dragon grants you passage…',              completionBonus:'dragon protection persists…' },
+  child:        { name:'CHILD GUIDE',     color:'#aaffcc', glow:'#00ffaa', power:'reveal',         powerDesc:'CHILD SIGHT — hidden nodes revealed',           activationMsg:'Child guide illuminates the path…',       completionBonus:'child\'s sight lingers…' },
+  orb:          { name:'ORB / SHEEP',     color:'#aaddff', glow:'#00ccff', power:'phase_walk',     powerDesc:'ORB PHASE — walk through walls (J)',            activationMsg:'Orb opens the membrane…',                 completionBonus:'orb carries you forward…' },
+  captor:       { name:'CAPTOR-TEACHER',  color:'#ffaadd', glow:'#dd0088', power:'rewind',         powerDesc:'REWIND — undo last 3 moves (J)',                activationMsg:'Captor shows you the loop…',              completionBonus:'you learned from the captor…' },
+  protector:    { name:'PROTECTOR',       color:'#88ccff', glow:'#4488ff', power:'shield_burst',   powerDesc:'PROTECT — shield burst (J)',                    activationMsg:'Protector stands between…',               completionBonus:'protection endures…' },
+  // ── Extended 10 (blueprint expansion) ───────────────────
+  cartographer: { name:'CARTOGRAPHER',    color:'#ffdd88', glow:'#ddaa00', power:'map_reveal',     powerDesc:'MAP REVEAL — uncover 5×5 fog area (J)',         activationMsg:'Cartographer charts unknown ground…',     completionBonus:'the map remains etched…' },
+  guardian:     { name:'GUARDIAN',        color:'#66ffaa', glow:'#00cc66', power:'area_protect',   powerDesc:'GUARDIAN FIELD — stun all enemies in range (J)',activationMsg:'Guardian holds the perimeter…',           completionBonus:'the guardian watches still…' },
+  devourer:     { name:'DEVOURER',        color:'#ff6644', glow:'#cc2200', power:'consume',        powerDesc:'DEVOUR — consume hazard tiles for HP (J)',       activationMsg:'Devourer transmutes the darkness…',       completionBonus:'hunger becomes fuel…' },
+  mirror:       { name:'MIRROR',          color:'#ccddff', glow:'#8899ff', power:'reflect',        powerDesc:'REFLECT — reflect next enemy hit back (J)',      activationMsg:'Mirror turns shadow into light…',         completionBonus:'the reflection holds…' },
+  weaver:       { name:'WEAVER',          color:'#dd88ff', glow:'#9900ee', power:'weave',          powerDesc:'WEAVE — convert 3 hazards into peace (J)',       activationMsg:'Weaver spins chaos to order…',            completionBonus:'the web holds…' },
+  witness:      { name:'WITNESS',         color:'#aaffee', glow:'#00ddcc', power:'witness',        powerDesc:'WITNESS — score ×3 for 20 moves (J)',           activationMsg:'Witness sees without judgment…',          completionBonus:'awareness deepens…' },
+  wanderer:     { name:'WANDERER',        color:'#ffcc88', glow:'#ff9900', power:'far_move',       powerDesc:'WANDER — teleport to any safe tile (J)',         activationMsg:'Wanderer steps beyond the boundary…',     completionBonus:'the journey continues…' },
+  judge:        { name:'JUDGE',           color:'#ff8888', glow:'#ff2222', power:'transmute_all',  powerDesc:'JUDGE — transform all hazards on screen (J)',    activationMsg:'Judge weighs all things…',                completionBonus:'balance is restored…' },
+  alchemist_a:  { name:'ALCHEMIST',       color:'#ffee44', glow:'#ccaa00', power:'alchemy_burst',  powerDesc:'ALCHEMY — triple element seeds gained (J)',      activationMsg:'Alchemist awakens the elements…',         completionBonus:'the Great Work continues…' },
+  herald:       { name:'HERALD',          color:'#88ffff', glow:'#00cccc', power:'herald_rush',    powerDesc:'HERALD RUSH — speed ×2 + trail for 15 moves',   activationMsg:'Herald brings swiftness…',                completionBonus:'the herald\'s gift fades…' },
 };
 
 // ═══════════════════════════════════════════════════════════

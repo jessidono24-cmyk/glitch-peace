@@ -4,6 +4,12 @@ import { CFG, UPG } from '../core/state.js';
 import { rnd, pick } from '../core/utils.js';
 import { burst, resonanceWave, addEcho } from './particles.js';
 
+// Push message labels for tiles that push the player back
+const PUSH_MSG = {
+  [T.RAGE]:  '-RAGE (pushed!)',
+  [T.TRAP]:  '-TRAP (pushed!)',
+};
+
 export function setEmotion(g, em) {
   UPG.emotion = em; UPG.emotionTimer = 120;
   g.emotionTimer = 120; g.slowMoves = (em === 'hopeless' || em === 'despair');
@@ -57,6 +63,99 @@ export function executeArchetypePower(g) {
     for (const e of g.enemies) e.stunTimer = 1500;
     if (g.boss) g.boss.stunTimer = 2000;
     burst(g, g.player.x, g.player.y, '#88ccff', 30, 6); showMsg(g, 'PROTECT — ENEMIES STUNNED!', '#88ccff', 55);
+  // ── Extended 10 archetypes (blueprint expansion) ─────────────────────
+  } else if (power === 'map_reveal') {
+    // Cartographer: reveal a 5×5 fog area around player and uncover HIDDEN tiles nearby
+    const pr = 3, py_ = g.player.y, px_ = g.player.x;
+    for (let dy2 = -pr; dy2 <= pr; dy2++) for (let dx2 = -pr; dx2 <= pr; dx2++) {
+      const ny2 = py_ + dy2, nx2 = px_ + dx2;
+      if (ny2 >= 0 && ny2 < sz && nx2 >= 0 && nx2 < sz && g.grid[ny2][nx2] === T.HIDDEN)
+        g.tileFlicker.push({ y: ny2, x: nx2, t: 300, reveal: true });
+    }
+    window._fogRevealBonus = (window._fogRevealBonus || 0) + 1; // signal to fog system
+    burst(g, g.player.x, g.player.y, '#ffdd88', 22, 4);
+    showMsg(g, 'CARTOGRAPHER — MAP REVEALED!', '#ffdd88', 50);
+  } else if (power === 'area_protect') {
+    // Guardian: stun all enemies in 3-tile radius
+    let stunCount = 0;
+    for (const e of g.enemies) {
+      if (Math.abs(e.y - g.player.y) + Math.abs(e.x - g.player.x) <= 4) { e.stunTimer = 3000; stunCount++; }
+    }
+    if (g.boss) g.boss.stunTimer = 1500;
+    burst(g, g.player.x, g.player.y, '#66ffaa', 28, 5);
+    showMsg(g, 'GUARDIAN FIELD — ' + stunCount + ' ENEMIES STUNNED', '#66ffaa', 55);
+  } else if (power === 'consume') {
+    // Devourer: remove up to 4 adjacent hazard tiles and gain 8 HP each
+    const HAZARDS = new Set([1,2,3,8,9,10,14,16]);
+    let consumed = 0;
+    for (const [dy2, dx2] of [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]) {
+      const ny2 = g.player.y + dy2, nx2 = g.player.x + dx2;
+      if (ny2 >= 0 && ny2 < sz && nx2 >= 0 && nx2 < sz && HAZARDS.has(g.grid[ny2][nx2])) {
+        g.grid[ny2][nx2] = T.VOID; g.hp = Math.min(UPG.maxHp, g.hp + 8); consumed++;
+      }
+    }
+    burst(g, g.player.x, g.player.y, '#ff6644', 20, 4);
+    showMsg(g, consumed > 0 ? `DEVOURED ${consumed} HAZARDS  +${consumed*8}HP` : 'NOTHING TO DEVOUR', '#ff6644', 45);
+  } else if (power === 'reflect') {
+    // Mirror: next enemy hit is reflected (damage to enemy, not player) for 10 moves
+    UPG.mirrorActive = 10;
+    burst(g, g.player.x, g.player.y, '#ccddff', 18, 4);
+    showMsg(g, 'MIRROR — REFLECT NEXT HIT', '#ccddff', 50);
+  } else if (power === 'weave') {
+    // Weaver: convert 3 random hazard tiles to peace within 4-tile radius
+    const HAZARDS = new Set([1,2,3,8,9,10,14,16]);
+    let woven = 0;
+    const candidates = [];
+    for (let y2 = 0; y2 < sz; y2++) for (let x2 = 0; x2 < sz; x2++)
+      if (HAZARDS.has(g.grid[y2][x2]) && Math.abs(y2-g.player.y)+Math.abs(x2-g.player.x) <= 4)
+        candidates.push([y2, x2]);
+    // pick up to 3
+    candidates.sort(() => Math.random() - 0.5);
+    for (let i = 0; i < Math.min(3, candidates.length); i++) {
+      const [wy, wx] = candidates[i];
+      g.grid[wy][wx] = T.PEACE; g.peaceLeft++;
+      burst(g, wx, wy, '#dd88ff', 10, 3); woven++;
+    }
+    showMsg(g, woven > 0 ? `WEAVER — ${woven} HAZARDS WOVEN TO PEACE` : 'WEAVER FINDS NO HAZARDS', '#dd88ff', 50);
+  } else if (power === 'witness') {
+    // Witness: score ×3 multiplier for next 20 moves
+    UPG.witnessMovesLeft = 20; UPG.witnessMultiplier = 3;
+    burst(g, g.player.x, g.player.y, '#aaffee', 16, 3);
+    showMsg(g, 'WITNESS — ×3 SCORE FOR 20 MOVES', '#aaffee', 55);
+  } else if (power === 'far_move') {
+    // Wanderer: teleport to a random open tile at least 4 tiles away
+    const candidates2 = [];
+    for (let y2 = 0; y2 < sz; y2++) for (let x2 = 0; x2 < sz; x2++)
+      if (g.grid[y2][x2] === T.VOID && Math.abs(y2-g.player.y)+Math.abs(x2-g.player.x) >= 4)
+        candidates2.push([y2, x2]);
+    if (candidates2.length > 0) {
+      const [ty, tx] = candidates2[Math.floor(Math.random() * candidates2.length)];
+      burst(g, g.player.x, g.player.y, '#ffcc88', 14, 3);
+      g.player.y = ty; g.player.x = tx;
+      burst(g, g.player.x, g.player.y, '#ffcc88', 20, 4);
+      showMsg(g, 'WANDERER STEPS BEYOND…', '#ffcc88', 50);
+    } else showMsg(g, 'WANDERER FINDS NO PATH', '#664422', 30);
+  } else if (power === 'transmute_all') {
+    // Judge: transmute all hazard tiles currently visible to VOID
+    const HAZARDS = new Set([1,2,3,8,9,10,14,16]);
+    let judged = 0;
+    for (let y2 = 0; y2 < sz; y2++) for (let x2 = 0; x2 < sz; x2++)
+      if (HAZARDS.has(g.grid[y2][x2])) { g.grid[y2][x2] = T.VOID; judged++; }
+    burst(g, g.player.x, g.player.y, '#ff8888', 36, 6);
+    showMsg(g, 'JUDGE — ' + judged + ' HAZARDS CLEARED', '#ff8888', 60);
+  } else if (power === 'alchemy_burst') {
+    // Alchemist archetype: triple element seed gain for next 5 element tiles
+    g.alchemyArchBurst = 5;
+    burst(g, g.player.x, g.player.y, '#ffee44', 22, 4);
+    showMsg(g, 'ALCHEMIST — ×3 SEEDS × 5 TILES', '#ffee44', 55);
+  } else if (power === 'herald_rush') {
+    // Herald: movement speed ×2 and trail for 15 moves
+    UPG.heraldMovesLeft = 15;
+    const prevDelay = UPG.moveDelay;
+    UPG.moveDelay   = Math.round(UPG.moveDelay * 0.5);
+    g._heraldPrevDelay = prevDelay;
+    burst(g, g.player.x, g.player.y, '#88ffff', 24, 5);
+    showMsg(g, 'HERALD RUSH — SPEED ×2 FOR 15 MOVES', '#88ffff', 55);
   }
 }
 
@@ -97,11 +196,27 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
   else                      UPG.energy = Math.min(UPG.energyMax, UPG.energy + 0.5);
   if (g.archetypeActive) { g.archetypeTimer--; if (g.archetypeTimer <= 0) { g.archetypeActive = false; UPG.archetypePower = null; } }
 
+  // ── Extended archetype per-move countdowns ──────────────────────────
+  if (UPG.witnessMovesLeft > 0) {
+    UPG.witnessMovesLeft--;
+    if (UPG.witnessMovesLeft === 0) { UPG.witnessMultiplier = 1; onMsg('WITNESS FADES…', '#334455', 25); }
+  }
+  if (UPG.heraldMovesLeft > 0) {
+    UPG.heraldMovesLeft--;
+    if (UPG.heraldMovesLeft === 0) {
+      if (g._heraldPrevDelay) { UPG.moveDelay = g._heraldPrevDelay; g._heraldPrevDelay = 0; }
+      onMsg('HERALD RUSH ENDS…', '#336666', 25);
+    }
+  }
+  if (UPG.mirrorActive > 0) UPG.mirrorActive--;
+
   // ── Tile effects ──
   const d = { dmgMul: CFG.difficulty === 'hard' ? 1.45 : CFG.difficulty === 'easy' ? 0.55 : 1.0 };
+  const sMul = g.scoreMulMode || 1.0; // play-mode score multiplier (e.g. Horror 3×, Nightmare 5×)
 
   if (tileType === T.PEACE) {
-    const pts = Math.round((150 + g.level * 20) * UPG.resonanceMultiplier);
+    const wMul = UPG.witnessMovesLeft > 0 ? (UPG.witnessMultiplier || 1) : 1;
+    const pts = Math.round((150 + g.level * 20) * UPG.resonanceMultiplier * sMul * wMul);
     g.score += pts;
     // Reverse mode: peace tiles damage instead of healing
     if (g.reverseMode) {
@@ -130,7 +245,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
     if (g.peaceLeft === 0) onNextDreamscape();
 
   } else if (tileType === T.INSIGHT) {
-    const pts = Math.round((300 + g.level * 50) * UPG.resonanceMultiplier);
+    const pts = Math.round((300 + g.level * 50) * UPG.resonanceMultiplier * sMul);
     g.score += pts; setInsightTokens(insightTokens + 1);
     g.grid[ny][nx] = T.VOID; g.insightLeft--;
     burst(g, nx, ny, '#00eeff', 24, 4);
@@ -156,25 +271,25 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
     for (const e of g.enemies) if (Math.abs(e.y - ny) + Math.abs(e.x - nx) <= 2) e.stunTimer = 600;
 
   } else if (tileType === T.MEMORY) {
-    g.grid[ny][nx] = T.VOID; g.score += 50;
+    g.grid[ny][nx] = T.VOID; g.score += Math.round(50 * sMul);
     onMsg('MEMORY ECHO…', '#88bbaa', 30); burst(g, nx, ny, '#88bbaa', 10, 2);
 
   // ── Phase 2.6: Embodiment / Somatic Tiles ──────────────────────────
   } else if (tileType === T.BODY_SCAN) {
-    g.grid[ny][nx] = T.VOID; g.score += 80;
+    g.grid[ny][nx] = T.VOID; g.score += Math.round(80 * sMul);
     g.hp = Math.min(UPG.maxHp, g.hp + 10);
     burst(g, nx, ny, '#00aa44', 14, 2.5);
     onMsg('BODY SCAN +10 HP  ·  notice sensations…', '#00cc44', 55);
     setEmotion(g, 'peace');
 
   } else if (tileType === T.BREATH_SYNC) {
-    g.grid[ny][nx] = T.VOID; g.score += 60;
+    g.grid[ny][nx] = T.VOID; g.score += Math.round(60 * sMul);
     UPG.energy = Math.min(UPG.energyMax, UPG.energy + 20);
     burst(g, nx, ny, '#6688ff', 14, 2.5);
     onMsg('BREATH SYNC  ·  inhale 4  ·  hold 4  ·  exhale 4…', '#6688ff', 100);
 
   } else if (tileType === T.ENERGY_NODE) {
-    g.grid[ny][nx] = T.VOID; g.score += 120;
+    g.grid[ny][nx] = T.VOID; g.score += Math.round(120 * sMul);
     UPG.energy = Math.min(UPG.energyMax, UPG.energy + 40);
     UPG.glitchPulseCharge = Math.min(100, UPG.glitchPulseCharge + 20);
     burst(g, nx, ny, '#cc44ff', 18, 3);
@@ -182,7 +297,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
     onMsg('ENERGY NODE  +40 ENERGY  ✦', '#cc44ff', 45);
 
   } else if (tileType === T.GROUNDING) {
-    g.grid[ny][nx] = T.VOID; g.score += 70;
+    g.grid[ny][nx] = T.VOID; g.score += Math.round(70 * sMul);
     g.slowMoves = false; UPG.emotion = 'neutral'; UPG.emotionTimer = 0;
     g.hp = Math.min(UPG.maxHp, g.hp + 5);
     burst(g, nx, ny, '#886644', 12, 2);
@@ -194,10 +309,11 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
     } else {
       const def = TILE_DEF[tileType];
       let dmg = Math.round(def.dmg * d.dmgMul * (matrixActive === 'A' ? 1.25 : 1) * (g.dmgMul ?? 1));
-      if (tileType === T.RAGE && def.push > 0) {
+      if (TILE_DEF[tileType]?.push > 0) {
         const pby = ny + dy * def.push, pbx = nx + dx * def.push;
         if (pby >= 0 && pby < sz && pbx >= 0 && pbx < sz && g.grid[pby][pbx] !== T.WALL) {
-          g.player.y = pby; g.player.x = pbx; onMsg('-RAGE (pushed!)', '#ff0066', 40);
+          g.player.y = pby; g.player.x = pbx;
+          onMsg(PUSH_MSG[tileType] || '-PUSHED!', '#ff0066', 40);
         }
       }
       if (tileType === T.SELF_HARM)  g.grid[ny][nx] = T.PAIN;
@@ -235,6 +351,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
   // ── Magnet upgrade: auto-collect peace/insight tiles within radius 2 ──
   if (UPG.magnet) {
     const MAGNET_R = 2;
+    let magnetInsightBonus = 0; // track additional tokens collected this sweep
     outer: for (let mdy = -MAGNET_R; mdy <= MAGNET_R; mdy++) {
       for (let mdx = -MAGNET_R; mdx <= MAGNET_R; mdx++) {
         if (mdy === 0 && mdx === 0) continue;
@@ -243,19 +360,20 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
         if (my < 0 || my >= sz || mx < 0 || mx >= sz) continue;
         const mt = g.grid[my][mx];
         if (mt === T.PEACE && !g.reverseMode) {
-          g.score += Math.round((80 + g.level * 10) * UPG.resonanceMultiplier);
+          g.score += Math.round((80 + g.level * 10) * UPG.resonanceMultiplier * sMul);
           g.hp = Math.min(UPG.maxHp, g.hp + 8);
           g.grid[my][mx] = T.VOID; g.peaceLeft--;
           burst(g, mx, my, UPG.particleColor || '#00ffaa', 8, 2);
           if (g.peaceLeft === 0) { onNextDreamscape(); return true; }
         } else if (mt === T.INSIGHT) {
-          g.score += Math.round((150 + g.level * 20) * UPG.resonanceMultiplier);
-          setInsightTokens(insightTokens + 1);
+          g.score += Math.round((150 + g.level * 20) * UPG.resonanceMultiplier * sMul);
+          magnetInsightBonus++;
           g.grid[my][mx] = T.VOID; g.insightLeft--;
           burst(g, mx, my, '#00eeff', 10, 2.5);
         }
       }
     }
+    if (magnetInsightBonus > 0) setInsightTokens(insightTokens + magnetInsightBonus);
   }
 
   return true;

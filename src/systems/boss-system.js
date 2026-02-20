@@ -184,7 +184,7 @@ export class BossSystem {
   }
 
   // ─── Boss defeated ────────────────────────────────────────────────
-  _handleBossDeath(game, sfxManager, showMsg) {
+  _handleBossDeath(game, sfxManager, showMsg, burstFn) {
     if (!game.boss) return;
     const bType  = BOSS_TYPES[game.boss.type] || BOSS_TYPES.fear_guardian;
     const reward = bType.reward;
@@ -192,6 +192,11 @@ export class BossSystem {
     if (sfxManager) sfxManager.playLevelComplete();
     showMsg(reward.msg, '#ffdd00', 220);
     window._bossPhaseBanner = null;
+    // Dramatic death burst
+    if (burstFn) {
+      burstFn(game, game.player.x, game.player.y, '#ffdd00', 40, 7);
+      burstFn(game, game.boss.x, game.boss.y, bType.phases[2].color, 30, 5);
+    }
     // Scatter PEACE tiles as reward
     const sz = game.sz;
     for (let dy = -2; dy <= 2; dy++) {

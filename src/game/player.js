@@ -226,7 +226,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
       onMsg('REVERSED! PEACE DAMAGES -15', '#ff2244', 45);
       g.shakeFrames = 4;
     } else {
-      g.hp = Math.min(UPG.maxHp, g.hp + 20);
+      g.hp = Math.min(UPG.maxHp, g.hp + Math.round(20 * (g.healMul ?? 1)));
       g.grid[ny][nx] = T.VOID; g.peaceLeft--;
       burst(g, nx, ny, UPG.particleColor, 18, 3.5);
       UPG.shieldCount++; UPG.comboCount++;
@@ -245,7 +245,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
     if (g.peaceLeft === 0) onNextDreamscape();
 
   } else if (tileType === T.INSIGHT) {
-    const pts = Math.round((300 + g.level * 50) * UPG.resonanceMultiplier * sMul);
+    const pts = Math.round((300 + g.level * 50) * UPG.resonanceMultiplier * sMul * (g.insightMul ?? 1.0));
     g.score += pts; setInsightTokens(insightTokens + 1);
     g.grid[ny][nx] = T.VOID; g.insightLeft--;
     burst(g, nx, ny, '#00eeff', 24, 4);

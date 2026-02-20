@@ -239,18 +239,80 @@ Players in Horror mode (3× multiplier), Nightmare mode (5× multiplier), or oth
 
 ## Summary
 
-| # | Title | Severity | Area |
-|---|-------|----------|------|
-| 01 | TRAP push effect not implemented | Medium | player.js |
-| 02 | Hallucinations bypass shield | High | enemy.js |
-| 03 | Capture zones bypass shield | Medium | enemy.js |
-| 04 | Boss walks through walls | High | enemy.js |
-| 05 | Boss death missing particle burst | Low | boss-system.js |
-| 06 | Philosopher's Stone heals to 100 not max HP | Medium | alchemy-system.js |
-| 07 | Start Journey after non-grid mode = broken state | High | main.js |
-| 08 | Death restart in non-grid modes starts wrong game | High | main.js |
-| 09 | Magnet only adds 1 insight token per move | Medium | player.js |
-| 10 | How to Play exits to wrong cursor position | Low | main.js |
-| 11 | Shooter contact cooldown uses stale delta time | Low | shooter-mode.js |
-| 12 | Daily challenge index lost on page refresh | Low | main.js |
-| 13 | Play mode score multiplier never applied | Medium | play-modes.js / player.js |
+| # | Title | Severity | Area | Status |
+|---|-------|----------|------|--------|
+| 01 | TRAP push effect not implemented | Medium | player.js | ✅ Fixed |
+| 02 | Hallucinations bypass shield | High | enemy.js | ✅ Fixed |
+| 03 | Capture zones bypass shield | Medium | enemy.js | ✅ Fixed |
+| 04 | Boss walks through walls | High | enemy.js | ✅ Fixed |
+| 05 | Boss death missing particle burst | Low | boss-system.js | ✅ Fixed |
+| 06 | Philosopher's Stone heals to 100 not max HP | Medium | alchemy-system.js | ✅ Fixed |
+| 07 | Start Journey after non-grid mode = broken state | High | main.js | ✅ Fixed |
+| 08 | Death restart in non-grid modes starts wrong game | High | main.js | ✅ Fixed |
+| 09 | Magnet only adds 1 insight token per move | Medium | player.js | ✅ Fixed |
+| 10 | How to Play exits to wrong cursor position | Low | main.js | ✅ Fixed |
+| 11 | Shooter contact cooldown uses stale delta time | Low | shooter-mode.js | ✅ Fixed |
+| 12 | Daily challenge index lost on page refresh | Low | main.js | ✅ Fixed |
+| 13 | Play mode score multiplier never applied | Medium | play-modes.js / player.js | ✅ Fixed |
+| 14 | Temporal enemy multiplier set but never consumed | Medium | enemy.js | ✅ Fixed |
+| 15 | Temporal insight multiplier set but never consumed | Medium | player.js | ✅ Fixed |
+| 16 | Realm dmgMul/healMul not applied to tile effects | Medium | main.js / player.js | ✅ Fixed |
+
+---
+
+## BUG-14 · Temporal enemy multiplier set but never consumed
+**Severity:** Medium
+**Location:** `src/game/enemy.js` — `stepEnemies()` line 18
+**Status:** ✅ Fixed
+
+**Description:**
+`game.temporalEnemyMul` (from the lunar/planetary day system) was being written to the `game` object in `main.js` each frame but was never read by `enemy.js`. The enemy step interval `mSpeed` ignored the temporal modifier entirely, meaning lunar/planetary day difficulty changes had zero effect on enemies.
+
+**Fix:** `mSpeed` now multiplies by `g.temporalEnemyMul ?? 1.0`.
+
+---
+
+## BUG-15 · Temporal insight multiplier set but never consumed
+**Severity:** Medium
+**Location:** `src/game/player.js` — INSIGHT tile handler ~line 248
+**Status:** ✅ Fixed
+
+**Description:**
+`game.insightMul` (combined lunar + planetary insight token value multiplier) was written each frame in `main.js` but the INSIGHT tile score calculation in `player.js` did not read it, giving the same flat score regardless of the day's temporal multiplier (up to 1.5× on Mercury/Full Moon days).
+
+**Fix:** INSIGHT tile `pts` now multiplies by `g.insightMul ?? 1.0`.
+
+---
+
+## BUG-16 · Realm damage/heal modifiers set but never applied to tile effects
+**Severity:** Medium
+**Location:** `src/main.js` (missing computation) + `src/game/player.js` — PEACE healing ~line 229
+**Status:** ✅ Fixed
+
+**Description:**
+The `purgDepth` realm system (HEAVEN/MIND/PURGATORY/HELL) is supposed to scale hazard-tile damage (+15–30% in PURGATORY/HELL) and peace-tile healing (+10–25% in HEAVEN/IMAGINATION). The damage multiplier `g.dmgMul` was already read by `player.js` but was never written by `main.js`. The heal multiplier `g.healMul` was never written anywhere and the peace-tile healing line simply used `+20` unconditionally.
+
+**Fix:**
+- `main.js` now computes `game.dmgMul` and `game.healMul` each frame from `emotionalField.purgDepth`.
+- `player.js` peace-tile healing now uses `Math.round(20 * (g.healMul ?? 1))`.
+
+---
+
+## Future Fix Roadmap
+
+### HIGH PRIORITY
+- **Emotional HUD row not shown (E3 incomplete):** The `drawEmotionRow` function described in task-E3.md has not been added to `renderer.js`. The HUD height remains 106px without the coherence/distortion bar row.
+- **Realm label not shown in HUD footer (E4-B incomplete):** `task-E4-B.md` describes showing the realm name (◈ MIND / ◈ PURGATORY etc.) in the footer bar. This renderer change is not yet present.
+- **Temporal HUD banner incomplete (T2 EDIT 6):** The dreamscape banner should show the lunar phase and planetary day name (e.g. `VOID STATE · numbness | Waning Gibbous Mars`). The current renderer shows these separately in the right column instead of inline.
+
+### MEDIUM PRIORITY
+- **Archetype dialogue system not fully connected:** `archetypeDialogue.reset()` and related calls are present but the dialogue triggers need review for coverage across all 14 archetypes.
+- **Rhythm mode death handling:** When `gameMode === 'rhythm'` and the player dies, `gameMode` is reset to `'grid'` but the death screen doesn't offer to restart in rhythm mode (unlike the constellation/meditation/coop fix from BUG-08).
+- **Boss Rush mode boss spawning:** Boss Rush mode is referenced in the BUG_REPORT but integration with the boss-system's three boss types needs further testing to confirm all phases trigger correctly.
+
+### LOW PRIORITY
+- **Fog of war radius hard-coded in renderer:** `window._fogRadius` correctly updates (4 + insight tokens / 5, capped at 7) but the fog draw in `renderer.js` still uses a hard-coded constant in some code paths. Ensure all fog renders read `window._fogRadius`.
+- **Achievement unlock sound sometimes fires twice:** When multiple achievements unlock on the same frame (e.g. boss kill + level up), `achievementSystem.popup` may cycle too fast to display both. Consider a queue.
+- **Shooter mode high-score not merged into main leaderboard:** Shooter-mode scores (`result.data.score`) are handled in the dead phase but `leaderboard.add()` is only called with the grid-game score. Shooter kills/score should also persist.
+- **Co-op mode second player input not rebindable:** P2 controls are hard-coded to WASD/Shift without an options screen entry.
+- **Meditation mode `emotionalField.addEmotion` not called:** Meditation mode runs its own session but never calls `window._emotionalField.addEmotion()`, so the HUD emotional state freezes at the pre-meditation value.

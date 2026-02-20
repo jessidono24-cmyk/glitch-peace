@@ -456,9 +456,96 @@ GLITCH·PEACE has a clear path to **free Steam release**:
 | **Constellation mode (M6)** | Skymap + Ritual Space; constellation line overlay; star glow rings; named constellation rewards (16 names) | 🔨 95% |
 | **Platformer/Rhythm (M7)** | Rhythm Flow mode: 80 BPM beat sync, on-beat scoring, HUD beat indicator | 🔨 20% |
 | **Multiplayer (M8)** | Shared emotional field, co-op | ⬜ 0% |
+| **3D / Animation layer** | Architecture explored; roadmap documented in `3D_ANIMATION_EXPLORATION.md` | 🔨 0% (ready to start) |
 | **Steam packaging** | Electron wrapper pathway documented; Gamepad API live | 🔨 10% |
 
-**Overall: ~95% complete.** All 18 dreamscapes and 21 play modes done. v2.1.0 fixes: magnet upgrade now auto-collects tiles, `playPlayerHurt` SFX wired, all enemy behavior aliases implemented (hunt/aggressive/passive/none/random), per-tile alchemy transmutation sparkle FX, 2 new alchemy quests (7 total), named constellation rewards in skymap mode (16 constellation names, score bonus every 3 star tiles). Remaining: full Tone.js music, multiplayer, Steam packaging.
+**Overall: ~97% complete.** All 18 dreamscapes, 21 play modes done, 13 gameplay bugs fixed (v2.2.0). Remaining: full Tone.js music, multiplayer, Steam packaging, 3D/animation layer.
+
+---
+
+## 🌐 Session Summary & Status Report (February 2026)
+
+### What Was Done This Session
+
+#### Bug Fix Sprint (v2.2.0)
+A full gameplay audit across all game modes, dreamscapes, and play style combinations
+documented **13 confirmed bugs** in `BUG_REPORT.md`. All 13 were fixed in this session:
+
+| Category | Bugs Fixed |
+|----------|-----------|
+| Shield bypass (hallucinations, capture zones) | 2 |
+| Boss pathfinding (walks through walls) | 1 |
+| Score multiplier never applied in play modes | 1 |
+| Magnet insight token count (always 1, not N) | 1 |
+| TRAP tile push effect never fired | 1 |
+| Philosopher's Stone healed to 100 not max HP | 1 |
+| gameMode reset on mode exit (broken state) | 2 |
+| Boss death particle burst missing | 1 |
+| Menu cursor off-by-one (How to Play) | 1 |
+| Shooter contact cooldown stale delta | 1 |
+| Daily challenge not persisted on refresh | 1 |
+
+#### 3D & Animation Exploration
+Conducted deep architecture analysis of the rendering pipeline and produced a
+comprehensive exploration document: **`3D_ANIMATION_EXPLORATION.md`**.
+
+Key findings:
+- Game logic and rendering are **fully decoupled** — 3D can be added without touching any game logic
+- The **Render Bridge Pattern** (`src/rendering/render-bridge.js`) is the cleanest integration path
+- **5 phased implementation steps** identified, starting from zero-risk sprite animation
+- **Isometric grid view** promoted from P4 to P2 — implementable with pure canvas math, no WebGL
+- **Three.js** recommended as the first WebGL library (constellation mode pilot = lowest risk entry)
+- All **5 archetypes** have concrete 3D character designs specified using procedural Three.js geometry
+
+### Blueprint Completion Status (February 2026)
+
+```
+Core game loop    ████████████████████ 100% ✅
+18 Dreamscapes    ████████████████████ 100% ✅
+21 Play Modes     ████████████████████ 100% ✅
+All systems       ████████████████████ 100% ✅  (RPG, Alchemy, Quests, Boss, Archetypes)
+Bug integrity     ████████████████████ 100% ✅  (13 bugs fixed, v2.2.0)
+Constellation M6  █████████████████░░░  95% 🔨
+Rhythm M7         ████░░░░░░░░░░░░░░░░  20% 🔨
+Multiplayer M8    ░░░░░░░░░░░░░░░░░░░░   0% ⬜
+3D/Animation      ░░░░░░░░░░░░░░░░░░░░   0% ⬜ (roadmap complete, ready to build)
+Steam packaging   ██░░░░░░░░░░░░░░░░░░  10% 🔨
+
+Overall: ~97% of original blueprint vision
+```
+
+### Blueprint Items Still Available to Build
+
+These items from the original GAP_ANALYSIS blueprint are **unbuilt and ready**:
+
+| Item | Priority | Est. effort | Notes |
+|------|----------|-------------|-------|
+| Isometric grid view | P2 | 1–2 days | Pure canvas math, no new deps |
+| Animated player sprites | P2 | 2–3 days | Replace player render block in renderer.js |
+| Three.js constellation star field | P2 | 3–5 days | `npm install three`; constellation-mode.js |
+| 10 additional archetypes | P2 | 1 week | Data + power logic; existing pattern |
+| Archetype selector screen | P2 | 2–3 days | Pre-game character choice UI |
+| Biome system (8 biomes) | P2 | 1–2 weeks | Emotional-state driven dreamscape variants |
+| Tone.js music system | P2 | 1 week | Procedural soundtrack, already in blueprint |
+| First-person raycasting | P4 | 3–4 weeks | GLSL raymarcher; design already in blueprint |
+| Full 3D dreamscape pilot | P3 | 1 month | Void Nexus dreamscape; Three.js scene |
+| Multiplayer / Co-op full | P4 | 2+ months | Shared emotional field; network layer |
+| Dialogue / visual novel mode | P3 | 2 weeks | Archetype dialogue trees + portraits |
+| Boss 3D model rendering | P3 | 1 week | Three.js procedural geometry per boss type |
+| Steam Electron packaging | P2 | 2 weeks | Electron + steamworks.js |
+
+### Future Direction — Recommended Task Order
+
+1. **3D-A**: Animated sprites for player (walk/idle/hit) — highest visual impact, zero-risk
+2. **3D-B**: Isometric grid view toggle — no new dependencies, pure canvas math
+3. **M6 finish**: Constellation completion rewards + named patterns — already 95% done
+4. **Archetypes**: 10 additional archetypes (Cartographer, Guardian, Devourer, Mirror, Weaver…)
+5. **3D-C**: Three.js constellation star field — first WebGL integration
+6. **Music**: Tone.js procedural soundtrack integration
+7. **3D-D**: Three.js boss 3D models — boss fights become dramatic set-pieces
+8. **Steam prep**: Electron wrapper + steamworks.js + store assets
+9. **3D-E**: Full 3D pilot (Void Nexus dreamscape)
+10. **M8**: Multiplayer / online co-op infrastructure
 
 ---
 

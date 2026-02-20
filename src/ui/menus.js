@@ -194,8 +194,12 @@ export function drawDreamSelect(ctx, w, h, dreamIdx) {
 }
 
 export function drawOptions(ctx, w, h, optIdx) {
-  const OPT_START_Y  = 48;  // y of first row label
-  const OPT_ROW_H    = 46;  // vertical spacing between rows
+  const OPT_START_Y   = 48;  // y of first row label
+  const OPT_ROW_H     = 46;  // vertical spacing between rows
+  const OPT_BTN_SPACE = 90;  // horizontal spacing between option buttons
+  const OPT_BTN_W     = 90;  // button width
+  const OPT_BTN_HALF  = 44;  // half button width (for fillRect offset)
+  const OPT_BTN_H     = 22;  // button height
   ctx.fillStyle = '#02020a'; ctx.fillRect(0, 0, w, h);
   ctx.textAlign = 'center';
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 16;
@@ -226,9 +230,9 @@ export function drawOptions(ctx, w, h, optIdx) {
     rowOpts.forEach((opt, j) => {
       const active = opt === row.cur;
       const oy_off = row.hint ? 30 : 22;
-      const ox = w / 2 + (j - (rowOpts.length - 1) / 2) * 90, oy = baseY + oy_off;
-      ctx.fillStyle = (sel && active) ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.02)'; ctx.fillRect(ox - 44, oy - 14, 90, 22);
-      ctx.strokeStyle = (sel && active) ? 'rgba(0,255,136,0.5)' : active ? 'rgba(0,255,136,0.18)' : 'rgba(255,255,255,0.04)'; ctx.strokeRect(ox - 44, oy - 14, 90, 22);
+      const ox = w / 2 + (j - (rowOpts.length - 1) / 2) * OPT_BTN_SPACE, oy = baseY + oy_off;
+      ctx.fillStyle = (sel && active) ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.02)'; ctx.fillRect(ox - OPT_BTN_HALF, oy - OPT_BTN_H + 8, OPT_BTN_W, OPT_BTN_H);
+      ctx.strokeStyle = (sel && active) ? 'rgba(0,255,136,0.5)' : active ? 'rgba(0,255,136,0.18)' : 'rgba(255,255,255,0.04)'; ctx.strokeRect(ox - OPT_BTN_HALF, oy - OPT_BTN_H + 8, OPT_BTN_W, OPT_BTN_H);
       ctx.fillStyle = active ? '#00ff88' : '#334455'; ctx.shadowColor = active ? '#00ff88' : 'transparent'; ctx.shadowBlur = active ? 5 : 0;
       ctx.font = active ? 'bold 10px Courier New' : '9px Courier New'; ctx.fillText(opt.toUpperCase().slice(0, 22), ox, oy); ctx.shadowBlur = 0;
     });
@@ -769,10 +773,18 @@ export function drawLanguageOptions(ctx, w, h, langOb) {
   ctx.fillStyle = '#aaddff'; ctx.shadowColor = '#aaddff'; ctx.shadowBlur = 14;
   ctx.font = 'bold 18px Courier New'; ctx.fillText('LANGUAGE SETTINGS', w / 2, 50); ctx.shadowBlur = 0;
 
+  // Display mode human labels
+  const DISPLAY_LABELS = {
+    native:    'NATIVE ONLY',
+    bilingual: 'BILINGUAL',
+    target:    'IMMERSION (target only)',
+  };
+
   const sections = [
     { label: 'NATIVE LANGUAGE', idx: langOb.nativeIdx, list: LANG_LIST, col: '#00ff88' },
     { label: 'LEARNING TARGET', idx: langOb.targetIdx, list: (LANGUAGE_PATHS[LANG_LIST[langOb.nativeIdx]] || LANGUAGE_PATHS.en), col: '#aaddff' },
-    { label: 'DISPLAY MODE',    idx: langOb.modeIdx,   list: ['native','bilingual','target'], col: '#ffdd88' },
+    { label: 'DISPLAY MODE',    idx: langOb.modeIdx,   list: ['native','bilingual','target'], col: '#ffdd88',
+      hintFn: (code) => DISPLAY_LABELS[code] || code },
   ];
 
   sections.forEach((sec, si) => {
@@ -783,7 +795,7 @@ export function drawLanguageOptions(ctx, w, h, langOb) {
     const opts = sec.list.slice(0, 8);
     opts.forEach((code, i) => {
       const lang = LANGUAGES[code];
-      const label = lang ? lang.emoji + ' ' + lang.name : code.toUpperCase();
+      const label = sec.hintFn ? sec.hintFn(code) : (lang ? lang.emoji + ' ' + lang.name : code.toUpperCase());
       const active = i === sec.idx;
       const ox = w / 2 + (i - (opts.length - 1) / 2) * 78;
       ctx.fillStyle = (sel && active) ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.02)';
@@ -792,9 +804,20 @@ export function drawLanguageOptions(ctx, w, h, langOb) {
       ctx.strokeRect(ox - 34, baseY + 14, 68, 22);
       ctx.fillStyle = active ? sec.col : '#334455';
       ctx.font = active ? 'bold 9px Courier New' : '8px Courier New';
-      ctx.fillText(label, ox, baseY + 29);
+      ctx.fillText(label.slice(0, 20), ox, baseY + 29);
     });
   });
+
+  // Mode description hint
+  const modeList = ['native','bilingual','target'];
+  const modeDescriptions = {
+    native:    'Shows words in your native language only.',
+    bilingual: 'Shows both native + target language words.',
+    target:    'Full immersion — target language only. Sink or swim.',
+  };
+  const curMode = modeList[langOb.modeIdx] || 'bilingual';
+  ctx.fillStyle = '#334455'; ctx.font = '8px Courier New';
+  ctx.fillText(modeDescriptions[curMode] || '', w / 2, h - 36);
 
   ctx.fillStyle = '#131328'; ctx.font = '8px Courier New';
   ctx.fillText('↑↓ row  ·  ←→ value  ·  ENTER/ESC back', w / 2, h - 20);

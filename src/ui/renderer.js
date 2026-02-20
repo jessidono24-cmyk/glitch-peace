@@ -727,28 +727,40 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
       ctx.globalAlpha = vAlpha;
     // Determine if we have a multilingual entry (from language system)
     const hasMulti = vocabWord.targetWord && vocabWord.targetLang;
-    const boxH = hasMulti ? 56 : 36;
+    const dMode = vocabWord.displayMode || 'bilingual'; // 'native' | 'bilingual' | 'target'
+    // Immersion: show only target language. Native-only: show only native.
+    const showTarget = hasMulti && dMode !== 'native';
+    const showNative = !hasMulti || dMode !== 'target';
+    const boxH = (showTarget && showNative) ? 56 : 36;
     ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.fillRect(w/2 - 140, sy - 62, 280, boxH);
     ctx.strokeStyle = 'rgba(255,221,136,0.3)'; ctx.lineWidth = 1;
     ctx.strokeRect(w/2 - 140, sy - 62, 280, boxH);
-    if (hasMulti) {
-      // Line 1: target language word + lang tag
+    if (showTarget) {
+      // Target language word (primary in immersion, secondary in bilingual)
       const tl = vocabWord.targetLang;
       ctx.fillStyle = '#aaddff'; ctx.shadowColor = '#88bbff'; ctx.shadowBlur = 5;
       ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
       ctx.fillText(vocabWord.targetWord + '  [' + vocabWord.targetPos + ']', w/2, sy - 44); ctx.shadowBlur = 0;
-      // Line 2: language name
-      ctx.fillStyle = '#446688'; ctx.font = '8px Courier New';
-      ctx.fillText((tl.emoji || '') + ' ' + tl.name + (tl.nativeName !== tl.name ? ' · ' + tl.nativeName : ''), w/2, sy - 30);
-      // Line 3: definition in native language
-      ctx.fillStyle = '#ffdd88'; ctx.font = '9px Courier New';
-      ctx.fillText(vocabWord.nativeDef || vocabWord.targetDef, w/2, sy - 14);
-    } else {
+      if (tl) {
+        ctx.fillStyle = '#446688'; ctx.font = '8px Courier New';
+        ctx.fillText((tl.emoji || '') + ' ' + tl.name + (tl.nativeName !== tl.name ? ' · ' + tl.nativeName : ''), w/2, sy - 30);
+      }
+      if (showNative) {
+        // Bilingual: also show native definition below
+        ctx.fillStyle = '#ffdd88'; ctx.font = '9px Courier New';
+        ctx.fillText(vocabWord.nativeDef || vocabWord.targetDef, w/2, sy - 14);
+      }
+    }
+    if (!showTarget) {
+      // Native-only mode or no multilingual data
+      const word = vocabWord.word || vocabWord.nativeWord || '';
+      const pos  = vocabWord.pos  || vocabWord.nativePos  || '';
+      const def  = vocabWord.def  || vocabWord.nativeDef  || '';
       ctx.fillStyle = '#ffdd88'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 5;
       ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
-      ctx.fillText(vocabWord.word + '  [' + vocabWord.pos + ']', w/2, sy - 44); ctx.shadowBlur = 0;
+      ctx.fillText(word + '  [' + pos + ']', w/2, sy - 44); ctx.shadowBlur = 0;
       ctx.fillStyle = '#886644'; ctx.font = '9px Courier New';
-      ctx.fillText(vocabWord.def, w/2, sy - 30);
+      ctx.fillText(def, w/2, sy - 30);
     }
       ctx.textAlign = 'left'; ctx.globalAlpha = 1;
     } // end vAlpha > 0

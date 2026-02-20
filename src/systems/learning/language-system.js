@@ -654,20 +654,33 @@ class LanguageSystem {
       targetLang: this.targetLangMeta,
       nativeLang: this.nativeLangMeta,
       isRTL: (this.targetLangMeta?.dir === 'rtl'),
+      displayMode: this._displayMode, // 'native' | 'bilingual' | 'target' (immersion)
     };
   }
 
   /** Get a random word from the core vocabulary for a given tile type */
   getWordForTile(tileType, vocabTier = 'advanced') {
-    // Map tile type to thematic word IDs
+    // Map tile type to thematic word IDs — covers all tile types
     const TILE_WORD_MAP = {
-      4:  ['peace', 'serenity', 'calm'],  // PEACE
-      6:  ['insight', 'wisdom', 'clarity', 'awareness'],  // INSIGHT
-      15: ['memory'],  // MEMORY
-      10: ['emerge', 'transform'],  // GLITCH
-      11: ['courage', 'growth'],   // ARCHETYPE
+      1:  ['resilience', 'courage', 'truth'],       // DESPAIR
+      2:  ['courage', 'awareness', 'truth'],         // TERROR
+      3:  ['resilience', 'growth', 'awareness'],     // SELF_HARM
+      4:  ['peace', 'serenity', 'calm'],             // PEACE
+      6:  ['insight', 'wisdom', 'clarity', 'awareness'], // INSIGHT
+      8:  ['transform', 'resilience'],               // RAGE
+      9:  ['emerge', 'courage', 'resilience'],       // HOPELESS
+      10: ['emerge', 'transform'],                   // GLITCH
+      11: ['courage', 'growth'],                     // ARCHETYPE
+      12: ['clarity', 'awareness'],                  // TELEPORT
+      14: ['courage', 'awareness'],                  // TRAP
+      15: ['memory'],                                // MEMORY
+      16: ['resilience', 'growth'],                  // PAIN
+      17: ['calm', 'awareness'],                     // BODY_SCAN
+      18: ['calm', 'serenity'],                      // BREATH_SYNC
+      19: ['growth', 'transform'],                   // ENERGY_NODE
+      20: ['truth', 'peace'],                        // GROUNDING
     };
-    const defaults = ['courage', 'growth', 'resilience', 'truth', 'awareness', 'clarity'];
+    const defaults = ['courage', 'resilience', 'truth', 'awareness'];
     const ids = TILE_WORD_MAP[tileType] || defaults;
     const wordId = ids[Math.floor(Math.random() * ids.length)];
     return this.getWord(wordId, vocabTier);

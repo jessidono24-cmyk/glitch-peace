@@ -1216,7 +1216,7 @@ window.addEventListener('keydown', e => {
       }
       else if(CURSOR.opt===4) {  // SFX VOLUME: cycle 0%, 25%, 50%, 75%, 100%
         const SFX_VOL_STEPS = [0, 0.25, 0.5, 0.75, 1.0];
-        const SFX_VOL_MATCH_EPS = 0.01;  // epsilon for float comparison
+        const SFX_VOL_MATCH_EPS = 0.001;  // epsilon for float comparison (volumes are exact presets)
         const SFX_VOL_DEFAULT_IDX = 2;   // index of 50% (default)
         const curI = SFX_VOL_STEPS.findIndex(v => Math.abs(v - (PLAYER_PROFILE.sfxVol || 0.3)) < SFX_VOL_MATCH_EPS);
         const nI = (curI < 0 ? SFX_VOL_DEFAULT_IDX : curI) + dir;

@@ -304,7 +304,7 @@ export class CoopMode {
       ctx.fillStyle = '#667788'; ctx.font = '8px Courier New';
       ctx.fillText('Collect ◈ PEACE tiles to advance the dreamscape', w/2, h/2 + 24);
       ctx.fillText('Somatic tiles heal BOTH players · Hazards damage individually', w/2, h/2 + 38);
-      ctx.fillText('If either player\'s HP reaches 0, the journey ends', w/2, h/2 + 52);
+      ctx.fillText("If either player's HP reaches 0, the journey ends", w/2, h/2 + 52);
       ctx.fillStyle = '#334455';
       ctx.fillText('ESC to return to title', w/2, h/2 + 72);
       ctx.globalAlpha = 1;

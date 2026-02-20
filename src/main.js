@@ -172,6 +172,7 @@ const MOVE_SPEED_SLOW_THR   = 0.4;   // moves/sec → sadness/disconnection sign
 let _recentMoveTimes = [];           // timestamps of recent moves (rolling window)
 
 // ─── Nature facts state ───────────────────────────────────────────────────
+const NATURE_FACT_PROB = 0.04;  // probability per move of showing a new fact mid-exploration
 let _birdFactIdx      = 0;
 let _mushroomFactIdx  = 0;
 let _predatorFactIdx  = 0;
@@ -379,6 +380,9 @@ function startGame(dreamIdx) {
   archetypeDialogue.reset();
   bossSystem.reset();
   alchemySystem.resetSession();
+  // Reset movement speed tracking + nature facts state
+  _recentMoveTimes = [];
+  _lastNatureDsId = null;
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -814,12 +818,12 @@ function loop(ts) {
           _showMsg('🦅 ' + fact, '#ffcc88', 200);
           _predatorFactIdx++;
         }
-      } else if (_dsId === 'forest_sanctuary' && Math.random() < 0.04) {
+      } else if (_dsId === 'forest_sanctuary' && Math.random() < NATURE_FACT_PROB) {
         // Occasional new bird fact while exploring
         const fact = BIRD_FACTS[_birdFactIdx % BIRD_FACTS.length];
         _showMsg('🐦 ' + fact, '#88ffaa', 180);
         _birdFactIdx++;
-      } else if (_dsId === 'mycelium_depths' && Math.random() < 0.04) {
+      } else if (_dsId === 'mycelium_depths' && Math.random() < NATURE_FACT_PROB) {
         const fact = MUSHROOM_FACTS[_mushroomFactIdx % MUSHROOM_FACTS.length];
         _showMsg('🍄 ' + fact, '#aaddcc', 180);
         _mushroomFactIdx++;

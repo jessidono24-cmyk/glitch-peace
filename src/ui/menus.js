@@ -901,6 +901,27 @@ export function drawHowToPlay(ctx, w, h) {
     ctx.fillText(s, w / 2, fsY + 22 + i * 16);
   });
 
+  // ── Co-op Setup ───────────────────────────────────────────────────────
+  const coopY = fsY + 22 + STEPS.length * 16 + 16;
+  ctx.strokeStyle = 'rgba(255,204,68,0.15)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(w / 2 - 200, coopY - 6); ctx.lineTo(w / 2 + 200, coopY - 6); ctx.stroke();
+  ctx.fillStyle = '#ffcc44'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 8;
+  ctx.font = 'bold 11px Courier New'; ctx.fillText('🤝  CO-OP SETUP  (two players on one keyboard)', w / 2, coopY + 6);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#998844'; ctx.font = '8px Courier New';
+  ctx.fillText('From the title, choose SELECT MODE → CO-OP MODE and press ENTER.', w / 2, coopY + 22);
+  ctx.fillStyle = '#00ff88'; ctx.font = 'bold 9px Courier New';
+  ctx.fillText('PLAYER 1:', w / 2 - 100, coopY + 38);
+  ctx.fillStyle = '#ff8844';
+  ctx.fillText('PLAYER 2:', w / 2 + 60, coopY + 38);
+  ctx.fillStyle = '#aaccaa'; ctx.font = '8px Courier New';
+  ctx.fillText('Arrow Keys ↑↓←→', w / 2 - 100, coopY + 52);
+  ctx.fillStyle = '#cc9977';
+  ctx.fillText('W A S D', w / 2 + 60, coopY + 52);
+  ctx.fillStyle = '#445566'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
+  ctx.fillText('Both share the same dreamscape. Collect ◈ tiles to clear the level together.', w / 2, coopY + 68);
+  ctx.fillText('Somatic tiles (◯ ≋ ✦ ⊕) heal both players simultaneously.', w / 2, coopY + 82);
+
   // ── Footer ────────────────────────────────────────────────────────────
   ctx.fillStyle = '#1a2a1a'; ctx.font = 'italic 7px Courier New';
   ctx.fillText('All data stays local · No shame spirals · Pause any time · Your identity is always safe.', w / 2, h - 30);

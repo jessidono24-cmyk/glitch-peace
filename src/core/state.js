@@ -121,6 +121,8 @@ export const CURSOR = {
   pause:   0,
   shop:    0,
   dream:   0,
+  modesel: 0,        // mode select cursor
+  achieveScroll: 0,  // achievements list scroll offset
   upgradeFrom: 'title',
   optFrom:     'title',  // tracks which screen opened the options panel
 };

@@ -13,31 +13,148 @@ function stars(ctx, backgroundStars, ts) {
   ctx.globalAlpha = 1;
 }
 
-export function drawTitle(ctx, w, h, backgroundStars, ts, menuIdx, gameMode) {
-  ctx.fillStyle = '#02020a'; ctx.fillRect(0, 0, w, h);
-  for (let y = 0; y < h; y += 4) { ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(0, y, w, 1); }
-  stars(ctx, backgroundStars, ts);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#0a0a20'; ctx.font = '8px Courier New'; ctx.fillText('A BEING NAVIGATES THE DREAMSCAPES', w / 2, h / 2 - 140);
-  ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 32;
-  ctx.font = 'bold 36px Courier New'; ctx.fillText('GLITCH·PEACE', w / 2, h / 2 - 100); ctx.shadowBlur = 0;
-  ctx.fillStyle = '#0a1a0a'; ctx.font = '9px Courier New'; ctx.fillText('v4  ·  dreamscape consciousness simulation', w / 2, h / 2 - 78);
-  // Mode indicator
-  const modeLabel = (gameMode === 'shooter') ? '[ SHOOTER MODE ]' : '[ GRID MODE ]';
-  const modeColor = (gameMode === 'shooter') ? '#ff6622' : '#00ff88';
-  ctx.fillStyle = modeColor; ctx.shadowColor = modeColor; ctx.shadowBlur = 8;
-  ctx.font = '10px Courier New'; ctx.fillText(modeLabel + '  ·  M to switch', w / 2, h / 2 - 60); ctx.shadowBlur = 0;
-  const menuTop = h / 2 - 42;
-  MAIN_MENU.forEach((opt, i) => {
-    const sel = i === menuIdx, y = menuTop + i * 36;
-    if (sel) {
-      ctx.fillStyle = 'rgba(0,255,136,0.07)'; ctx.fillRect(w / 2 - 130, y - 19, 260, 28);
-      ctx.strokeStyle = 'rgba(0,255,136,0.28)'; ctx.strokeRect(w / 2 - 130, y - 19, 260, 28);
-    }
-    ctx.fillStyle = sel ? '#00ff88' : '#2a3a2a'; ctx.shadowColor = sel ? '#00ff88' : 'transparent'; ctx.shadowBlur = sel ? 8 : 0;
-    ctx.font = sel ? 'bold 14px Courier New' : '12px Courier New'; ctx.fillText(opt, w / 2, y); ctx.shadowBlur = 0;
+// ─── Mode select definitions ──────────────────────────────────────────
+export const GAME_MODES = [
+  { id: 'grid',          label: '🗂️  GRID MODE',          sub: 'tactical tile navigation · original',         color: '#00ff88' },
+  { id: 'shooter',       label: '🔫  SHOOTER MODE',        sub: 'fast-paced arena combat · reflex',            color: '#ff6622' },
+  { id: 'constellation', label: '✦   CONSTELLATION MODE',  sub: 'connect star nodes · meditative puzzle  M6',  color: '#aaddff' },
+  { id: 'meditation',    label: '🌸  MEDITATION MODE',     sub: 'breathing & awareness · no enemies  M7',      color: '#88ffcc' },
+  { id: 'coop',          label: '🤝  CO-OP MODE',          sub: 'two-player journey · shared dreamscape  M8',  color: '#ffcc44' },
+  { id: 'challenge',     label: '📅  DAILY CHALLENGE',     sub: 'new seeded run every 24 hours',               color: '#cc88ff' },
+];
+
+export function drawModeSelect(ctx, w, h, modeIdx, backgroundStars, ts) {
+  // Deep dark background
+  ctx.fillStyle = '#01010a'; ctx.fillRect(0, 0, w, h);
+  for (let y2 = 0; y2 < h; y2 += 4) { ctx.fillStyle = 'rgba(0,0,0,0.10)'; ctx.fillRect(0, y2, w, 1); }
+  if (backgroundStars) stars(ctx, backgroundStars, ts);
+
+  // Corner brackets matching title screen style
+  const cSz = 14, cPad = 10, cAlpha = 0.2 + 0.1 * Math.sin(ts * 0.003);
+  ctx.globalAlpha = cAlpha; ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 1.5;
+  [[cPad, cPad, 1, 1], [w - cPad, cPad, -1, 1], [cPad, h - cPad, 1, -1], [w - cPad, h - cPad, -1, -1]].forEach(([cx, cy, dx, dy]) => {
+    ctx.beginPath(); ctx.moveTo(cx + dx * cSz, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + dy * cSz); ctx.stroke();
   });
-  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New'; ctx.fillText('↑↓ navigate  ·  ENTER select  ·  M toggle mode', w / 2, h - 20);
+  ctx.globalAlpha = 1;
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 18;
+  ctx.font = 'bold 20px Courier New'; ctx.fillText('SELECT GAME MODE', w / 2, 52); ctx.shadowBlur = 0;
+  ctx.fillStyle = '#223322'; ctx.font = '9px Courier New';
+  ctx.fillText('choose your path through the dreamscapes', w / 2, 70);
+
+  const rowH = 70, startY = 100;
+  GAME_MODES.forEach((mode, i) => {
+    const sel  = i === modeIdx;
+    const ry   = startY + i * rowH;
+    const col  = mode.color;
+    const pulse = sel ? 0.5 + 0.5 * Math.sin(ts * 0.005) : 0;
+    if (sel) {
+      // Animated glow background for selected mode
+      const bgAlpha   = Math.round(18 + pulse * 14).toString(16).padStart(2, '0');
+      const bordAlpha = Math.round(60 + pulse * 40).toString(16).padStart(2, '0');
+      const selGrd = ctx.createLinearGradient(w / 2 - 200, ry, w / 2 + 200, ry);
+      selGrd.addColorStop(0, 'rgba(0,0,0,0)');
+      selGrd.addColorStop(0.5, col + bgAlpha);
+      selGrd.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = selGrd; ctx.fillRect(w / 2 - 200, ry - 12, 400, 52);
+      ctx.strokeStyle = col + bordAlpha;
+      ctx.lineWidth = 1; ctx.strokeRect(w / 2 - 200, ry - 12, 400, 52);
+      // Selection arrow
+      ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 6;
+      ctx.font = 'bold 11px Courier New'; ctx.fillText('▶', w / 2 - 210, ry + 12); ctx.shadowBlur = 0;
+    }
+    ctx.fillStyle = sel ? col : '#2a3a2a';
+    ctx.shadowColor = sel ? col : 'transparent'; ctx.shadowBlur = sel ? 10 : 0;
+    ctx.font = sel ? 'bold 14px Courier New' : '12px Courier New';
+    ctx.fillText(mode.label, w / 2, ry + 8);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = sel ? '#445566' : '#1a2a1a'; ctx.font = '9px Courier New';
+    ctx.fillText(mode.sub, w / 2, ry + 26);
+  });
+
+  ctx.fillStyle = '#0d1a0d'; ctx.font = '8px Courier New';
+  ctx.fillText('↑↓ navigate  ·  ENTER select  ·  ESC back', w / 2, h - 20);
+  ctx.textAlign = 'left';
+}
+
+export function drawTitle(ctx, w, h, backgroundStars, ts, menuIdx, gameMode) {
+  // Deep space background
+  const bgGrd = ctx.createLinearGradient(0, 0, 0, h);
+  bgGrd.addColorStop(0, '#01010a');
+  bgGrd.addColorStop(0.5, '#02020e');
+  bgGrd.addColorStop(1, '#010108');
+  ctx.fillStyle = bgGrd; ctx.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 4) { ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(0, y, w, 1); }
+  stars(ctx, backgroundStars, ts);
+
+  // Animated horizontal scan line
+  const scanY = ((ts * 0.06) % h);
+  ctx.globalAlpha = 0.04; ctx.fillStyle = '#00ff88';
+  ctx.fillRect(0, scanY, w, 2);
+  ctx.globalAlpha = 1;
+
+  // Corner decorations (L-shaped brackets)
+  const cornerSize = 18, cornerPad = 12;
+  const cornerAlpha = 0.28 + 0.12 * Math.sin(ts * 0.003);
+  ctx.globalAlpha = cornerAlpha; ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 1.5;
+  [[cornerPad, cornerPad, 1, 1], [w - cornerPad, cornerPad, -1, 1],
+   [cornerPad, h - cornerPad, 1, -1], [w - cornerPad, h - cornerPad, -1, -1]].forEach(([cx, cy, dx, dy]) => {
+    ctx.beginPath(); ctx.moveTo(cx + dx * cornerSize, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + dy * cornerSize); ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+
+  ctx.textAlign = 'center';
+
+  // Subtitle above title
+  ctx.fillStyle = '#0d1a0d'; ctx.font = '8px Courier New';
+  ctx.fillText('⬦  A BEING NAVIGATES THE DREAMSCAPES  ⬦', w / 2, h / 2 - 162);
+
+  // Animated glitch on title occasionally
+  const glitch = Math.sin(ts * 0.0013) > 0.97;
+  if (glitch) {
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#ff0055'; ctx.shadowColor = '#ff0055'; ctx.shadowBlur = 20;
+    ctx.font = 'bold 36px Courier New'; ctx.fillText('GLITCH·PEACE', w / 2 + 2, h / 2 - 122);
+    ctx.globalAlpha = 1;
+  }
+  // Title
+  ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 36;
+  ctx.font = 'bold 36px Courier New'; ctx.fillText('GLITCH·PEACE', w / 2, h / 2 - 120); ctx.shadowBlur = 0;
+
+  // Tagline with animated glow
+  const tlPulse = 0.5 + 0.5 * Math.sin(ts * 0.002);
+  ctx.fillStyle = `rgba(0,80,40,${0.6 + 0.4 * tlPulse})`;
+  ctx.font = '9px Courier New'; ctx.fillText('v4  ·  dreamscape consciousness simulation  ·  18 dreamscapes  ·  6 modes', w / 2, h / 2 - 98);
+
+  // Mode indicator with pulsing background
+  const MODE_COLORS = { grid:'#00ff88', shooter:'#ff6622', constellation:'#aaddff', meditation:'#88ffcc', coop:'#ffcc44', challenge:'#cc88ff' };
+  const MODE_LABELS = { grid:'GRID', shooter:'SHOOTER', constellation:'CONSTELLATION', meditation:'MEDITATION', coop:'CO-OP', challenge:'CHALLENGE' };
+  const modeColor = MODE_COLORS[gameMode] || '#00ff88';
+  const modeLabel = '[ ' + (MODE_LABELS[gameMode] || gameMode.toUpperCase()) + ' MODE ]';
+  ctx.fillStyle = modeColor + '18'; ctx.fillRect(w / 2 - 80, h / 2 - 92, 160, 18);
+  ctx.fillStyle = modeColor; ctx.shadowColor = modeColor; ctx.shadowBlur = 8;
+  ctx.font = '10px Courier New'; ctx.fillText(modeLabel, w / 2, h / 2 - 79); ctx.shadowBlur = 0;
+
+  // Menu items
+  const menuTop = h / 2 - 58;
+  MAIN_MENU.forEach((opt, i) => {
+    const sel = i === menuIdx, y = menuTop + i * 32;
+    if (sel) {
+      const selGrd = ctx.createLinearGradient(w / 2 - 130, y - 18, w / 2 + 130, y - 18);
+      selGrd.addColorStop(0, 'rgba(0,255,136,0.01)');
+      selGrd.addColorStop(0.5, 'rgba(0,255,136,0.09)');
+      selGrd.addColorStop(1, 'rgba(0,255,136,0.01)');
+      ctx.fillStyle = selGrd; ctx.fillRect(w / 2 - 130, y - 18, 260, 26);
+      ctx.strokeStyle = 'rgba(0,255,136,0.35)'; ctx.strokeRect(w / 2 - 130, y - 18, 260, 26);
+    }
+    ctx.fillStyle = sel ? '#00ff88' : '#2a3a2a'; ctx.shadowColor = sel ? '#00ff88' : 'transparent'; ctx.shadowBlur = sel ? 10 : 0;
+    ctx.font = sel ? 'bold 13px Courier New' : '11px Courier New'; ctx.fillText(opt, w / 2, y); ctx.shadowBlur = 0;
+  });
+
+  // Footer
+  ctx.fillStyle = '#0d1a0d'; ctx.font = '8px Courier New';
+  ctx.fillText('↑↓ navigate  ·  ENTER select  ·  gamepad supported', w / 2, h - 20);
   ctx.textAlign = 'left';
 }
 
@@ -265,7 +382,12 @@ export function drawInterlude(ctx, w, h, interludeState, ts) {
   const elemAlpha = (startMs) => Math.min(1, Math.max(0, (elapsed - startMs) / 350));
 
   const ds = interludeState.ds || DREAMSCAPES[0];
+  // Rich background: blend dreamscape color with animated radial gradient
   ctx.fillStyle = ds.bgColor || '#02020a'; ctx.fillRect(0, 0, w, h);
+  const bgAccent = ds.bgAccent || '#002810';
+  const bgGrd2 = ctx.createRadialGradient(w * 0.5, h * 0.4, 0, w * 0.5, h * 0.4, w * 0.8);
+  bgGrd2.addColorStop(0, bgAccent + '44'); bgGrd2.addColorStop(1, 'transparent');
+  ctx.fillStyle = bgGrd2; ctx.fillRect(0, 0, w, h);
 
   // Animated scan lines
   for (let i = 0; i < 7; i++) {
@@ -388,54 +510,87 @@ export function drawInterlude(ctx, w, h, interludeState, ts) {
 }
 
 export function drawDead(ctx, w, h, game, highScores, dreamHistory, insightTokens, sessionRep) {
+  // Animated scanline vignette for death screen
+  const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.004);
   ctx.fillStyle = 'rgba(8,0,0,0.97)'; ctx.fillRect(0, 0, w, h);
+  for (let y2 = 0; y2 < h; y2 += 3) { ctx.fillStyle = 'rgba(40,0,0,0.06)'; ctx.fillRect(0, y2, w, 1); }
+  // Red vignette
+  const vg = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.8);
+  vg.addColorStop(0, 'rgba(80,0,0,0)'); vg.addColorStop(1, 'rgba(80,0,0,0.35)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
+
   ctx.textAlign = 'center';
   const ds = game?.ds;
-  ctx.fillStyle = '#330000'; ctx.font = '9px Courier New'; ctx.fillText('THE BEING DISSOLVES IN ' + (ds?.name || 'THE VOID'), w / 2, h / 2 - 138);
-  ctx.fillStyle = '#ff2222'; ctx.shadowColor = '#ff2222'; ctx.shadowBlur = 30;
-  ctx.font = 'bold 40px Courier New'; ctx.fillText('ERASED', w / 2, h / 2 - 90); ctx.shadowBlur = 0;
-  ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 10;
-  ctx.font = 'bold 26px Courier New'; ctx.fillText(String(game.score).padStart(7, '0'), w / 2, h / 2 - 28); ctx.shadowBlur = 0;
-  ctx.fillStyle = '#333'; ctx.font = '10px Courier New'; ctx.fillText('FINAL SCORE  ·  LEVEL ' + game.level, w / 2, h / 2 - 6);
-  ctx.fillStyle = '#223322'; ctx.font = '9px Courier New';
-  ctx.fillText('dreams completed: ' + (dreamHistory.length) + '/' + DREAMSCAPES.length, w / 2, h / 2 + 14);
-  ctx.fillText('REP ' + (sessionRep >= 0 ? '+' : '') + sessionRep + '  ·  ◆×' + insightTokens, w / 2, h / 2 + 32);
+  ctx.fillStyle = '#330000'; ctx.font = '8px Courier New'; ctx.fillText('THE BEING DISSOLVES IN ' + (ds?.name || 'THE VOID').toUpperCase(), w / 2, h / 2 - 140);
+  // "ERASED" with glitch/shimmer
+  ctx.fillStyle = '#ff0000'; ctx.shadowColor = '#ff2222'; ctx.shadowBlur = 40 * pulse;
+  ctx.font = 'bold 44px Courier New'; ctx.fillText('ERASED', w / 2, h / 2 - 88); ctx.shadowBlur = 0;
+  // Dreamscape emotion
+  if (ds?.emotion) {
+    ctx.fillStyle = '#440000'; ctx.font = 'italic 9px Courier New';
+    ctx.fillText('"' + ds.emotion + '"  ·  ' + (ds.narrative || ''), w / 2, h / 2 - 64);
+  }
+
+  // Score box
+  ctx.strokeStyle = `rgba(0,255,136,${0.3 * pulse})`; ctx.lineWidth = 1;
+  ctx.strokeRect(w / 2 - 80, h / 2 - 50, 160, 34);
+  ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 14 * pulse;
+  ctx.font = 'bold 28px Courier New'; ctx.fillText(String(game.score).padStart(7, '0'), w / 2, h / 2 - 22); ctx.shadowBlur = 0;
+  ctx.fillStyle = '#334455'; ctx.font = '9px Courier New'; ctx.fillText('FINAL SCORE  ·  LEVEL ' + game.level, w / 2, h / 2 - 4);
+
+  // Session stats row
+  ctx.fillStyle = '#223322'; ctx.font = '8px Courier New';
+  ctx.fillText('DREAMS  ' + dreamHistory.length + '/' + DREAMSCAPES.length + '  ·  REP ' + (sessionRep >= 0 ? '+' : '') + sessionRep + '  ·  ◆×' + insightTokens, w / 2, h / 2 + 16);
+
+  // Run stats from window globals
+  const learnStats = window._learnStats || { words: 0, patterns: 0 };
+  if (learnStats.words > 0 || learnStats.patterns > 0) {
+    ctx.fillStyle = '#224422'; ctx.font = '8px Courier New';
+    ctx.fillText('WORDS LEARNED: ' + learnStats.words + '  ·  PATTERNS: ' + learnStats.patterns, w / 2, h / 2 + 32);
+  }
 
   // ── RPG stats snapshot ──────────────────────────────────────────────
   const cs = window._characterStats;
   if (cs && cs.level > 1) {
     ctx.fillStyle = '#ffdd88'; ctx.font = '8px Courier New';
-    ctx.fillText('RPG  LVL ' + cs.level + '  STR ' + (cs.str||1) + '  INT ' + (cs.int||1) + '  WIS ' + (cs.wis||1) + '  VIT ' + (cs.vit||1), w / 2, h / 2 + 50);
+    ctx.fillText('RPG  LVL ' + cs.level + '  STR ' + (cs.str||1) + '  INT ' + (cs.int||1) + '  WIS ' + (cs.wis||1) + '  VIT ' + (cs.vit||1), w / 2, h / 2 + 48);
   }
   // ── Quest summary ───────────────────────────────────────────────────
   const qd = window._questData;
   if (qd) {
     const qDone = qd.filter(q => q.done).length;
     ctx.fillStyle = qDone > 0 ? '#ddcc66' : '#223322'; ctx.font = '8px Courier New';
-    ctx.fillText('QUESTS  ' + qDone + '/5 complete', w / 2, cs && cs.level > 1 ? h / 2 + 64 : h / 2 + 50);
+    ctx.fillText('QUESTS  ' + qDone + '/5 complete', w / 2, cs && cs.level > 1 ? h / 2 + 62 : h / 2 + 48);
   }
   // ── Alchemy phase ───────────────────────────────────────────────────
   const al = window._alchemy;
-  // Calculate vertical position for alchemy row (below RPG and quest rows)
-  let alY = h / 2 + 50;
-  if (cs && cs.level > 1) alY = h / 2 + 64;
-  if (qd) alY = h / 2 + (cs && cs.level > 1 ? 78 : 64);
+  let alY = h / 2 + 48;
+  if (cs && cs.level > 1) alY = h / 2 + 62;
+  if (qd) alY = h / 2 + (cs && cs.level > 1 ? 76 : 62);
   if (al && al.transmutations > 0) {
     const phaseLabel = { nigredo: '🜏 Nigredo', albedo: '🜃 Albedo', rubedo: '🜔 Rubedo', aurora: '✦ Aurora' }[al.phase] || al.phase;
     ctx.fillStyle = '#cc88ff'; ctx.font = '8px Courier New';
     ctx.fillText('ALCHEMY  ' + phaseLabel + '  ·  ' + al.transmutations + ' transmutation' + (al.transmutations !== 1 ? 's' : ''), w / 2, alY);
   }
 
+  // ── High score rank ──────────────────────────────────────────────────
   const rankY = alY + (al && al.transmutations > 0 ? 18 : 0);
   if (highScores.length > 0) {
     const rank = highScores.findIndex(s => s.score === game.score);
-    if (rank >= 0) { ctx.fillStyle = '#ffdd00'; ctx.font = 'bold 11px Courier New'; ctx.fillText('RANK #' + (rank + 1) + ' ALL TIME', w / 2, rankY); }
+    if (rank === 0) {
+      ctx.fillStyle = '#ffdd00'; ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 8;
+      ctx.font = 'bold 11px Courier New'; ctx.fillText('🏆  NEW HIGH SCORE!  RANK #1', w / 2, rankY); ctx.shadowBlur = 0;
+    } else if (rank >= 0) {
+      ctx.fillStyle = '#ffdd00'; ctx.font = 'bold 11px Courier New'; ctx.fillText('RANK #' + (rank + 1) + ' ALL TIME', w / 2, rankY);
+    }
   }
-  const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.004);
-  ctx.fillStyle = `rgba(255,34,34,${0.07 * pulse})`; ctx.fillRect(w / 2 - 110, rankY + 16, 220, 34);
-  ctx.strokeStyle = `rgba(255,34,34,${0.45 * pulse})`; ctx.strokeRect(w / 2 - 110, rankY + 16, 220, 34);
-  ctx.fillStyle = '#ff2222'; ctx.font = '12px Courier New'; ctx.fillText('↺  ENTER TO TRY AGAIN', w / 2, rankY + 38);
-  ctx.fillStyle = '#221122'; ctx.font = '9px Courier New'; ctx.fillText('ESC → TITLE', w / 2, rankY + 56);
+
+  // ── Continue prompt ──────────────────────────────────────────────────
+  const btnY = rankY + 22;
+  ctx.fillStyle = `rgba(255,34,34,${0.07 * pulse})`; ctx.fillRect(w / 2 - 110, btnY, 220, 34);
+  ctx.strokeStyle = `rgba(255,34,34,${0.45 * pulse})`; ctx.strokeRect(w / 2 - 110, btnY, 220, 34);
+  ctx.fillStyle = '#ff2222'; ctx.font = '12px Courier New'; ctx.fillText('↺  ENTER TO TRY AGAIN', w / 2, btnY + 22);
+  ctx.fillStyle = '#221122'; ctx.font = '9px Courier New'; ctx.fillText('ESC → TITLE', w / 2, btnY + 40);
   ctx.textAlign = 'left';
 }
 
@@ -751,5 +906,87 @@ export function drawHowToPlay(ctx, w, h) {
   ctx.fillText('All data stays local · No shame spirals · Pause any time · Your identity is always safe.', w / 2, h - 30);
   ctx.fillStyle = '#131328'; ctx.font = '9px Courier New';
   ctx.fillText('ENTER / ESC  ·  return to title', w / 2, h - 16);
+  ctx.textAlign = 'left';
+}
+
+// ─── Achievement popup overlay (drawn over any phase) ──────────────────
+export function drawAchievementPopup(ctx, w, h, popup, ts) {
+  if (!popup) return;
+  const alpha  = Math.min(1, popup.progress);
+  const slide  = Math.min(1, popup.progress);
+  const panelW = 290, panelH = 64;
+  const px     = w - panelW - 14;
+  const py     = 14 + (1 - slide) * -80;
+
+  ctx.globalAlpha = alpha * 0.97;
+  // Animated glow behind panel
+  ctx.shadowColor = '#ffdd44'; ctx.shadowBlur = 20 * alpha;
+  ctx.fillStyle = '#060610';
+  ctx.beginPath(); ctx.roundRect(px, py, panelW, panelH, 8); ctx.fill();
+  ctx.shadowBlur = 0;
+  // Border: gold achievement color
+  ctx.strokeStyle = '#ffdd44'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(px + 0.5, py + 0.5, panelW - 1, panelH - 1, 8); ctx.stroke();
+  // Top "ACHIEVEMENT UNLOCKED" gold band
+  ctx.fillStyle = 'rgba(255,221,68,0.12)';
+  ctx.beginPath(); ctx.roundRect(px + 1, py + 1, panelW - 2, 22, [7, 7, 0, 0]); ctx.fill();
+
+  // Icon
+  ctx.font = '20px Courier New'; ctx.textAlign = 'left';
+  ctx.fillStyle = '#ffdd44'; ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 10;
+  ctx.fillText(popup.icon || '🏆', px + 10, py + 44);
+  ctx.shadowBlur = 0;
+
+  // Labels
+  ctx.fillStyle = '#ffdd44'; ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'left';
+  ctx.fillText('✦  ACHIEVEMENT UNLOCKED  ✦', px + 42, py + 15);
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px Courier New';
+  ctx.fillText(popup.name, px + 42, py + 33);
+  ctx.fillStyle = '#556677'; ctx.font = '8px Courier New';
+  const descStr = popup.desc || '';
+  ctx.fillText(descStr.length > 36 ? descStr.slice(0, 34) + '…' : descStr, px + 42, py + 50);
+
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'left';
+}
+
+// ─── Achievements screen ──────────────────────────────────────────────
+export function drawAchievements(ctx, w, h, achievementSystem, scrollOffset) {
+  ctx.fillStyle = '#02020a'; ctx.fillRect(0, 0, w, h);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffdd44'; ctx.shadowColor = '#ffdd44'; ctx.shadowBlur = 16;
+  ctx.font = 'bold 20px Courier New';
+  ctx.fillText('ACHIEVEMENTS', w / 2, 46);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#445566'; ctx.font = '10px Courier New';
+  ctx.fillText(achievementSystem.unlockedCount + ' / ' + achievementSystem.totalCount + ' unlocked', w / 2, 64);
+
+  const all = (window._achieveDefs && window._achieveDefs.ACHIEVEMENT_DEFS) || [];
+  const visible = Math.min(all.length, 8);
+  const startI  = scrollOffset || 0;
+  for (let i = 0; i < visible && startI + i < all.length; i++) {
+    const def = all[startI + i];
+    const unlocked = achievementSystem.isUnlocked(def.id);
+    const y = 90 + i * 52;
+    ctx.fillStyle = unlocked ? 'rgba(0,255,136,0.06)' : 'rgba(255,255,255,0.02)';
+    ctx.fillRect(w / 2 - 200, y - 12, 400, 42);
+    ctx.strokeStyle = unlocked ? 'rgba(0,255,136,0.25)' : 'rgba(255,255,255,0.06)';
+    ctx.strokeRect(w / 2 - 200, y - 12, 400, 42);
+    ctx.fillStyle = unlocked ? '#ffdd44' : '#334455'; ctx.font = '16px Courier New'; ctx.textAlign = 'left';
+    ctx.fillText(def.icon || '?', w / 2 - 188, y + 14);
+    ctx.fillStyle = unlocked ? '#00ff88' : '#334455'; ctx.font = 'bold 11px Courier New';
+    ctx.fillText(unlocked ? def.name : (def.hidden ? '???' : def.name), w / 2 - 162, y + 6);
+    ctx.fillStyle = unlocked ? '#445566' : '#223322'; ctx.font = '8px Courier New';
+    const rawDesc = unlocked ? def.desc : (def.hidden ? 'Hidden achievement' : def.desc);
+    const descText = rawDesc.length > 36 ? rawDesc.slice(0, 34) + '…' : rawDesc;
+    ctx.fillText(descText, w / 2 - 162, y + 20);
+    if (unlocked) {
+      ctx.fillStyle = '#ffdd44'; ctx.textAlign = 'right'; ctx.font = '8px Courier New';
+      ctx.fillText('✓', w / 2 + 188, y + 14);
+    }
+  }
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New';
+  ctx.fillText('↑↓ scroll  ·  ENTER / ESC back', w / 2, h - 20);
   ctx.textAlign = 'left';
 }

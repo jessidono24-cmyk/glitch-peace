@@ -21,7 +21,9 @@ import { burst, resonanceWave } from './game/particles.js';
 import { drawGame } from './ui/renderer.js';
 import { drawTitle, drawDreamSelect, drawOptions, drawHighScores,
          drawUpgradeShop, drawPause, drawInterlude, drawDead,
-         drawOnboarding, drawLanguageOptions, drawHowToPlay } from './ui/menus.js';
+         drawOnboarding, drawLanguageOptions, drawHowToPlay,
+         drawModeSelect, drawAchievementPopup, drawAchievements,
+         GAME_MODES } from './ui/menus.js';
 // ─── Phase 2-5 systems ───────────────────────────────────────────────────
 import { sfxManager } from './audio/sfx-manager.js';
 import { temporalSystem } from './systems/temporal-system.js';
@@ -71,6 +73,14 @@ import { bossSystem, BOSS_TYPES } from './systems/boss-system.js';
 import { questSystem } from './systems/rpg/quest-system.js';
 // ─── Phase M6: Alchemy System ─────────────────────────────────────────────
 import { alchemySystem, TILE_ELEMENT_MAP } from './systems/alchemy-system.js';
+// ─── Phase M6: Constellation Mode ─────────────────────────────────────────
+import { ConstellationMode } from './modes/constellation-mode.js';
+// ─── Phase M7: Meditation Mode ────────────────────────────────────────────
+import { MeditationMode } from './modes/meditation-mode.js';
+// ─── Phase M8: Co-op Mode ─────────────────────────────────────────────────
+import { CoopMode } from './modes/coop-mode.js';
+// ─── SteamPack: Achievement System ────────────────────────────────────────
+import { achievementSystem, ACHIEVEMENT_DEFS } from './systems/achievements.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -78,14 +88,21 @@ const ctx    = canvas.getContext('2d');
 const DPR    = Math.min(window.devicePixelRatio || 1, 2);
 
 function resizeCanvas() {
-  const w = CW(), h = CH();
-  canvas.width  = w * DPR; canvas.height = h * DPR;
-  canvas.style.width  = Math.min(w, window.innerWidth - 16) + 'px';
-  canvas.style.height = 'auto';
+  const logW = CW(), logH = CH();
+  // Draw at DPR-scaled resolution
+  canvas.width  = logW * DPR;
+  canvas.height = logH * DPR;
+  // Scale CSS dimensions to fill the viewport while maintaining aspect ratio
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const scale = Math.min(vw / logW, vh / logH);
+  canvas.style.width  = Math.round(logW * scale) + 'px';
+  canvas.style.height = Math.round(logH * scale) + 'px';
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(DPR, DPR);
 }
 resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 // ─── Shared systems ─────────────────────────────────────────────────────
 const emotionalField = new EmotionalField();
@@ -100,13 +117,18 @@ const shooterSharedSystems = {
 };
 const shooterMode = new ShooterMode(shooterSharedSystems);
 
+// ─── Phase M6 / M7 / M8 mode instances ──────────────────────────────────
+const constellationMode = new ConstellationMode(shooterSharedSystems);
+const meditationMode    = new MeditationMode(shooterSharedSystems);
+const coopMode          = new CoopMode(shooterSharedSystems);
+
 // ─── Runtime globals ────────────────────────────────────────────────────
 let game       = null;
 let deadGame   = null; // snapshot used by death screen (survives game=null)
 let animId     = null;
 let prevTs     = performance.now(); // initialise to now so first dt ≈ 0
 let lastMove   = 0;
-let gameMode   = 'grid'; // 'grid' | 'shooter'
+let gameMode   = 'grid'; // 'grid' | 'shooter' | 'constellation' | 'meditation' | 'coop'
 const EMOTION_THRESHOLD      = 0.15;   // emotion must exceed this to affect gameplay
 const INTERLUDE_DURATION_MS  = 10000;  // auto-advance after 10 s
 const INTERLUDE_MIN_ADVANCE_MS = 3500; // player may skip after 3.5 s (all content visible)
@@ -131,6 +153,9 @@ if (PLAYER_PROFILE.targetLang) languageSystem.setTargetLang(PLAYER_PROFILE.targe
 // Expose tokens/dreamIdx to renderer via window (avoids circular import)
 window._insightTokens = insightTokens;
 window._dreamIdx      = CFG.dreamIdx;
+// SteamPack: expose achievement defs for drawAchievements
+window._achieveDefs   = { ACHIEVEMENT_DEFS, list: ACHIEVEMENT_DEFS };
+window._achievementQueue = [];
 
 let glitchFrames = 0, glitchTimer = 500;
 let anomalyActive = false, anomalyData = { row:-1, col:-1, t:0 };
@@ -353,6 +378,12 @@ function nextDreamscape() {
   pushDreamHistory(g.ds.id);
   sfxManager.playDreamComplete();
   sessionTracker.onDreamscapeComplete();
+  // SteamPack: achievement tracking on dreamscape complete
+  achievementSystem.onDreamscapeComplete(sessionTracker.dreamscapesCompleted);
+  achievementSystem.onScoreUpdate(g.score);
+  if (g.level >= 10) achievementSystem.onGridLevel(g.level);
+  // Check no-damage achievement (if player kept full HP through the dream)
+  if (g.hp >= UPG.maxHp) achievementSystem.onNoDamageDream();
   // Phase 8: get a reflection prompt for the completed dreamscape
   const prompt = selfReflection.getPrompt(g.ds.emotion);
   const affirmation = selfReflection.getAffirmation();
@@ -443,16 +474,25 @@ function loop(ts) {
   const w = CW(), h = CH();
   pollGamepad(); // Controller support — runs every frame
 
+  // ── Achievement tick ──────────────────────────────────────────────────
+  achievementSystem.tick(dt);
+  // Process external achievement queue (from modes)
+  if (window._achievementQueue && window._achievementQueue.length) {
+    while (window._achievementQueue.length) achievementSystem.unlock(window._achievementQueue.shift());
+  }
+
   if (phase === 'onboarding')  { drawOnboarding(ctx, w, h, onboardState); animId=requestAnimationFrame(loop); return; }
   if (phase === 'langopts')    { drawLanguageOptions(ctx, w, h, langOptState); animId=requestAnimationFrame(loop); return; }
   if (phase === 'howtoplay')   { drawHowToPlay(ctx, w, h); animId=requestAnimationFrame(loop); return; }
-  if (phase === 'title')       { drawTitle(ctx, w, h, backgroundStars, ts, CURSOR.menu, gameMode); animId=requestAnimationFrame(loop); return; }
+  if (phase === 'title')       { drawTitle(ctx, w, h, backgroundStars, ts, CURSOR.menu, gameMode); drawAchievementPopup(ctx, w, h, achievementSystem.popup, ts); animId=requestAnimationFrame(loop); return; }
+  if (phase === 'modeselect')  { drawModeSelect(ctx, w, h, CURSOR.modesel, backgroundStars, ts); animId=requestAnimationFrame(loop); return; }
   if (phase === 'dreamselect') { drawDreamSelect(ctx, w, h, CFG.dreamIdx); animId=requestAnimationFrame(loop); return; }
   if (phase === 'options')     { drawOptions(ctx, w, h, CURSOR.opt); animId=requestAnimationFrame(loop); return; }
   if (phase === 'highscores')  { drawHighScores(ctx, w, h, highScores); animId=requestAnimationFrame(loop); return; }
+  if (phase === 'achievements'){ drawAchievements(ctx, w, h, achievementSystem, CURSOR.achieveScroll); animId=requestAnimationFrame(loop); return; }
   if (phase === 'upgrade')     { drawUpgradeShop(ctx, w, h, CURSOR.shop, insightTokens, checkOwned); animId=requestAnimationFrame(loop); return; }
-  if (phase === 'dead')        { drawDead(ctx, w, h, deadGame, highScores, dreamHistory, insightTokens, sessionRep); animId=requestAnimationFrame(loop); return; }
-  if (phase === 'paused')      { drawPause(ctx, w, h, game, CURSOR.pause); animId=requestAnimationFrame(loop); return; }
+  if (phase === 'dead')        { drawDead(ctx, w, h, deadGame, highScores, dreamHistory, insightTokens, sessionRep); drawAchievementPopup(ctx, w, h, achievementSystem.popup, ts); animId=requestAnimationFrame(loop); return; }
+  if (phase === 'paused')      { drawPause(ctx, w, h, game, CURSOR.pause); drawAchievementPopup(ctx, w, h, achievementSystem.popup, ts); animId=requestAnimationFrame(loop); return; }
   if (phase === 'interlude') {
     interludeState.elapsed = (interludeState.elapsed || 0) + dt;
     drawInterlude(ctx, w, h, interludeState, ts);
@@ -466,9 +506,50 @@ function loop(ts) {
     window._shooterState = { wave: shooterMode.wave, score: shooterMode.player.score, health: Math.round(shooterMode.player.health) };
     const result = shooterMode.update(dt, keys, matrixActive, ts);
     shooterMode.render(ctx, ts, { w, h, DPR });
+    drawAchievementPopup(ctx, w, h, achievementSystem.popup, ts);
     if (result && result.phase === 'dead') {
-      // Create a dead-screen-compatible snapshot for shooter mode
+      achievementSystem.onShooterWave(shooterMode.wave);
       deadGame = { score: result.data.score, level: shooterMode.wave, ds: { name: 'SHOOTER ARENA' } };
+      game = null;
+      setPhase('dead');
+    }
+    animId = requestAnimationFrame(loop);
+    return;
+  }
+
+  // ── Constellation mode ────────────────────────────────────────────────
+  if (gameMode === 'constellation') {
+    const result = constellationMode.update(dt, keys, matrixActive, ts);
+    constellationMode.render(ctx, ts, { w, h, DPR });
+    drawAchievementPopup(ctx, w, h, achievementSystem.popup, ts);
+    if (result && result.phase === 'dead') {
+      achievementSystem.onConstellationDone();
+      deadGame = { score: result.data.score, level: result.data.level || 1, ds: result.data.ds || { name: 'CONSTELLATION' } };
+      game = null;
+      setPhase('dead');
+    }
+    animId = requestAnimationFrame(loop);
+    return;
+  }
+
+  // ── Meditation mode ───────────────────────────────────────────────────
+  if (gameMode === 'meditation') {
+    meditationMode.update(dt, keys, matrixActive, ts);
+    meditationMode.render(ctx, ts, { w, h, DPR });
+    drawAchievementPopup(ctx, w, h, achievementSystem.popup, ts);
+    if (window._meditationTime) achievementSystem.onMeditationTime(window._meditationTime);
+    animId = requestAnimationFrame(loop);
+    return;
+  }
+
+  // ── Co-op mode ────────────────────────────────────────────────────────
+  if (gameMode === 'coop') {
+    const result = coopMode.update(dt, keys, matrixActive, ts);
+    coopMode.render(ctx, ts, { w, h, DPR });
+    drawAchievementPopup(ctx, w, h, achievementSystem.popup, ts);
+    if (result && result.phase === 'dead') {
+      achievementSystem.onCoopDreamComplete();
+      deadGame = { score: result.data.score, level: result.data.level || 1, ds: result.data.ds || { name: 'CO-OP ARENA' } };
       game = null;
       setPhase('dead');
     }
@@ -490,7 +571,17 @@ function loop(ts) {
   const domEmotion = emotionalField.getDominantEmotion();
   if (domEmotion.value > EMOTION_THRESHOLD) UPG.emotion = domEmotion.id;
   window._emotionSynergy = emotionalField.synergy;
-  window._purgDepth = emotionalField.purgDepth;
+  window._purgDepth      = emotionalField.purgDepth;
+  // Expose full emotion state for renderer (realm tinting, HUD header)
+  window._emotionField = {
+    realm:      emotionalField.realm       || 'Mind',
+    dominant:   domEmotion.id,
+    coherence:  emotionalField.coherence   || 0,
+    distortion: emotionalField.distortion  || 0,
+    valence:    emotionalField.valence     || 0,
+  };
+  // Expand fog radius based on insight collected
+  window._fogRadius = 4 + Math.min(3, Math.floor((window._insightTokens || 0) / 5));
 
   // ── Play Mode: Speedrun countdown ───────────────────────────────────
   if (game.speedrunActive && game.speedrunTimer > 0) {
@@ -569,6 +660,7 @@ function loop(ts) {
           patternRecognition.onPeaceCollected(game.peaceLeft);
           dreamYoga.onPeaceCollect();
           questSystem.onPeaceCollect();
+          achievementSystem.onPeaceCollect();
         }
         // Phase 8: Record emergence events on tile step
         if (targetTile === 6) { emergenceIndicators.record('insight_accumulation'); dreamYoga.onInsightCollect(); questSystem.onInsightCollect(); }
@@ -671,6 +763,9 @@ function loop(ts) {
       if (game.nightmareMode && targetTile === 4 && game.hp > _hpBeforeMove) game.hp = _hpBeforeMove;
       lastMove = ts;
       impulseBuffer.reset();
+      // SteamPack: first move + score achievements
+      achievementSystem.onFirstMove();
+      achievementSystem.onScoreUpdate(game.score);
     }
   } else if (!activeDir) {
     // Phase 9: track impulse cancellations (buffer was active, key released)
@@ -980,21 +1075,56 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
   if (phase === 'title') {
-    if (e.key==='ArrowUp')   { CURSOR.menu=(CURSOR.menu-1+6)%6; sfxManager.resume(); sfxManager.playMenuNav(); }
-    if (e.key==='ArrowDown') { CURSOR.menu=(CURSOR.menu+1)%6; sfxManager.resume(); sfxManager.playMenuNav(); }
-    if (e.key==='m'||e.key==='M') {
-      gameMode = gameMode === 'grid' ? 'shooter' : 'grid';
-      sfxManager.resume(); sfxManager.playMatrixSwitch(gameMode === 'grid');
-    }
+    if (e.key==='ArrowUp')   { CURSOR.menu=(CURSOR.menu-1+7)%7; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowDown') { CURSOR.menu=(CURSOR.menu+1)%7; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='Enter'||e.key===' ') {
       sfxManager.resume(); sfxManager.playMenuSelect();
       if (CURSOR.menu===0)      startGame(CFG.dreamIdx);
-      else if (CURSOR.menu===1) setPhase('dreamselect');
-      else if (CURSOR.menu===2) setPhase('howtoplay');
-      else if (CURSOR.menu===3) { CURSOR.opt=0; CURSOR.optFrom='title'; setPhase('options'); }
-      else if (CURSOR.menu===4) setPhase('highscores');
-      else if (CURSOR.menu===5) { CURSOR.shop=0; CURSOR.upgradeFrom='title'; setPhase('upgrade'); }
+      else if (CURSOR.menu===1) { CURSOR.modesel=0; setPhase('modeselect'); }
+      else if (CURSOR.menu===2) setPhase('dreamselect');
+      else if (CURSOR.menu===3) setPhase('howtoplay');
+      else if (CURSOR.menu===4) { CURSOR.opt=0; CURSOR.optFrom='title'; setPhase('options'); }
+      else if (CURSOR.menu===5) setPhase('highscores');
+      else if (CURSOR.menu===6) { CURSOR.shop=0; CURSOR.upgradeFrom='title'; setPhase('upgrade'); }
     }
+    e.preventDefault(); return;
+  }
+  // ── Mode select screen ─────────────────────────────────────────────
+  if (phase === 'modeselect') {
+    const N = GAME_MODES.length;
+    if (e.key==='ArrowUp')   { CURSOR.modesel=(CURSOR.modesel-1+N)%N; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowDown') { CURSOR.modesel=(CURSOR.modesel+1)%N;   sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='Enter'||e.key===' ') {
+      sfxManager.resume(); sfxManager.playMenuSelect();
+      const chosen = GAME_MODES[CURSOR.modesel].id;
+      gameMode = chosen;
+      if (chosen === 'challenge') {
+        // Daily Challenge: seed dreamscape index from today's date (format YYYYMMDD, e.g. 20260219)
+        // Same date = same dreamscape for all players, resets at midnight local time.
+        const today = new Date();
+        const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+        CFG.playMode = 'daily';
+        CFG.dreamIdx = seed % DREAMSCAPES.length;
+        startGame(CFG.dreamIdx);
+      } else if (chosen === 'grid') {
+        startGame(CFG.dreamIdx);
+      } else if (chosen === 'shooter') {
+        startGame(CFG.dreamIdx);
+      } else if (chosen === 'constellation') {
+        constellationMode.init({ dreamscapeId: null, level: 1 });
+        setPhase('playing');
+        cancelAnimationFrame(animId); animId = requestAnimationFrame(loop);
+      } else if (chosen === 'meditation') {
+        meditationMode.init({ dreamscapeId: null });
+        setPhase('playing');
+        cancelAnimationFrame(animId); animId = requestAnimationFrame(loop);
+      } else if (chosen === 'coop') {
+        coopMode.init({ dreamIdx: CFG.dreamIdx });
+        setPhase('playing');
+        cancelAnimationFrame(animId); animId = requestAnimationFrame(loop);
+      }
+    }
+    if (e.key==='Escape') setPhase('title');
     e.preventDefault(); return;
   }
   if (phase === 'dreamselect') {
@@ -1025,7 +1155,18 @@ window.addEventListener('keydown', e => {
     if (e.key==='Escape') setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
     e.preventDefault(); return;
   }
-  if (phase === 'highscores') { if(e.key==='Enter'||e.key==='Escape') setPhase('title'); e.preventDefault(); return; }
+  if (phase === 'highscores') {
+    if (e.key==='Enter'||e.key==='Escape') setPhase('title');
+    if (e.key==='a'||e.key==='A') setPhase('achievements');
+    e.preventDefault(); return;
+  }
+  if (phase === 'achievements') {
+    const N = ACHIEVEMENT_DEFS.length;
+    if (e.key==='ArrowUp')   { CURSOR.achieveScroll = Math.max(0, CURSOR.achieveScroll - 1); sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowDown') { CURSOR.achieveScroll = Math.min(Math.max(0, N - 8), CURSOR.achieveScroll + 1); sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='Enter'||e.key==='Escape') setPhase('title');
+    e.preventDefault(); return;
+  }
   if (phase === 'upgrade') {
     if (e.key==='ArrowUp')   { CURSOR.shop=(CURSOR.shop-1+UPGRADE_SHOP.length)%UPGRADE_SHOP.length; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowDown') { CURSOR.shop=(CURSOR.shop+1)%UPGRADE_SHOP.length; sfxManager.resume(); sfxManager.playMenuNav(); }
@@ -1086,6 +1227,14 @@ window.addEventListener('keydown', e => {
       if (e.key==='Escape') { shooterMode.paused = true; CURSOR.pause=0; setPhase('paused'); }
       e.preventDefault(); return;
     }
+    // Constellation / Meditation / Co-op: ESC returns to title
+    if (gameMode === 'constellation' || gameMode === 'meditation' || gameMode === 'coop') {
+      if (e.key==='Escape') {
+        constellationMode.cleanup(); meditationMode.cleanup(); coopMode.cleanup();
+        setPhase('title'); CURSOR.menu=0; game=null;
+      }
+      e.preventDefault(); return;
+    }
     if (e.key==='Escape') { CURSOR.pause=0; sessionTracker.pauseSession(); emergenceIndicators.record('pause_frequency'); characterStats.onPauseUsed(); questSystem.onPause(); dashboard.hide(); setPhase('paused'); }
     if ((e.key==='h'||e.key==='H') && !e.repeat) dashboard.toggle();
     if (e.key==='Shift' && !e.repeat) {
@@ -1093,6 +1242,7 @@ window.addEventListener('keydown', e => {
       setMatrix(next); setMatrixHoldTime(0);
       sfxManager.resume(); sfxManager.playMatrixSwitch(next === 'A');
       questSystem.onMatrixSwitch();
+      achievementSystem.onMatrixToggle();
       emergenceIndicators.record('matrix_mastery');
       logicPuzzles.onMatrixSwitch();  // Phase 9
       dreamYoga.onMatrixSwitch();     // Phase 2.5

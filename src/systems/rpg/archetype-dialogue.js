@@ -5,12 +5,21 @@
 //  Each archetype has 5 lines shown progressively across encounters.
 //  All dialogue is therapeutic — affirming sovereignty, compassion.
 //
+//  AI integration: if server/relay.js is running (HTTP_PORT = WS_PORT+1),
+//  this module fetches AI-generated dialogue from POST /ai-dialogue.
+//  The static tables below serve as immediate display + offline fallback.
+//
 //  Design law: sterilized wisdom framing; no dogma; player identity stable.
 // ═══════════════════════════════════════════════════════════════════════
 
 const STORAGE_KEY = 'gp_archetype_encounters';
 
+// Default relay HTTP base (WS port 8765 → HTTP port 8766)
+// Override via window.GLITCH_RELAY_HTTP before the game starts.
+const DEFAULT_AI_URL = 'http://localhost:8766/ai-dialogue';
+
 // 5 lines per archetype, indexed by encounter count (0–4, then cycling)
+// These are the static fallback tables — also shown immediately while AI loads.
 const DIALOGUE = {
   dragon: [
     'You have entered my domain. Show me your courage.',
@@ -66,12 +75,50 @@ export class ArchetypeDialogue {
     const lines = DIALOGUE[archetypeKey];
     if (!lines) return;
     const count = this._encounters[archetypeKey] || 0;
-    const text  = lines[count % lines.length];
+    // Show the static fallback line immediately so there is no delay
+    const fallbackText = lines[count % lines.length];
     this._encounters[archetypeKey] = count + 1;
-    this._current = { key: archetypeKey, text };
+    this._current = { key: archetypeKey, text: fallbackText };
     this._timer   = this._TOTAL;
     this._alpha   = 0;
     this._save();
+
+    // Attempt to enrich the dialogue with an AI-generated line (async).
+    // If it arrives while the dialogue is still on screen, replace the text.
+    this._fetchAIDialogue(archetypeKey, count);
+  }
+
+  // ─── AI fetch (fire-and-forget; static fallback already shown) ───
+  _fetchAIDialogue(archetypeKey, encounterCount) {
+    const aiUrl = (typeof window !== 'undefined' && window.GLITCH_RELAY_HTTP)
+      || DEFAULT_AI_URL;
+
+    // Only attempt if fetch is available (browser / modern Node)
+    if (typeof fetch === 'undefined') return;
+
+    const timeoutMs = 4000; // give up if relay doesn't respond in 4 s
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    fetch(aiUrl, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ archetypeKey, encounterCount }),
+      signal:  controller.signal,
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        clearTimeout(timer);
+        // Only update if the dialogue is still visible and matches this archetype
+        if (data && data.text && this._timer > 0 &&
+            this._current && this._current.key === archetypeKey) {
+          this._current.text = data.text;
+        }
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        // Network error / relay not running — static fallback is already shown
+      });
   }
 
   tick() {

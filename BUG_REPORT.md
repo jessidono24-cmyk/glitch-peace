@@ -301,18 +301,18 @@ The `purgDepth` realm system (HEAVEN/MIND/PURGATORY/HELL) is supposed to scale h
 ## Future Fix Roadmap
 
 ### HIGH PRIORITY
-- **Emotional HUD row not shown (E3 incomplete):** The `drawEmotionRow` function described in task-E3.md has not been added to `renderer.js`. The HUD height remains 106px without the coherence/distortion bar row.
-- **Realm label not shown in HUD footer (E4-B incomplete):** `task-E4-B.md` describes showing the realm name (◈ MIND / ◈ PURGATORY etc.) in the footer bar. This renderer change is not yet present.
-- **Temporal HUD banner incomplete (T2 EDIT 6):** The dreamscape banner should show the lunar phase and planetary day name (e.g. `VOID STATE · numbness | Waning Gibbous Mars`). The current renderer shows these separately in the right column instead of inline.
+- **Emotional HUD row (E3):** ✅ Fixed — `drawEmotionRow` added to `renderer.js`, HUD height expanded to 120px. Shows dominant emotion (color-coded), coherence bar (blue), and distortion bar (red/orange).
+- **Realm label in HUD footer (E4-B):** ✅ Fixed — `realmLabel(pd)` helper added; footer now shows HEAVEN/IMAGINATION/MIND/PURGATORY/HELL (color-coded) on the left.
+- **Temporal HUD banner (T2 EDIT 6):** ✅ Fixed — Dreamscape banner now shows lunar phase and planetary day inline (e.g. `VOID STATE · numbness · Mind | Waning Gibbous Mars`).
 
 ### MEDIUM PRIORITY
 - **Archetype dialogue system not fully connected:** `archetypeDialogue.reset()` and related calls are present but the dialogue triggers need review for coverage across all 14 archetypes.
-- **Rhythm mode death handling:** When `gameMode === 'rhythm'` and the player dies, `gameMode` is reset to `'grid'` but the death screen doesn't offer to restart in rhythm mode (unlike the constellation/meditation/coop fix from BUG-08).
+- **Rhythm mode death handling:** ✅ Fixed — `gameMode` now stays `'rhythm'` when the player dies; death screen restart handler has a new case for rhythm mode.
 - **Boss Rush mode boss spawning:** Boss Rush mode is referenced in the BUG_REPORT but integration with the boss-system's three boss types needs further testing to confirm all phases trigger correctly.
+- **Meditation mode `emotionalField.addEmotion`:** ✅ Fixed — Meditation mode now calls `addEmotion` when collecting somatic tiles (hope +0.04), PEACE tiles (peace +0.06), and INSIGHT tiles (clarity +0.05).
 
 ### LOW PRIORITY
 - **Fog of war radius hard-coded in renderer:** `window._fogRadius` correctly updates (4 + insight tokens / 5, capped at 7) but the fog draw in `renderer.js` still uses a hard-coded constant in some code paths. Ensure all fog renders read `window._fogRadius`.
 - **Achievement unlock sound sometimes fires twice:** When multiple achievements unlock on the same frame (e.g. boss kill + level up), `achievementSystem.popup` may cycle too fast to display both. Consider a queue.
 - **Shooter mode high-score not merged into main leaderboard:** Shooter-mode scores (`result.data.score`) are handled in the dead phase but `leaderboard.add()` is only called with the grid-game score. Shooter kills/score should also persist.
 - **Co-op mode second player input not rebindable:** P2 controls are hard-coded to WASD/Shift without an options screen entry.
-- **Meditation mode `emotionalField.addEmotion` not called:** Meditation mode runs its own session but never calls `window._emotionalField.addEmotion()`, so the HUD emotional state freezes at the pre-meditation value.

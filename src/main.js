@@ -1128,7 +1128,7 @@ window.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === 'Escape') {
       sfxManager.resume();
       setPhase('title');
-      CURSOR.menu = 2;
+      CURSOR.menu = 3;
     }
     e.preventDefault(); return;
   }
@@ -1169,9 +1169,18 @@ window.addEventListener('keydown', e => {
         // Daily Challenge: seed dreamscape index from today's date (format YYYYMMDD, e.g. 20260219)
         // Same date = same dreamscape for all players, resets at midnight local time.
         const today = new Date();
-        const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+        const dateKey = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+        const DAILY_KEY = 'gp_daily_idx';
+        const stored = JSON.parse(localStorage.getItem(DAILY_KEY) || 'null');
+        let dailyIdx;
+        if (stored && stored.date === dateKey) {
+          dailyIdx = stored.idx; // same day — restore persisted index
+        } else {
+          dailyIdx = dateKey % DREAMSCAPES.length;
+          localStorage.setItem(DAILY_KEY, JSON.stringify({ date: dateKey, idx: dailyIdx }));
+        }
         CFG.playMode = 'daily';
-        CFG.dreamIdx = seed % DREAMSCAPES.length;
+        CFG.dreamIdx = dailyIdx;
         startGame(CFG.dreamIdx);
       } else if (chosen === 'grid') {
         startGame(CFG.dreamIdx);
@@ -1259,8 +1268,25 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
   if (phase === 'dead') {
-    if (e.key==='Enter'||e.key===' ') { sfxManager.resume(); sfxManager.playMenuSelect(); startGame(CFG.dreamIdx); }
-    if (e.key==='Escape') { setPhase('title'); CURSOR.menu=0; }
+    if (e.key==='Enter'||e.key===' ') {
+      sfxManager.resume(); sfxManager.playMenuSelect();
+      if (gameMode === 'constellation') {
+        constellationMode.init({ dreamscapeId: null, level: 1 });
+        setPhase('playing');
+        cancelAnimationFrame(animId); animId = requestAnimationFrame(loop);
+      } else if (gameMode === 'meditation') {
+        meditationMode.init({ dreamscapeId: null });
+        setPhase('playing');
+        cancelAnimationFrame(animId); animId = requestAnimationFrame(loop);
+      } else if (gameMode === 'coop') {
+        coopMode.init({ dreamIdx: CFG.dreamIdx });
+        setPhase('playing');
+        cancelAnimationFrame(animId); animId = requestAnimationFrame(loop);
+      } else {
+        startGame(CFG.dreamIdx);
+      }
+    }
+    if (e.key==='Escape') { gameMode = 'grid'; setPhase('title'); CURSOR.menu=0; }
     e.preventDefault(); return;
   }
   if (phase === 'paused') {
@@ -1297,7 +1323,7 @@ window.addEventListener('keydown', e => {
       else if(CURSOR.pause===1){CURSOR.opt=0; CURSOR.optFrom='paused'; setPhase('options');}
       else if(CURSOR.pause===2 && gameMode!=='shooter'){CURSOR.shop=0;CURSOR.upgradeFrom='paused';setPhase('upgrade');}
       else if(CURSOR.pause===2 && gameMode==='shooter'){ shooterMode.paused=false; setPhase('playing'); }
-      else { if(gameMode==='shooter') shooterMode.paused=false; else { sessionTracker.endSession(0,0); } setPhase('title'); CURSOR.menu=0; game=null; }
+      else { if(gameMode==='shooter') shooterMode.paused=false; else { sessionTracker.endSession(0,0); } gameMode='grid'; setPhase('title'); CURSOR.menu=0; game=null; }
     }
     if (e.key==='Escape') {
       if(gameMode==='shooter') { shooterMode.paused=false; setPhase('playing'); }
@@ -1315,6 +1341,7 @@ window.addEventListener('keydown', e => {
     if (gameMode === 'constellation' || gameMode === 'meditation' || gameMode === 'coop') {
       if (e.key==='Escape') {
         constellationMode.cleanup(); meditationMode.cleanup(); coopMode.cleanup();
+        gameMode = 'grid';
         setPhase('title'); CURSOR.menu=0; game=null;
       }
       e.preventDefault(); return;

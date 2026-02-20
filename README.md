@@ -2,11 +2,11 @@
 
 > **A multidimensional consciousness awakening platform** for healing, learning, and transformation — playable today as an HTML5 game, building toward a free Steam release.
 
-[![Version](https://img.shields.io/badge/version-2.1.0--alpha-blue.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/jessidono24-cmyk/glitch-peace)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
-[![Lines of Code](https://img.shields.io/badge/LOC-12%2C900%2B-orange.svg)](src/)
-[![Progress](https://img.shields.io/badge/completion-95%25-brightgreen.svg)](#-development-roadmap)
+[![Lines of Code](https://img.shields.io/badge/LOC-13%2C000%2B-orange.svg)](src/)
+[![Progress](https://img.shields.io/badge/completion-97%25-brightgreen.svg)](#-development-roadmap)
 
 *Begin in stillness. Emerge through pattern recognition. Transform through play.*
 
@@ -45,7 +45,7 @@ GLITCH·PEACE is a **consciousness engine disguised as a game**. Built on extens
 - **Lucidity affirmations** surfacing at interlude transitions
 - Research basis: LaBerge (1990), Stumbrys et al. (2012), Tibetan dream yoga, Hobson (2009)
 
-### 🎮 21 Play Styles *(v2.0.0: Nightmare 🌑 + Rhythm 🎵 added)*
+### 🎮 21 Play Styles *(v2.0.0: Nightmare 🌑 + Rhythm 🎵 added — v2.2.0: all score multipliers fixed)*
 Each style radically changes gameplay feel. Select in OPTIONS → PLAY STYLE (← → to cycle):
 
 | Style | Feel | Key Change |
@@ -94,27 +94,43 @@ Visible in the dreamscape selection screen for each level:
 
 ---
 
-## 📦 Current Version: v2.1.0-alpha (February 2026)
+## 📦 Current Version: v2.2.0 (February 2026)
 
 ### Build Statistics
 | Metric | Value |
 |--------|-------|
 | Source files | 46 JS modules |
-| Lines of code | ~12,900 |
-| Bundle size | 304 KB (99 KB gzipped) |
-| Build time | ~620ms |
-| Completion | ~95% of full vision |
+| Lines of code | ~13,000 |
+| Bundle size | 352 KB (113 KB gzipped) |
+| Build time | ~780ms |
+| Completion | ~97% of full vision |
+| Bug fixes | 13 issues resolved (v2.2.0) |
+
+### What's New in v2.2.0 — Bug Fixes & Gameplay Integrity
+
+- ✅ **BUG-13 Fixed: Play mode score multiplier now applied** — Horror (3×), Nightmare (5×), Ritual Space (1.6×), etc. now correctly scale all tile scores (PEACE, INSIGHT, MEMORY, all somatic tiles, magnet sweeps). Advertised difficulty reward now real.
+- ✅ **BUG-07/08 Fixed: gameMode reset on mode exit** — Exiting Constellation / Meditation / Co-op via ESC or death screen now correctly resets `gameMode` to `'grid'`, preventing broken blank-canvas state on "Start Journey". Death screen restart also correctly re-initializes the active mode.
+- ✅ **BUG-04 Fixed: Boss respects walls** — Boss movement now checks `T.WALL` before stepping, same as regular enemies. Terrain is now tactically relevant during boss fights.
+- ✅ **BUG-02 Fixed: Shield blocks hallucination damage** — Chaos Phantoms (level 3+ hallucinations) now check `UPG.shield` before dealing damage, consistent with regular enemy behavior.
+- ✅ **BUG-03 Fixed: Shield blocks capture zone damage** — Capture zone tick damage (5 HP per enemy per zone) now respects the player's active shield.
+- ✅ **BUG-05 Fixed: Boss death now fires particle bursts** — `_handleBossDeath` now accepts and calls `burstFn` — a dramatic dual burst (player position + boss position) fires on every boss defeat.
+- ✅ **BUG-06 Fixed: Philosopher's Stone heals to actual max HP** — `game.maxHp || 100` → `UPG.maxHp`. Players who bought +MAX HP upgrades receive a full restore.
+- ✅ **BUG-09 Fixed: Magnet collects all insight tokens correctly** — Magnet loop now accumulates a delta count and calls `setInsightTokens` once at the end, correctly granting all tokens swept in a single move.
+- ✅ **BUG-01 Fixed: TRAP tile push effect implemented** — The push-back effect (declared in `TILE_DEF` as `push: 1`) now fires for any tile with `push > 0`, including TRAP (×). RAGE and TRAP both push the player one step in the direction of travel.
+- ✅ **BUG-10 Fixed: HOW TO PLAY returns cursor to correct position** — `CURSOR.menu` set to `3` (HOW TO PLAY) instead of `2` on exit, consistent with all other menu screens.
+- ✅ **BUG-11 Fixed: Shooter contact cooldown uses current frame delta** — `checkCollisions()` now receives `dtSec` as a parameter instead of using the stale `this._lastDt` field.
+- ✅ **BUG-12 Fixed: Daily challenge index persisted across refreshes** — Daily dreamscape index saved to `localStorage` keyed by date (`gp_daily_idx`). Refreshing mid-session keeps the same dreamscape; resets correctly at midnight.
 
 ### What's In This Build
 - ✅ **Complete base game** (Phases 1-5): 21 tile types, **18 dreamscapes**, 5 archetypes, 9+ enemy AI behaviors
-- ✅ **Magnet upgrade now functional** — auto-collects PEACE/INSIGHT tiles within radius 2 on each move
+- ✅ **Magnet upgrade now functional** — auto-collects PEACE/INSIGHT tiles within radius 2 on each move; correctly counts all swept tokens
 - ✅ **`playPlayerHurt` SFX** — low-frequency sawtooth hurt sound now wired when stepping on hazard tiles (distinct from enemy hit)
 - ✅ **Enemy behavior aliases** — `hunt` (horror/predictive), `aggressive` (chase_fast), `passive`/`none` (gentle wander), `random` (roguelike) now all properly implemented
 - ✅ **Per-tile transmutation sparkle FX** — each hazard tile converted in alchemy radius now emits its own particle burst (up to 8 tiles)
 - ✅ **2 new Alchemy Quests** — "The Alchemist" (5 transmutations + 3 elements) and "The Great Work" (Philosopher's Stone + aurora phase); quest count 5→7
 - ✅ **Named Constellation Rewards** (Phase M6) — skymap/ritual_space mode: every 3 star tiles collected awards a named constellation (16 names: Orion, Pleiades, Cassiopeia, etc.) + score bonus; constellation flash overlay in renderer
 - ✅ **Alchemy System** (Phase M6 extension, deepened) — proper Philosopher's Stone: ALL 4 classical elements (fire/water/earth/air) used in session triggers; 8-transmutation fallback; element-history tracking; dashboard shows Great Work progress (X/4 elements); 2 new SFX
-- ✅ **19 Play Modes** — **NEW: Ritual Space 🕯️** (somatic-alchemical hybrid: seeds ×2, half-damage, alchemy enabled)
+- ✅ **21 Play Modes** — all modes' score multipliers are now correctly applied
 - ✅ **Constellation visual overlay** — Skymap + Ritual Space modes now draw glowing dashed lines between nearby star tiles (INSIGHT/ARCHETYPE), forming real constellations on the grid; Phase M6 ↑ 20%→65%
 - ✅ **Death screen enriched** — RPG level, quests completed, alchemy phase/transmutations shown on death
 - ✅ **Interlude enriched** — Cosmology info (4.2s), RPG level + active quest progress (4.8s), milestone (5.2s)
@@ -123,7 +139,7 @@ Visible in the dreamscape selection screen for each level:
 - ✅ **18 Dreamscapes** — all complete
 - ✅ **4 Somatic Tiles** (Phase 2.6) — BODY_SCAN ◯, BREATH_SYNC ≋, ENERGY_NODE ✦, GROUNDING ⊕ — full animated visuals + somatic SFX
 - ✅ **RPG Character System** (Phase M5) — STR/INT/WIS/VIT stats; XP + level; archetype dialogue; **5 main quests**; quest progress panel in dashboard
-- ✅ **Multi-phase Boss System** (Phase M3.5) — 3 boss types × 3 phases; Void Nexus & Ancient Structure get bosses
+- ✅ **Multi-phase Boss System** (Phase M3.5) — 3 boss types × 3 phases; Void Nexus & Ancient Structure get bosses; bosses now respect walls; dramatic death burst FX
 - ✅ **5 new environment events** — solar_pulse, ocean_surge, crystal_resonance, wind_drift, void_expansion
 - ✅ **Quest panel** in H-key dashboard — real-time quest progress, active objective, completion count
 - ✅ **Alchemy panel** in H-key dashboard — phase, seeds, transmutations, Great Work progress (X/4 elements), philosopher stones
@@ -145,7 +161,7 @@ Visible in the dreamscape selection screen for each level:
 - ✅ **Campaign manager** — narrative arc for all 18 dreamscapes
 - ✅ **Procedural audio** — 17 distinct SFX (incl. dreamComplete + transmutation + philosopher's stone)
 - ✅ **Onboarding flow** — age group, language, difficulty selection
-- ✅ **HOW TO PLAY screen** — tile guide, controls (incl. X=transmute for Alchemist/Ritual), matrix system, 18 dreamscapes / 19 modes noted
+- ✅ **HOW TO PLAY screen** — tile guide, controls (incl. X=transmute for Alchemist/Ritual), matrix system, 18 dreamscapes / 21 modes noted
 - ✅ **Smooth level transitions** — 10-second readable interlude; cosmology + RPG quest info + milestone; player-skippable
 - ✅ **Boss phase banner** + **Quest flash** + **Alchemy HUD strip** — all animated overlays
 
@@ -304,29 +320,30 @@ glitch-peace/
 Phase 1-5   ████████████████████ 100% ✅  Foundation, base game
 Phase M1-2  ████████████████████ 100% ✅  Mode system, Shooter
 Phase M3    ████████████████████ 100% ✅  Campaign structure
-Phase M4+   ████████████████████ 100% ✅  21 Play Modes (Nightmare 🌑 + Rhythm 🎵 added)
+Phase M4+   ████████████████████ 100% ✅  21 Play Modes (Nightmare 🌑 + Rhythm 🎵 + score muls fixed v2.2)
 Phase 2.5   ████████████████████ 100% ✅  Dream Yoga
 Phase 6-11  ████████████████████ 100% ✅  Learning/Awareness/IQ/Chakra
 Cosmologies ████████████████████ 100% ✅  12 frameworks mapped
 Phase 2.6   ████████████████████ 100% ✅  Embodiment Tiles — animated visuals + somatic SFX
 UX Polish   ████████████████████ 100% ✅  HOW TO PLAY; transitions; somatic visuals; tile SFX; level-up
-Boss System ████████████████████ 100% ✅  3 bosses × 3 phases; speedMs wired; 4 dreamscapes get bosses
+Boss System ████████████████████ 100% ✅  3 bosses × 3 phases; wall-aware movement; death burst FX fixed
 Quest System████████████████████ 100% ✅  7 main quests (5 core + 2 alchemy); dashboard panel; quest flash
 18 Dreamsc. ████████████████████ 100% ✅  All 18 dreamscapes complete (target reached)
 Containment ████████████████████ 100% ✅  C-key contZones rendered + enemy stun working
 Gamepad     ████████████████████ 100% ✅  Gamepad API — Steam controller support
 Enemy AI    ████████████████████ 100% ✅  hunt/aggressive/passive/none/random all properly aliased
-Magnet      ████████████████████ 100% ✅  Auto-collects PEACE/INSIGHT within radius 2
+Magnet      ████████████████████ 100% ✅  Auto-collects PEACE/INSIGHT; all tokens counted correctly (fixed)
 SFX         ████████████████████ 100% ✅  playPlayerHurt now wired; 18 total SFX
 Phase M5    ████████████████████ 100% ✅  RPG: stats + XP + level + quests + death screen RPG stats
-Alchemy     ████████████████████ 100% ✅  Proper Philosopher's Stone; element tracking; Ritual Space; per-tile FX; 3 SFX; 2 quests
+Alchemy     ████████████████████ 100% ✅  Philosopher's Stone heals to true maxHP (fixed); Ritual Space; SFX
+Bug Fixes   ████████████████████ 100% ✅  v2.2.0: 13 gameplay-correctness bugs fixed
 Phase M6    █████████████████░░░  95% 🔨  Constellation overlay + named rewards; completion rewards TBD
 
 Phase M7    ████░░░░░░░░░░░░░░░░  20% 🔨  Rhythm Mode implemented (beat-sync scoring)
 Phase M8    ░░░░░░░░░░░░░░░░░░░░   0% ⬜  Multiplayer / Co-op
 Steam pack  ██░░░░░░░░░░░░░░░░░░  10% 🔨  Electron pathway docs; Gamepad API done
 
-Overall: ~12,900 / 13,600 estimated lines (~95%)
+Overall: ~13,000 / 13,600 estimated lines (~97%)
 ```
 
 ### 🚧 Next Steps

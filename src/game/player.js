@@ -4,6 +4,12 @@ import { CFG, UPG } from '../core/state.js';
 import { rnd, pick } from '../core/utils.js';
 import { burst, resonanceWave, addEcho } from './particles.js';
 
+// Push message labels for tiles that push the player back
+const PUSH_MSG = {
+  [T.RAGE]:  '-RAGE (pushed!)',
+  [T.TRAP]:  '-TRAP (pushed!)',
+};
+
 export function setEmotion(g, em) {
   UPG.emotion = em; UPG.emotionTimer = 120;
   g.emotionTimer = 120; g.slowMoves = (em === 'hopeless' || em === 'despair');
@@ -99,9 +105,10 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
 
   // ── Tile effects ──
   const d = { dmgMul: CFG.difficulty === 'hard' ? 1.45 : CFG.difficulty === 'easy' ? 0.55 : 1.0 };
+  const sMul = g.scoreMulMode || 1.0; // play-mode score multiplier (e.g. Horror 3×, Nightmare 5×)
 
   if (tileType === T.PEACE) {
-    const pts = Math.round((150 + g.level * 20) * UPG.resonanceMultiplier);
+    const pts = Math.round((150 + g.level * 20) * UPG.resonanceMultiplier * sMul);
     g.score += pts;
     // Reverse mode: peace tiles damage instead of healing
     if (g.reverseMode) {
@@ -130,7 +137,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
     if (g.peaceLeft === 0) onNextDreamscape();
 
   } else if (tileType === T.INSIGHT) {
-    const pts = Math.round((300 + g.level * 50) * UPG.resonanceMultiplier);
+    const pts = Math.round((300 + g.level * 50) * UPG.resonanceMultiplier * sMul);
     g.score += pts; setInsightTokens(insightTokens + 1);
     g.grid[ny][nx] = T.VOID; g.insightLeft--;
     burst(g, nx, ny, '#00eeff', 24, 4);
@@ -156,25 +163,25 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
     for (const e of g.enemies) if (Math.abs(e.y - ny) + Math.abs(e.x - nx) <= 2) e.stunTimer = 600;
 
   } else if (tileType === T.MEMORY) {
-    g.grid[ny][nx] = T.VOID; g.score += 50;
+    g.grid[ny][nx] = T.VOID; g.score += Math.round(50 * sMul);
     onMsg('MEMORY ECHO…', '#88bbaa', 30); burst(g, nx, ny, '#88bbaa', 10, 2);
 
   // ── Phase 2.6: Embodiment / Somatic Tiles ──────────────────────────
   } else if (tileType === T.BODY_SCAN) {
-    g.grid[ny][nx] = T.VOID; g.score += 80;
+    g.grid[ny][nx] = T.VOID; g.score += Math.round(80 * sMul);
     g.hp = Math.min(UPG.maxHp, g.hp + 10);
     burst(g, nx, ny, '#00aa44', 14, 2.5);
     onMsg('BODY SCAN +10 HP  ·  notice sensations…', '#00cc44', 55);
     setEmotion(g, 'peace');
 
   } else if (tileType === T.BREATH_SYNC) {
-    g.grid[ny][nx] = T.VOID; g.score += 60;
+    g.grid[ny][nx] = T.VOID; g.score += Math.round(60 * sMul);
     UPG.energy = Math.min(UPG.energyMax, UPG.energy + 20);
     burst(g, nx, ny, '#6688ff', 14, 2.5);
     onMsg('BREATH SYNC  ·  inhale 4  ·  hold 4  ·  exhale 4…', '#6688ff', 100);
 
   } else if (tileType === T.ENERGY_NODE) {
-    g.grid[ny][nx] = T.VOID; g.score += 120;
+    g.grid[ny][nx] = T.VOID; g.score += Math.round(120 * sMul);
     UPG.energy = Math.min(UPG.energyMax, UPG.energy + 40);
     UPG.glitchPulseCharge = Math.min(100, UPG.glitchPulseCharge + 20);
     burst(g, nx, ny, '#cc44ff', 18, 3);
@@ -182,7 +189,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
     onMsg('ENERGY NODE  +40 ENERGY  ✦', '#cc44ff', 45);
 
   } else if (tileType === T.GROUNDING) {
-    g.grid[ny][nx] = T.VOID; g.score += 70;
+    g.grid[ny][nx] = T.VOID; g.score += Math.round(70 * sMul);
     g.slowMoves = false; UPG.emotion = 'neutral'; UPG.emotionTimer = 0;
     g.hp = Math.min(UPG.maxHp, g.hp + 5);
     burst(g, nx, ny, '#886644', 12, 2);
@@ -194,10 +201,11 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
     } else {
       const def = TILE_DEF[tileType];
       let dmg = Math.round(def.dmg * d.dmgMul * (matrixActive === 'A' ? 1.25 : 1) * (g.dmgMul ?? 1));
-      if (tileType === T.RAGE && def.push > 0) {
+      if (TILE_DEF[tileType]?.push > 0) {
         const pby = ny + dy * def.push, pbx = nx + dx * def.push;
         if (pby >= 0 && pby < sz && pbx >= 0 && pbx < sz && g.grid[pby][pbx] !== T.WALL) {
-          g.player.y = pby; g.player.x = pbx; onMsg('-RAGE (pushed!)', '#ff0066', 40);
+          g.player.y = pby; g.player.x = pbx;
+          onMsg(PUSH_MSG[tileType] || '-PUSHED!', '#ff0066', 40);
         }
       }
       if (tileType === T.SELF_HARM)  g.grid[ny][nx] = T.PAIN;
@@ -235,6 +243,7 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
   // ── Magnet upgrade: auto-collect peace/insight tiles within radius 2 ──
   if (UPG.magnet) {
     const MAGNET_R = 2;
+    let magnetInsightBonus = 0; // track additional tokens collected this sweep
     outer: for (let mdy = -MAGNET_R; mdy <= MAGNET_R; mdy++) {
       for (let mdx = -MAGNET_R; mdx <= MAGNET_R; mdx++) {
         if (mdy === 0 && mdx === 0) continue;
@@ -243,19 +252,20 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
         if (my < 0 || my >= sz || mx < 0 || mx >= sz) continue;
         const mt = g.grid[my][mx];
         if (mt === T.PEACE && !g.reverseMode) {
-          g.score += Math.round((80 + g.level * 10) * UPG.resonanceMultiplier);
+          g.score += Math.round((80 + g.level * 10) * UPG.resonanceMultiplier * sMul);
           g.hp = Math.min(UPG.maxHp, g.hp + 8);
           g.grid[my][mx] = T.VOID; g.peaceLeft--;
           burst(g, mx, my, UPG.particleColor || '#00ffaa', 8, 2);
           if (g.peaceLeft === 0) { onNextDreamscape(); return true; }
         } else if (mt === T.INSIGHT) {
-          g.score += Math.round((150 + g.level * 20) * UPG.resonanceMultiplier);
-          setInsightTokens(insightTokens + 1);
+          g.score += Math.round((150 + g.level * 20) * UPG.resonanceMultiplier * sMul);
+          magnetInsightBonus++;
           g.grid[my][mx] = T.VOID; g.insightLeft--;
           burst(g, mx, my, '#00eeff', 10, 2.5);
         }
       }
     }
+    if (magnetInsightBonus > 0) setInsightTokens(insightTokens + magnetInsightBonus);
   }
 
   return true;

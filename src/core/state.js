@@ -11,6 +11,10 @@ export const CFG = {
   playMode:   'arcade',  // see src/systems/play-modes.js
   viewMode:   'flat',    // 'flat' | 'iso'  — 3D-B isometric toggle
   chosenArchetype: null, // key into ARCHETYPES, set by archetype selector; null = random/dreamscape default
+  // ── Accessibility ──────────────────────────────────────────────────────
+  highContrast:  false,  // colorblind-friendly high-contrast tile palette
+  reducedMotion: false,  // disable screen shake, flash overlay, sparkle particles
+  fontScale:     1.0,    // text size multiplier: 0.8 | 1.0 | 1.2 | 1.4
 };
 
 // ═══════════════════════════════════════════════════════════

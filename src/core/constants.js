@@ -83,6 +83,31 @@ export const PAL_A = makePal({
   [T.GLITCH]:   { bg:'#1a0028', bd:'#cc00ff', glow:'#ff00ff' },
 });
 
+// ── High-contrast / colorblind-friendly palette ───────────────────────────
+// Uses shapes + patterns are primary differentiators; colors chosen for
+// deuteranopia (green-blind) and protanopia (red-blind) safety using
+// blue/yellow/white/black high-contrast combinations.
+export const PAL_HC = makePal({
+  [T.VOID]:     { bg:'#000000', bd:'rgba(255,255,255,0.08)' },
+  [T.DESPAIR]:  { bg:'#001040', bd:'#4488ff', glow:'#6699ff' },  // blue (avoids red/green confusion)
+  [T.TERROR]:   { bg:'#300000', bd:'#ffffff', glow:'#ffffff' },  // white on black (high contrast)
+  [T.SELF_HARM]:{ bg:'#1a0000', bd:'#ff8800', glow:'#ffaa00' },  // orange
+  [T.PEACE]:    { bg:'#001a28', bd:'#00ccff', glow:'#00eeff' },  // cyan (safe for most CVD)
+  [T.WALL]:     { bg:'#0a0a0a', bd:'#666677', glow:null },
+  [T.INSIGHT]:  { bg:'#0a0818', bd:'#ffdd00', glow:'#ffee44' },  // yellow
+  [T.RAGE]:     { bg:'#1a0800', bd:'#ff8800', glow:'#ffaa00' },  // orange
+  [T.HOPELESS]: { bg:'#080818', bd:'#8888ff', glow:'#aaaaff' },  // light blue
+  [T.GLITCH]:   { bg:'#0a0028', bd:'#ff00ff', glow:'#ff44ff' },  // magenta (distinct from all)
+  [T.ARCHETYPE]:{ bg:'#0a0a00', bd:'#ffff00', glow:'#ffff44' },  // bright yellow
+  [T.TELEPORT]: { bg:'#000814', bd:'#00ffff', glow:'#44ffff' },  // cyan
+  [T.TRAP]:     { bg:'#100800', bd:'#ff6600', glow:'#ff8800' },  // orange
+  [T.PAIN]:     { bg:'#0a0000', bd:'#ff4400', glow:'#ff6622' },
+  [T.BODY_SCAN]:  { bg:'#000a04', bd:'#00ffcc', glow:'#00ffaa' },
+  [T.BREATH_SYNC]:{ bg:'#000818', bd:'#88aaff', glow:'#aaccff' },
+  [T.ENERGY_NODE]:{ bg:'#080014', bd:'#ff88ff', glow:'#ffaaff' },
+  [T.GROUNDING]:  { bg:'#050400', bd:'#ddbb44', glow:'#eedd66' },
+});
+
 // ═══════════════════════════════════════════════════════════
 //  ARCHETYPES
 // ═══════════════════════════════════════════════════════════

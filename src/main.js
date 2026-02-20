@@ -97,14 +97,16 @@ const ctx    = canvas.getContext('2d');
 const DPR    = Math.min(window.devicePixelRatio || 1, 2);
 
 function resizeCanvas() {
+  const fs = CFG.fontScale || 1.0;
   const logW = CW(), logH = CH();
   // Draw at DPR-scaled resolution
   canvas.width  = logW * DPR;
   canvas.height = logH * DPR;
   // Scale CSS dimensions to fill the viewport while maintaining aspect ratio
+  // fontScale zooms the canvas: 1.4 = 40% larger text/UI
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const scale = Math.min(vw / logW, vh / logH);
+  const scale = Math.min(vw / logW, vh / logH) * fs;
   canvas.style.width  = Math.round(logW * scale) + 'px';
   canvas.style.height = Math.round(logH * scale) + 'px';
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1300,7 +1302,7 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
   if (phase === 'options') {
-    const OPT_COUNT = 8; // rows: gridsize, difficulty, particles, playstyle, viewmode, sfxvol, languages, back
+    const OPT_COUNT = 11; // rows: gridsize, difficulty, particles, playstyle, viewmode, sfxvol, highcontrast, reducedmotion, fontscale, languages, back
     if (e.key==='ArrowUp')   { CURSOR.opt=(CURSOR.opt-1+OPT_COUNT)%OPT_COUNT; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowDown') { CURSOR.opt=(CURSOR.opt+1)%OPT_COUNT; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowLeft'||e.key==='ArrowRight') {
@@ -1323,6 +1325,14 @@ window.addEventListener('keydown', e => {
         if(!PLAYER_PROFILE.sfxMuted) sfxManager.setVolume(PLAYER_PROFILE.sfxVol);
         savePlayerProfile();
       }
+      else if(CURSOR.opt===6) { CFG.highContrast = !CFG.highContrast; }  // HIGH CONTRAST toggle
+      else if(CURSOR.opt===7) { CFG.reducedMotion = !CFG.reducedMotion; } // REDUCED MOTION toggle
+      else if(CURSOR.opt===8) { // FONT SCALE: cycle S/M/L/XL
+        const FONT_SCALES = [0.8, 1.0, 1.2, 1.4];
+        const fi = FONT_SCALES.indexOf(CFG.fontScale); const ni = (fi < 0 ? 1 : fi) + dir;
+        CFG.fontScale = FONT_SCALES[(ni + FONT_SCALES.length) % FONT_SCALES.length];
+        resizeCanvas(); // re-apply scale immediately
+      }
       sfxManager.resume(); sfxManager.playMenuNav();
     }
     if (e.key==='Enter') {
@@ -1332,8 +1342,10 @@ window.addEventListener('keydown', e => {
         savePlayerProfile();
         sfxManager.resume(); sfxManager.playMenuSelect();
       }
-      else if(CURSOR.opt===6) { setPhase('langopts'); }  // Language settings
-      else if(CURSOR.opt===7) setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
+      else if(CURSOR.opt===6) { CFG.highContrast = !CFG.highContrast; sfxManager.resume(); sfxManager.playMenuSelect(); } // HIGH CONTRAST
+      else if(CURSOR.opt===7) { CFG.reducedMotion = !CFG.reducedMotion; sfxManager.resume(); sfxManager.playMenuSelect(); } // REDUCED MOTION
+      else if(CURSOR.opt===9) { setPhase('langopts'); }  // Language settings
+      else if(CURSOR.opt===10) setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
     }
     if (e.key==='Escape') setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
     e.preventDefault(); return;

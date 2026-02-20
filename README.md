@@ -104,7 +104,7 @@ Visible in the dreamscape selection screen for each level:
 | Bundle size | 1,159 KB (321 KB gzipped) |
 | Build time | ~2.9s |
 | Completion | 100% of original blueprint vision |
-| Bug fixes | 13 (v2.2.0) + 2 (v2.3.0) + 0 (v2.4.0) |
+| Bug fixes | 13 (v2.2.0) + 2 (v2.3.0) + 1 (v2.4.0) |
 
 ### What's New in v2.4.0 — Rhythm M7, Archetype Selector, Biome System, WebSocket Co-op
 

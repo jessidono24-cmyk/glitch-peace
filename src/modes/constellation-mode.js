@@ -159,8 +159,7 @@ export class ConstellationMode {
             this.visitedNodes.push({ y: ny, x: nx });
 
             this.sfxManager.playPeaceCollect();
-            burst(g.particles, ny * (CELL + GAP) + CELL / 2,
-              nx * (CELL + GAP) + CELL / 2, '#00eeff', 12);
+            burst(g, nx, ny, '#00eeff', 12, 3);
 
             // Every 3 stars = constellation named
             if (this.visitedNodes.length % 3 === 0) {

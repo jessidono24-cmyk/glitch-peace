@@ -255,12 +255,14 @@ export class CoopMode {
       const nextDs = DREAMSCAPES[nextDsIdx];
       const sz2 = SZ();
       const prevScore = g.score;
-      this.game = buildDreamscape(nextDs, sz2, this._level, 0, g.player.hp, UPG.maxHp, []);
+      const prevHp    = g.player.hp;
+      this.game = buildDreamscape(nextDs, sz2, this._level, 0, prevHp, UPG.maxHp, []);
       this.game.score = prevScore;
       this.game.player.y = 0; this.game.player.x = 0;
       this.p2.y = sz2 - 1; this.p2.x = sz2 - 1;
       this.game.grid[sz2-1][sz2-1] = T.VOID;
-      g.msg = '⬆ LEVEL ' + this._level + '  COOP ADVANCE!'; g.msgColor = '#ffcc44'; g.msgTimer = 120;
+      this.game.msg = '⬆ LEVEL ' + this._level + '  COOP ADVANCE!';
+      this.game.msgColor = '#ffcc44'; this.game.msgTimer = 120;
       return null;
     }
 

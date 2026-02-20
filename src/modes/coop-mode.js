@@ -8,12 +8,11 @@
 //  Dream ends when EITHER player's HP reaches 0, or all peace nodes
 //  are collected.
 //
-//  Design:
-//    - Two distinct player objects on the same dreamscape grid
-//    - Shared peace node collection & score
-//    - Individual HP tracking (P1 shown left, P2 shown right)
-//    - Enemies target the nearest player
-//    - Cooperative synergy: both collect somatic tiles for combined healing
+//  Online mode (config.online = true):
+//    Connects to the WebSocket relay at config.relayUrl (default:
+//    ws://localhost:8765).  Local player is always P1; remote is P2.
+//    P1 sends { type:'input', data:{key,dy,dx} } on every move.
+//    Receives { type:'relay', from:'p2', data:{key,dy,dx} } from server.
 // ═══════════════════════════════════════════════════════════════════════
 
 import { T, DREAMSCAPES, CELL, GAP } from '../core/constants.js';
@@ -23,6 +22,79 @@ import { SZ, buildDreamscape, CW, CH } from '../game/grid.js';
 import { stepEnemies } from '../game/enemy.js';
 import { burst } from '../game/particles.js';
 import { drawGame } from '../ui/renderer.js';
+
+// ── Network relay client ─────────────────────────────────────────────────
+const DEFAULT_RELAY_URL = 'ws://localhost:8765';
+
+class RelayClient {
+  constructor(url, roomId) {
+    this._ws       = null;
+    this._role     = null;
+    this._ready    = false;     // true when peer has joined
+    this._inQueue  = [];        // incoming messages from peer
+    this._url      = url;
+    this._roomId   = roomId;
+    this._connect();
+  }
+
+  _connect() {
+    try {
+      this._ws = new WebSocket(this._url);
+    } catch (_e) {
+      console.warn('[CoopRelay] WebSocket unavailable');
+      return;
+    }
+    this._ws.onopen = () => {
+      this._send({ type: 'join', roomId: this._roomId });
+    };
+    this._ws.onmessage = (evt) => {
+      let msg;
+      try { msg = JSON.parse(evt.data); } catch (_e) { return; }
+      switch (msg.type) {
+        case 'joined':
+          this._role = msg.role;
+          console.log(`[CoopRelay] joined as ${this._role} in room ${msg.roomId}`);
+          break;
+        case 'peer_joined':
+          this._ready = true;
+          console.log('[CoopRelay] peer joined — starting online co-op');
+          break;
+        case 'peer_left':
+          this._ready = false;
+          console.log('[CoopRelay] peer left');
+          break;
+        case 'relay':
+          this._inQueue.push(msg);
+          break;
+      }
+    };
+    this._ws.onerror = (e) => console.warn('[CoopRelay] error', e.message || e);
+    this._ws.onclose = () => { this._ready = false; };
+  }
+
+  _send(obj) {
+    try {
+      if (this._ws?.readyState === WebSocket.OPEN) this._ws.send(JSON.stringify(obj));
+    } catch (_e) {}
+  }
+
+  sendInput(data) { this._send({ type: 'input', data }); }
+
+  /** Drain incoming queue, return array of messages */
+  drain() {
+    const q = this._inQueue.splice(0);
+    return q;
+  }
+
+  get isOnline()   { return this._ready; }
+  get role()       { return this._role; }
+
+  destroy() {
+    try { this._ws?.close(); } catch (_e) {}
+    this._ws = null;
+  }
+}
+
 
 export class CoopMode {
   constructor(sharedSystems) {
@@ -44,6 +116,9 @@ export class CoopMode {
     this.anomalyData     = { row: -1, col: -1, t: 0 };
     this._result         = null;
     this._dreamStartTime = 0;
+    this._relay          = null;  // RelayClient instance (online co-op)
+    this._online         = false; // true when connected to relay
+    this._roomId         = null;
   }
 
   init(config) {
@@ -57,6 +132,17 @@ export class CoopMode {
     this._p2Dead         = false;
     this._p2ReviveTimer  = 0;   // countdown until P2 permanently removed
     this._level          = 1;
+
+    // ── Online relay setup ─────────────────────────────────────────────
+    if (this._relay) { this._relay.destroy(); this._relay = null; }
+    this._online = !!(config.online);
+    if (this._online) {
+      const url    = config.relayUrl || DEFAULT_RELAY_URL;
+      const roomId = config.roomId   || Math.random().toString(36).slice(2,8).toUpperCase();
+      this._relay  = new RelayClient(url, roomId);
+      this._roomId = roomId;
+      console.log(`[CoopMode] online — room ${roomId}  relay ${url}`);
+    }
 
     const dsIdx = config.dreamIdx || CFG.dreamIdx || 0;
     const ds    = DREAMSCAPES[dsIdx % DREAMSCAPES.length];
@@ -164,20 +250,38 @@ export class CoopMode {
     };
     for (const [k,[dy,dx]] of Object.entries(P1_DIRS)) {
       if (keys.has(k)) {
+        const prevT = this.lastMoveP1;
         this.lastMoveP1 = this._movePlayer(g.player, dy, dx, ts, this.lastMoveP1);
+        // Relay P1 input to online peer
+        if (this._online && this._relay && this.lastMoveP1 !== prevT) {
+          this._relay.sendInput({ key: k, dy, dx });
+        }
         break;
       }
     }
 
-    // P2 movement: WASD
-    const P2_DIRS = {
-      w:[-1,0], s:[1,0], a:[0,-1], d:[0,1],
-      W:[-1,0], S:[1,0], A:[0,-1], D:[0,1],
-    };
-    for (const [k,[dy,dx]] of Object.entries(P2_DIRS)) {
-      if (keys.has(k)) {
-        this.lastMoveP2 = this._movePlayer(this.p2, dy, dx, ts, this.lastMoveP2);
-        break;
+    // P2 movement: WASD (local) OR relayed from online peer
+    if (this._online && this._relay) {
+      // Process incoming peer messages as P2 movement
+      for (const msg of this._relay.drain()) {
+        if (msg.type === 'relay' && msg.data) {
+          const { dy, dx } = msg.data;
+          if (dy !== undefined && dx !== undefined) {
+            this.lastMoveP2 = this._movePlayer(this.p2, dy, dx, ts, this.lastMoveP2);
+          }
+        }
+      }
+    } else {
+      // Local P2 movement: WASD
+      const P2_DIRS = {
+        w:[-1,0], s:[1,0], a:[0,-1], d:[0,1],
+        W:[-1,0], S:[1,0], A:[0,-1], D:[0,1],
+      };
+      for (const [k,[dy,dx]] of Object.entries(P2_DIRS)) {
+        if (keys.has(k)) {
+          this.lastMoveP2 = this._movePlayer(this.p2, dy, dx, ts, this.lastMoveP2);
+          break;
+        }
       }
     }
 
@@ -400,6 +504,7 @@ export class CoopMode {
     this.isActive = false;
     this.game = null;
     this.p2   = null;
+    if (this._relay) { this._relay.destroy(); this._relay = null; }
   }
 
   getState() {

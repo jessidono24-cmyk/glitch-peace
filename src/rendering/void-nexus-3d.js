@@ -83,41 +83,115 @@ export class VoidNexus3D extends ThreeLayer {
   }
 
   _buildLighting() {
-    this.scene.add(new THREE.AmbientLight(0x050510, 2));
-    const dirL = new THREE.DirectionalLight(0x8800ff, 1.2);
-    dirL.position.set(5, 10, 5);
+    // Ambient — deep purple-blue space fill
+    this.scene.add(new THREE.AmbientLight(0x080818, 3.5));
+
+    // Primary directional light (top-left-front) with shadow casting
+    const dirL = new THREE.DirectionalLight(0x6622ff, 1.8);
+    dirL.position.set(6, 14, 8);
+    dirL.castShadow = true;
+    dirL.shadow.mapSize.width  = 512;
+    dirL.shadow.mapSize.height = 512;
+    dirL.shadow.camera.near    = 0.5;
+    dirL.shadow.camera.far     = 40;
+    dirL.shadow.camera.left    = -10;
+    dirL.shadow.camera.right   =  10;
+    dirL.shadow.camera.top     =  10;
+    dirL.shadow.camera.bottom  = -10;
     this.scene.add(dirL);
-    const pointL = new THREE.PointLight(0x00ffaa, 1.5, 12);
+    this._dirLight = dirL;
+
+    // Secondary rim light (back-right) — cyan accent
+    const rimL = new THREE.DirectionalLight(0x00eeff, 0.7);
+    rimL.position.set(-8, 5, -6);
+    this.scene.add(rimL);
+
+    // Rotating point light at grid centre — warm glow on tiles
+    const pointL = new THREE.PointLight(0x00ffaa, 2.5, 14, 2);
     pointL.position.set(0, 4, 0);
     this.scene.add(pointL);
+    this._pointLight = pointL;
+
+    // Second roving point light (pink/magenta)
+    const roveL = new THREE.PointLight(0xff44cc, 1.2, 10, 2);
+    roveL.position.set(4, 3, -4);
+    this.scene.add(roveL);
+    this._roveLight = roveL;
   }
 
   _buildFloor() {
-    // Subtle grid floor
-    const gridHelper = new THREE.GridHelper(30, 30, 0x111122, 0x0a0a18);
-    gridHelper.position.y = -0.01;
-    this.scene.add(gridHelper);
-    // Dark base plane
-    const planeGeo = new THREE.PlaneGeometry(30, 30);
-    const planeMat = new THREE.MeshBasicMaterial({ color: 0x01010a, side: THREE.BackSide });
+    // Normal-mapped standard material floor (no texture — procedural normals via vertex colours)
+    const planeGeo = new THREE.PlaneGeometry(30, 30, 20, 20);
+    // Add slight randomized height noise to give the floor natural normals
+    const pos = planeGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      pos.setZ(i, (Math.random() - 0.5) * 0.04);
+    }
+    planeGeo.computeVertexNormals();
+    const planeMat = new THREE.MeshStandardMaterial({
+      color: 0x010108,
+      metalness: 0.4,
+      roughness: 0.75,
+      envMapIntensity: 0.5,
+    });
     const plane = new THREE.Mesh(planeGeo, planeMat);
     plane.rotation.x = -Math.PI / 2;
     plane.position.y = -0.02;
+    plane.receiveShadow = true;
     this.scene.add(plane);
+
+    // Subtle wire grid on top of the floor
+    const gridHelper = new THREE.GridHelper(30, 30, 0x0a0a28, 0x06060f);
+    gridHelper.position.y = -0.01;
+    this.scene.add(gridHelper);
+  }
+
+  _buildSkybox() {
+    // Procedural deep-space skybox — large sphere with inside face
+    const skyGeo = new THREE.SphereGeometry(90, 20, 20);
+    // Gradient-like colouring: mix of very dark purples via vertex colours
+    const colArr = new Float32Array(skyGeo.attributes.position.count * 3);
+    for (let i = 0; i < skyGeo.attributes.position.count; i++) {
+      const y = skyGeo.attributes.position.getY(i);
+      const t = (y + 90) / 180; // 0 = bottom, 1 = top
+      colArr[i*3]   = 0.01 + t * 0.04;  // R
+      colArr[i*3+1] = 0.00 + t * 0.01;  // G
+      colArr[i*3+2] = 0.05 + t * 0.12;  // B (blue-purple at top)
+    }
+    skyGeo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
+    const skyMat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide });
+    this.scene.add(new THREE.Mesh(skyGeo, skyMat));
+
+    // Distant nebula haze — large translucent ring
+    const nebulaGeo = new THREE.TorusGeometry(35, 12, 8, 32);
+    const nebulaMat = new THREE.MeshBasicMaterial({
+      color: 0x220044, transparent: true, opacity: 0.08,
+      side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    const nebula = new THREE.Mesh(nebulaGeo, nebulaMat);
+    nebula.rotation.x = Math.PI / 4;
+    nebula.position.y = 15;
+    this.scene.add(nebula);
+    this._nebula = nebula;
   }
 
   _buildBackground() {
-    // Far background star particles (additive, static)
-    const count = 300;
+    this._buildSkybox();
+
+    // Close-field additive star particles (mid-distance)
+    const count = 400;
     const pos   = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      pos[i*3]   = (Math.random() - 0.5) * 40;
-      pos[i*3+1] = 2 + Math.random() * 20;
-      pos[i*3+2] = (Math.random() - 0.5) * 40;
+      pos[i*3]   = (Math.random() - 0.5) * 60;
+      pos[i*3+1] = 2 + Math.random() * 30;
+      pos[i*3+2] = (Math.random() - 0.5) * 60;
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.06, blending: THREE.AdditiveBlending, depthWrite: false });
+    const mat = new THREE.PointsMaterial({
+      color: 0xffffff, size: 0.05,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
     this.scene.add(new THREE.Points(geo, mat));
   }
 
@@ -202,6 +276,20 @@ export class VoidNexus3D extends ThreeLayer {
     if (this._playerOrb) {
       this._playerOrb.position.y = 0.55 + 0.08 * Math.sin(t * 4);
       this._playerOrb.rotation.y = t * 2;
+    }
+    // Roving light orbit
+    if (this._roveLight) {
+      this._roveLight.position.x = Math.cos(t * 0.7) * 6;
+      this._roveLight.position.z = Math.sin(t * 0.7) * 6;
+      this._roveLight.position.y = 2 + Math.sin(t * 0.5) * 1.5;
+    }
+    // Directional light slow sweep
+    if (this._dirLight) {
+      this._dirLight.position.x = 6 + Math.sin(t * 0.18) * 3;
+    }
+    // Nebula slow rotation
+    if (this._nebula) {
+      this._nebula.rotation.z = t * 0.05;
     }
     // Gentle camera orbit
     this.camera.position.x = Math.sin(t * 0.12) * 1.2;

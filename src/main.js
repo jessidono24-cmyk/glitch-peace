@@ -4,7 +4,7 @@
 //  Entry point: state machine + game loop.
 //  All game logic lives in src/game/, src/ui/, src/core/.
 // ═══════════════════════════════════════════════════════════════════════
-import { T, DREAMSCAPES, UPGRADE_SHOP, VISION_WORDS, CELL, GAP, PAL_A, PAL_B, CONSTELLATION_NAMES, BIRD_FACTS, MUSHROOM_FACTS, PREDATOR_FACTS } from './core/constants.js';
+import { T, DREAMSCAPES, ARCHETYPES, UPGRADE_SHOP, VISION_WORDS, CELL, GAP, PAL_A, PAL_B, CONSTELLATION_NAMES, BIRD_FACTS, MUSHROOM_FACTS, PREDATOR_FACTS } from './core/constants.js';
 import { CFG, UPG, CURSOR, phase, setPhase, resetUpgrades, resetSession,
          checkOwned, matrixActive, setMatrix, matrixHoldTime, setMatrixHoldTime, addMatrixHoldTime,
          insightTokens, addInsightToken, spendInsightTokens,
@@ -84,6 +84,12 @@ import { CoopMode } from './modes/coop-mode.js';
 import { achievementSystem, ACHIEVEMENT_DEFS } from './systems/achievements.js';
 // ─── Tone.js procedural music engine ──────────────────────────────────────
 import { musicEngine } from './audio/music-engine.js';
+// ─── Phase M7: Rhythm Mode ────────────────────────────────────────────────
+import { RhythmMode, RHYTHM_KEYS } from './modes/rhythm-mode.js';
+// ─── Biome System ─────────────────────────────────────────────────────────
+import { biomeSystem } from './systems/biome-system.js';
+// ─── Archetype Select UI ──────────────────────────────────────────────────
+import { drawArchetypeSelect } from './ui/menus.js';
 
 // ─── Canvas setup ───────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -125,6 +131,7 @@ const shooterMode = new ShooterMode(shooterSharedSystems);
 const constellationMode = new ConstellationMode(shooterSharedSystems);
 const meditationMode    = new MeditationMode(shooterSharedSystems);
 const coopMode          = new CoopMode(shooterSharedSystems);
+const rhythmMode        = new RhythmMode(shooterSharedSystems);
 
 // ─── Runtime globals ────────────────────────────────────────────────────
 let game       = null;
@@ -134,6 +141,7 @@ let prevTs     = performance.now(); // initialise to now so first dt ≈ 0
 let lastMove   = 0;
 let gameMode   = 'grid'; // 'grid' | 'shooter' | 'constellation' | 'meditation' | 'coop'
 const EMOTION_THRESHOLD      = 0.15;   // emotion must exceed this to affect gameplay
+const ARCHETYPE_PERM_DURATION = 999999; // arbitrarily large — effectively permanent for a run
 const INTERLUDE_DURATION_MS  = 10000;  // auto-advance after 10 s
 const INTERLUDE_MIN_ADVANCE_MS = 3500; // player may skip after 3.5 s (all content visible)
 // Pre-allocated tile-type sets to avoid array creation in the hot path
@@ -387,6 +395,17 @@ function startGame(dreamIdx) {
   archetypeDialogue.reset();
   bossSystem.reset();
   alchemySystem.resetSession();
+  // Apply chosen archetype (from archetype selector) as starting power
+  if (CFG.chosenArchetype && ARCHETYPES[CFG.chosenArchetype]) {
+    const archData = ARCHETYPES[CFG.chosenArchetype];
+    UPG.archetypePower    = archData.power;
+    UPG.archetypeDuration = ARCHETYPE_PERM_DURATION; // effectively permanent for the run
+    if (game) {
+      game.msg      = archData.activationMsg || '';
+      game.msgColor = archData.color || '#ffdd44';
+      game.msgTimer = 80;
+    }
+  }
   // Reset movement speed tracking + nature facts state
   _recentMoveTimes = [];
   _lastNatureDsId = null;
@@ -514,6 +533,7 @@ function loop(ts) {
   if (phase === 'title')       { drawTitle(ctx, w, h, backgroundStars, ts, CURSOR.menu, gameMode); drawAchievementPopup(ctx, w, h, achievementSystem.popup, ts); animId=requestAnimationFrame(loop); return; }
   if (phase === 'modeselect')  { drawModeSelect(ctx, w, h, CURSOR.modesel, backgroundStars, ts); animId=requestAnimationFrame(loop); return; }
   if (phase === 'dreamselect') { drawDreamSelect(ctx, w, h, CFG.dreamIdx); animId=requestAnimationFrame(loop); return; }
+  if (phase === 'archsel')     { drawArchetypeSelect(ctx, w, h, CURSOR.archsel, backgroundStars, ts); animId=requestAnimationFrame(loop); return; }
   if (phase === 'options')     { drawOptions(ctx, w, h, CURSOR.opt); animId=requestAnimationFrame(loop); return; }
   if (phase === 'highscores')  { drawHighScores(ctx, w, h, highScores); animId=requestAnimationFrame(loop); return; }
   if (phase === 'achievements'){ drawAchievements(ctx, w, h, achievementSystem, CURSOR.achieveScroll); animId=requestAnimationFrame(loop); return; }
@@ -524,6 +544,19 @@ function loop(ts) {
     interludeState.elapsed = (interludeState.elapsed || 0) + dt;
     drawInterlude(ctx, w, h, interludeState, ts);
     if (interludeState.elapsed >= interludeState.duration) _advanceFromInterlude();
+    animId = requestAnimationFrame(loop); return;
+  }
+
+  // ── Rhythm mode ──────────────────────────────────────────────────────
+  if (gameMode === 'rhythm') {
+    rhythmMode.setSizes(w, h);
+    const result = rhythmMode.update(dt, keys, matrixActive, ts);
+    rhythmMode.render(ctx, ts, { backgroundStars });
+    drawAchievementPopup(ctx, w, h, achievementSystem.popup, ts);
+    if (result && result.phase === 'dead') {
+      deadGame = result.data;
+      setPhase('dead'); gameMode = 'grid';
+    }
     animId = requestAnimationFrame(loop); return;
   }
 
@@ -607,6 +640,11 @@ function loop(ts) {
     distortion: emotionalField.distortion  || 0,
     valence:    emotionalField.valence     || 0,
   };
+  // Update biome system from dominant emotion (or dreamscape base emotion)
+  const biomeEmotion = (domEmotion.value > EMOTION_THRESHOLD ? domEmotion.id : null) ||
+                       (game?.ds?.emotion) || null;
+  if (biomeEmotion) biomeSystem.setEmotion(biomeEmotion);
+  biomeSystem.update(dt);
   // Expand fog radius based on insight collected
   window._fogRadius = 4 + Math.min(3, Math.floor((window._insightTokens || 0) / 5));
 
@@ -1059,6 +1097,8 @@ function loop(ts) {
   }
 
   drawGame(ctx, ts, game, matrixActive, backgroundStars, visions, hallucinations, anomalyActive, anomalyData, glitchFrames, DPR, consequencePreview.getGhostPath());
+  // Biome overlay (drawn after game world, before HUD)
+  biomeSystem.draw(ctx, w, h, ts);
   // Phase 11: Draw dashboard overlay if visible
   if (dashboard.visible) drawDashboard(ctx, CW(), CH());
   animId = requestAnimationFrame(loop);
@@ -1216,6 +1256,10 @@ window.addEventListener('keydown', e => {
         coopMode.init({ dreamIdx: CFG.dreamIdx });
         setPhase('playing');
         cancelAnimationFrame(animId); animId = requestAnimationFrame(loop);
+      } else if (chosen === 'rhythm') {
+        rhythmMode.init({ level: 1, dsIdx: CFG.dreamIdx, score: 0 });
+        setPhase('playing');
+        cancelAnimationFrame(animId); animId = requestAnimationFrame(loop);
       }
     }
     if (e.key==='Escape') setPhase('title');
@@ -1224,8 +1268,25 @@ window.addEventListener('keydown', e => {
   if (phase === 'dreamselect') {
     if (e.key==='ArrowUp')   { CFG.dreamIdx=(CFG.dreamIdx-1+DREAMSCAPES.length)%DREAMSCAPES.length; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowDown') { CFG.dreamIdx=(CFG.dreamIdx+1)%DREAMSCAPES.length; sfxManager.resume(); sfxManager.playMenuNav(); }
-    if (e.key==='Enter')     { sfxManager.resume(); sfxManager.playMenuSelect(); startGame(CFG.dreamIdx); }
+    if (e.key==='Enter')     { sfxManager.resume(); sfxManager.playMenuSelect(); CURSOR.archsel=0; setPhase('archsel'); }
     if (e.key==='Escape')    setPhase('title');
+    e.preventDefault(); return;
+  }
+  // ── Archetype selector ────────────────────────────────────────────────
+  if (phase === 'archsel') {
+    const archKeys = Object.keys(ARCHETYPES);
+    const N = archKeys.length;
+    const COLS_ARCH = 3;
+    if (e.key==='ArrowLeft')  { CURSOR.archsel=(CURSOR.archsel-1+N)%N; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowRight') { CURSOR.archsel=(CURSOR.archsel+1)%N;   sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowUp')    { CURSOR.archsel=(CURSOR.archsel-COLS_ARCH+N)%N; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowDown')  { CURSOR.archsel=(CURSOR.archsel+COLS_ARCH)%N;   sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='Enter') {
+      sfxManager.resume(); sfxManager.playMenuSelect();
+      CFG.chosenArchetype = archKeys[CURSOR.archsel] || null;
+      startGame(CFG.dreamIdx);
+    }
+    if (e.key==='Escape') { CFG.chosenArchetype = null; startGame(CFG.dreamIdx); } // skip
     e.preventDefault(); return;
   }
   if (phase === 'options') {
@@ -1351,6 +1412,22 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
   if (phase === 'playing') {
+    // Rhythm mode: A/S/D/F column key presses + ESC
+    if (gameMode === 'rhythm') {
+      const k = e.key.toLowerCase();
+      for (let col = 0; col < 4; col++) {
+        if (RHYTHM_KEYS[col].includes(k)) {
+          sfxManager.resume();
+          rhythmMode.pressCol(col);
+          e.preventDefault(); return;
+        }
+      }
+      if (e.key === 'Escape') {
+        gameMode = 'grid'; setPhase('title'); CURSOR.menu = 0;
+        e.preventDefault(); return;
+      }
+      e.preventDefault(); return;
+    }
     // Shooter mode: ESC pauses (not instant title exit)
     if (gameMode === 'shooter') {
       if (e.key==='Escape') { shooterMode.paused = true; CURSOR.pause=0; setPhase('paused'); }

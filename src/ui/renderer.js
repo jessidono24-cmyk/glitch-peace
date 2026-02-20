@@ -718,8 +718,13 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
   // ── Phase 6 + Lang: Vocabulary word flash (multilingual) ─────────────
   const vocabWord = window._vocabWord;
   if (vocabWord) {
-    const vAlpha = Math.min(1, (window._vocabTimer || 150) / 30);
-    ctx.globalAlpha = Math.min(1, vAlpha);
+    // _vocabTimer counts 150→0; fade in during first 20 frames, fade out during last 25 frames
+    const vt = window._vocabTimer !== undefined ? window._vocabTimer : 150;
+    const fadeIn  = Math.min(1, (150 - vt) / 20);  // 0→1 in first 20 frames
+    const fadeOut = Math.min(1, vt / 25);            // 1→0 in last 25 frames
+    const vAlpha  = Math.min(fadeIn, fadeOut);
+    if (vAlpha > 0) {
+      ctx.globalAlpha = vAlpha;
     // Determine if we have a multilingual entry (from language system)
     const hasMulti = vocabWord.targetWord && vocabWord.targetLang;
     const boxH = hasMulti ? 56 : 36;
@@ -745,7 +750,8 @@ function drawHUD(ctx, g, w, h, gp, sx, sy, matrixActive) {
       ctx.fillStyle = '#886644'; ctx.font = '9px Courier New';
       ctx.fillText(vocabWord.def, w/2, sy - 30);
     }
-    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+      ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    } // end vAlpha > 0
   }
 
   // ── Sigil system: pattern flash ─────────────────────────────────────

@@ -194,6 +194,8 @@ export function drawDreamSelect(ctx, w, h, dreamIdx) {
 }
 
 export function drawOptions(ctx, w, h, optIdx) {
+  const OPT_START_Y  = 48;  // y of first row label
+  const OPT_ROW_H    = 46;  // vertical spacing between rows
   ctx.fillStyle = '#02020a'; ctx.fillRect(0, 0, w, h);
   ctx.textAlign = 'center';
   ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 16;
@@ -201,34 +203,46 @@ export function drawOptions(ctx, w, h, optIdx) {
   const langMeta  = LANGUAGES[PLAYER_PROFILE.nativeLang] || {};
   const tgtMeta   = LANGUAGES[PLAYER_PROFILE.targetLang]  || {};
   const playMeta  = getPlayModeMeta(CFG.playMode || 'arcade');
+  // SFX volume display  (PLAYER_PROFILE.sfxVol 0-1 → percentage label)
+  const sfxPct   = Math.round((PLAYER_PROFILE.sfxVol !== undefined ? PLAYER_PROFILE.sfxVol : 0.3) * 100);
+  const sfxMuted = PLAYER_PROFILE.sfxMuted || false;
   const rows = [
     { label:'GRID SIZE',   opts:OPT_GRID, cur:CFG.gridSize },
     { label:'DIFFICULTY',  opts:OPT_DIFF, cur:CFG.difficulty },
     { label:'PARTICLES',   opts:['on','off'], cur:CFG.particles ? 'on' : 'off' },
     { label:'PLAY STYLE',  opts:['‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›'], cur:'‹ ' + (playMeta.emoji||'') + ' ' + playMeta.name + ' ›',
       hint: playMeta.desc },
+    { label:'SFX VOLUME',  opts:['0%','25%','50%','75%','100%'], cur: sfxPct + '%', hint: sfxMuted ? 'muted — ←→ volume  ENTER=toggle mute' : '←→ adjust  ENTER=toggle mute' },
     { label:'LANGUAGES',   opts:['OPEN →'], cur:'OPEN →', hint: (langMeta.emoji||'') + ' → ' + (tgtMeta.emoji||'') + ' ' + (tgtMeta.name||'') },
     { label:'',            opts:['← BACK'], cur:'← BACK' },
   ];
   rows.forEach((row, i) => {
-    const sel = i === optIdx, baseY = 80 + i * 52;
+    const sel = i === optIdx, baseY = OPT_START_Y + i * OPT_ROW_H;
     if (row.label) {
       ctx.fillStyle = '#334455'; ctx.font = '9px Courier New'; ctx.fillText(row.label, w / 2, baseY);
-      if (row.hint) { ctx.fillStyle = '#445566'; ctx.font = '8px Courier New'; ctx.fillText(row.hint.slice(0, 55), w / 2, baseY + 12); }
+      if (row.hint) { ctx.fillStyle = '#445566'; ctx.font = '8px Courier New'; ctx.fillText(row.hint.slice(0, 60), w / 2, baseY + 12); }
     }
     const rowOpts = row.opts;
     rowOpts.forEach((opt, j) => {
       const active = opt === row.cur;
       const oy_off = row.hint ? 30 : 22;
-      const ox = w / 2 + (j - (rowOpts.length - 1) / 2) * 110, oy = baseY + oy_off;
-      ctx.fillStyle = (sel && active) ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.02)'; ctx.fillRect(ox - 60, oy - 14, 120, 22);
-      ctx.strokeStyle = (sel && active) ? 'rgba(0,255,136,0.5)' : active ? 'rgba(0,255,136,0.18)' : 'rgba(255,255,255,0.04)'; ctx.strokeRect(ox - 60, oy - 14, 120, 22);
+      const ox = w / 2 + (j - (rowOpts.length - 1) / 2) * 90, oy = baseY + oy_off;
+      ctx.fillStyle = (sel && active) ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.02)'; ctx.fillRect(ox - 44, oy - 14, 90, 22);
+      ctx.strokeStyle = (sel && active) ? 'rgba(0,255,136,0.5)' : active ? 'rgba(0,255,136,0.18)' : 'rgba(255,255,255,0.04)'; ctx.strokeRect(ox - 44, oy - 14, 90, 22);
       ctx.fillStyle = active ? '#00ff88' : '#334455'; ctx.shadowColor = active ? '#00ff88' : 'transparent'; ctx.shadowBlur = active ? 5 : 0;
       ctx.font = active ? 'bold 10px Courier New' : '9px Courier New'; ctx.fillText(opt.toUpperCase().slice(0, 22), ox, oy); ctx.shadowBlur = 0;
     });
     if (sel) { ctx.fillStyle = '#00ff88'; ctx.font = '12px Courier New'; ctx.fillText('▶', w / 2 - 154, baseY + (row.hint ? 30 : 22)); }
+    // SFX row: draw a live volume bar
+    if (row.label === 'SFX VOLUME' && sel) {
+      const barX = w / 2 - 110, barY = baseY + (row.hint ? 30 : 22) - 6, barW = 220, barH = 6;
+      ctx.fillStyle = '#111122'; ctx.fillRect(barX, barY, barW, barH);
+      ctx.fillStyle = sfxMuted ? '#443344' : '#00cc77';
+      ctx.fillRect(barX, barY, barW * (sfxPct / 100), barH);
+      ctx.strokeStyle = 'rgba(0,255,136,0.2)'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH);
+    }
   });
-  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New'; ctx.fillText('↑↓ row  ·  ←→ value  ·  ENTER opens  ·  ESC back', w / 2, h - 20);
+  ctx.fillStyle = '#131328'; ctx.font = '8px Courier New'; ctx.fillText('↑↓ row  ·  ←→ value  ·  ENTER action  ·  ESC back', w / 2, h - 20);
   ctx.textAlign = 'left';
 }
 

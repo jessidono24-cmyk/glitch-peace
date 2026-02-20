@@ -202,11 +202,20 @@ export function tryMove(g, dy, dx, matrixActive, onNextDreamscape, onMsg, insigh
       }
       if (tileType === T.SELF_HARM)  g.grid[ny][nx] = T.PAIN;
       if (tileType === T.HOPELESS)   setEmotion(g, 'hopeless');
-      if (tileType === T.DESPAIR && Math.random() < 0.3) {
-        const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-        const [sdy, sdx] = pick(dirs);
-        const sy = ny + sdy, sx = nx + sdx;
-        if (sy >= 0 && sy < sz && sx >= 0 && sx < sz && g.grid[sy][sx] === T.VOID) g.grid[sy][sx] = T.DESPAIR;
+      if (tileType === T.DESPAIR) {
+        // Despair may spread to an adjacent void tile (it seeps outward…)
+        if (Math.random() < 0.3) {
+          const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+          const [sdy, sdx] = pick(dirs);
+          const sy = ny + sdy, sx = nx + sdx;
+          if (sy >= 0 && sy < sz && sx >= 0 && sx < sz && g.grid[sy][sx] === T.VOID) g.grid[sy][sx] = T.DESPAIR;
+        }
+        // …but the one you walked through dissolves — you faced it.
+        g.grid[ny][nx] = T.VOID;
+      }
+      if (tileType === T.TERROR) {
+        // Terror vanishes when confronted directly — it only holds power unmet.
+        g.grid[ny][nx] = T.VOID;
       }
       g.hp = Math.max(0, g.hp - dmg);
       g.shakeFrames = 5;

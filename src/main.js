@@ -889,6 +889,7 @@ function loop(ts) {
     }
   }
   window._vocabWord      = displayVocab;
+  window._vocabTimer     = vocabularyEngine.recentTimer; // 150→0, drives renderer fade-out
   window._patternBanner  = patternRecognition.activeBanner;
   window._learnStats     = {
     words: vocabularyEngine.sessionCount,
@@ -1201,8 +1202,9 @@ window.addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
   if (phase === 'options') {
-    if (e.key==='ArrowUp')   { CURSOR.opt=(CURSOR.opt-1+6)%6; sfxManager.resume(); sfxManager.playMenuNav(); }
-    if (e.key==='ArrowDown') { CURSOR.opt=(CURSOR.opt+1)%6; sfxManager.resume(); sfxManager.playMenuNav(); }
+    const OPT_COUNT = 7; // rows: gridsize, difficulty, particles, playstyle, sfxvol, languages, back
+    if (e.key==='ArrowUp')   { CURSOR.opt=(CURSOR.opt-1+OPT_COUNT)%OPT_COUNT; sfxManager.resume(); sfxManager.playMenuNav(); }
+    if (e.key==='ArrowDown') { CURSOR.opt=(CURSOR.opt+1)%OPT_COUNT; sfxManager.resume(); sfxManager.playMenuNav(); }
     if (e.key==='ArrowLeft'||e.key==='ArrowRight') {
       const dir=e.key==='ArrowLeft'?-1:1;
       if(CURSOR.opt===0){const i=['small','medium','large'].indexOf(CFG.gridSize);CFG.gridSize=['small','medium','large'][(i+dir+3)%3];}
@@ -1212,11 +1214,27 @@ window.addEventListener('keydown', e => {
         const i=PLAY_MODE_LIST.indexOf(CFG.playMode||'arcade');
         CFG.playMode=PLAY_MODE_LIST[(i+dir+PLAY_MODE_LIST.length)%PLAY_MODE_LIST.length];
       }
+      else if(CURSOR.opt===4) {  // SFX VOLUME: cycle 0%, 25%, 50%, 75%, 100%
+        const SFX_VOL_STEPS = [0, 0.25, 0.5, 0.75, 1.0];
+        const SFX_VOL_MATCH_EPS = 0.01;  // epsilon for float comparison
+        const SFX_VOL_DEFAULT_IDX = 2;   // index of 50% (default)
+        const curI = SFX_VOL_STEPS.findIndex(v => Math.abs(v - (PLAYER_PROFILE.sfxVol || 0.3)) < SFX_VOL_MATCH_EPS);
+        const nI = (curI < 0 ? SFX_VOL_DEFAULT_IDX : curI) + dir;
+        PLAYER_PROFILE.sfxVol = SFX_VOL_STEPS[(nI + SFX_VOL_STEPS.length) % SFX_VOL_STEPS.length];
+        if(!PLAYER_PROFILE.sfxMuted) sfxManager.setVolume(PLAYER_PROFILE.sfxVol);
+        savePlayerProfile();
+      }
       sfxManager.resume(); sfxManager.playMenuNav();
     }
     if (e.key==='Enter') {
-      if(CURSOR.opt===4) { setPhase('langopts'); }  // Language settings
-      else if(CURSOR.opt===5) setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
+      if(CURSOR.opt===4) { // Toggle mute
+        PLAYER_PROFILE.sfxMuted=!PLAYER_PROFILE.sfxMuted;
+        sfxManager.setVolume(PLAYER_PROFILE.sfxMuted ? 0 : (PLAYER_PROFILE.sfxVol||0.3));
+        savePlayerProfile();
+        sfxManager.resume(); sfxManager.playMenuSelect();
+      }
+      else if(CURSOR.opt===5) { setPhase('langopts'); }  // Language settings
+      else if(CURSOR.opt===6) setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
     }
     if (e.key==='Escape') setPhase(CURSOR.optFrom==='paused' ? 'paused' : 'title');
     e.preventDefault(); return;
@@ -1462,6 +1480,12 @@ canvas.addEventListener('click', () => { if(phase==='title')startGame(CFG.dreamI
 // ─── Boot ─────────────────────────────────────────────────────────────────
 setHighScores(loadHighScores());
 initStars(CW(), CH());
+// Apply saved audio settings
+if (PLAYER_PROFILE.sfxMuted) {
+  sfxManager.setVolume(0);
+} else if (PLAYER_PROFILE.sfxVol !== undefined) {
+  sfxManager.setVolume(PLAYER_PROFILE.sfxVol);
+}
 // Show onboarding screen on first ever launch (no saved profile)
 if (!PLAYER_PROFILE.onboardingDone) {
   setPhase('onboarding');

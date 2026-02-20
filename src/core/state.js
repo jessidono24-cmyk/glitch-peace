@@ -105,6 +105,9 @@ export const PLAYER_PROFILE = {
   nativeLang:     _raw.nativeLang     || 'en',
   targetLang:     _raw.targetLang     || 'no',
   diffTier:       _raw.diffTier       || 'standard',
+  // Audio settings
+  sfxVol:         _raw.sfxVol         !== undefined ? _raw.sfxVol  : 0.3,
+  sfxMuted:       _raw.sfxMuted       || false,
 };
 export function savePlayerProfile() { _saveProfile(PLAYER_PROFILE); }
 
